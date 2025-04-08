@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SearchHistory, PlanOption } from "@/types/socialMedia";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Search, AlertCircle, CheckCircle, LogOut, ArrowLeft, Trash } from "lucide-react";
+import { Clock, Search, LogOut, ArrowLeft, Trash } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -296,7 +296,7 @@ const Profile = () => {
                           <ul className="space-y-3">
                             {plan.features.map((feature, i) => (
                               <li key={i} className="flex items-start">
-                                <CheckCircle className="h-5 w-5 mr-2 text-green-400 shrink-0 mt-0.5" />
+                                <div className="h-5 w-5 mr-2 text-green-400 shrink-0 mt-0.5">✓</div>
                                 <span>{feature}</span>
                               </li>
                             ))}
