@@ -1,19 +1,29 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SocialResultCard from "@/components/SocialResultCard";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, ExternalLink } from "lucide-react";
-import { getSocialMediaProfiles } from "@/utils/socialMediaSearch";
+import { Search, ExternalLink, Filter, Grid, List } from "lucide-react";
+import { getSocialMediaProfiles, getCategories } from "@/utils/socialMediaSearch";
+import { SocialMediaProfile, SocialMediaCategory } from "@/types/socialMedia";
 
 const Index = () => {
   const [name, setName] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SocialMediaProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<SocialMediaCategory[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (results.length > 0) {
+      setCategories(getCategories(results));
+    }
+  }, [results]);
 
   const handleSearch = () => {
     if (!name.trim()) {
@@ -37,6 +47,7 @@ const Index = () => {
     // Simulate async search with a timeout
     setTimeout(() => {
       setResults(profiles);
+      setSelectedCategory(null);
       setIsSearching(false);
       
       toast({
@@ -45,6 +56,10 @@ const Index = () => {
       });
     }, 1500);
   };
+
+  const filteredResults = selectedCategory 
+    ? results.filter(profile => profile.category === selectedCategory)
+    : results;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -95,15 +110,59 @@ const Index = () => {
 
           {results.length > 0 && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-semibold">
-                  Search Results for {name}
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-2xl font-semibold flex items-center gap-2">
+                  Results for {name}
+                  <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full">
+                    {filteredResults.length} found
+                  </span>
                 </h2>
-                <Separator className="flex-1" />
+                
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                    className="px-2"
+                  >
+                    {viewMode === "grid" ? <List size={16} /> : <Grid size={16} />}
+                  </Button>
+                  
+                  <Button 
+                    variant={selectedCategory ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-2 ${!selectedCategory && 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-200'}`}
+                  >
+                    <Filter size={14} className="mr-1" />
+                    All
+                  </Button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {results.map((profile, index) => (
+              {categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 pb-4">
+                  {categories.map((category) => (
+                    <Button
+                      key={category.name}
+                      variant={selectedCategory === category.name ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(selectedCategory === category.name ? null : category.name)}
+                      className={selectedCategory === category.name ? "" : "bg-gray-50 hover:bg-gray-100"}
+                    >
+                      {category.name}
+                      <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white text-gray-800">
+                        {category.count}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              )}
+
+              <Separator />
+
+              <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+                {filteredResults.map((profile, index) => (
                   <SocialResultCard key={index} profile={profile} />
                 ))}
               </div>

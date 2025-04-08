@@ -1,15 +1,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
+import { SocialMediaProfile } from "@/types/socialMedia";
 
 interface SocialResultCardProps {
-  profile: {
-    platform: string;
-    url: string;
-    username: string;
-    icon: string;
-    color: string;
-  };
+  profile: SocialMediaProfile;
 }
 
 const SocialResultCard = ({ profile }: SocialResultCardProps) => {
@@ -32,6 +27,11 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
             <div className="flex-1">
               <h3 className="font-medium">{profile.platform}</h3>
               <p className="text-sm text-gray-500">{profile.username}</p>
+              {profile.category && (
+                <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-800">
+                  {profile.category}
+                </span>
+              )}
             </div>
             <ExternalLink className="text-gray-400" size={16} />
           </div>
