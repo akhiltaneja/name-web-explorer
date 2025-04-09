@@ -1,4 +1,3 @@
-
 import { SocialMediaProfile } from "@/types/socialMedia";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
@@ -6,18 +5,21 @@ import { format } from "date-fns";
 
 // Extend the jsPDF interface to include our needed properties
 declare module "jspdf" {
+  // Define PubSub type to match the error message
+  type PubSub = any;
+  
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
     internal: {
-      events: any;
+      events: PubSub;
       scaleFactor: number;
       pageSize: {
         width: number;
-        height: number;
         getWidth: () => number;
+        height: number;
         getHeight: () => number;
       };
-      pages: any[];
+      pages: number[];
       getEncryptor(objectId: number): (data: string) => string;
       getNumberOfPages: () => number;
     };
