@@ -54,7 +54,7 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setTextColor(100, 100, 100);
-    doc.text(`CandidateChecker.io - Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+    doc.text(`CandidateChecker.io - Page ${i} of ${pageCount}`, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: "center" });
   }
   
   return doc;

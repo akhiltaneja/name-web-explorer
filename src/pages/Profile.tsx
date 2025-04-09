@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,10 +78,18 @@ const Profile = () => {
   const { user, signOut, profile, loadingProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const plansRef = useRef<HTMLDivElement>(null);
 
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'plans' ? 'plans' : 'account';
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    // Scroll to plans section if 'plans' tab is active
+    if (activeTab === 'plans' && plansRef.current) {
+      plansRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const fetchSearchHistory = async () => {
@@ -239,7 +248,7 @@ const Profile = () => {
           </Button>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-8 mb-6 relative overflow-hidden shadow-sm border border-blue-100">
+        <div className="bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 rounded-lg p-8 mb-6 relative overflow-hidden shadow-sm border border-blue-100">
           <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500 to-purple-500"></div>
           
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
@@ -313,7 +322,12 @@ const Profile = () => {
             {profile?.plan !== 'unlimited' && (
               <div className="flex-shrink-0">
                 <Button 
-                  onClick={() => setActiveTab('plans')}
+                  onClick={() => {
+                    setActiveTab('plans');
+                    if (plansRef.current) {
+                      plansRef.current.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className="bg-blue-600 hover:bg-blue-700"
                   size="lg"
                 >
@@ -332,7 +346,7 @@ const Profile = () => {
                   : `${profile?.checks_used % 500}/500 monthly searches`}
                 </span>
               </div>
-              <Progress value={usagePercentage} className="h-2 bg-gray-200" indicatorClassName="bg-gradient-to-r from-blue-500 to-purple-500" />
+              <Progress value={usagePercentage} className="h-2 bg-gray-200" />
             </div>
           )}
         </div>
@@ -412,12 +426,15 @@ const Profile = () => {
         )}
 
         {activeTab === 'plans' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="text-center max-w-xl mx-auto mb-10">
+          <div ref={plansRef} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="text-center max-w-xl mx-auto mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-2">
                 Get more searches and unlock powerful features with our premium plans.
               </p>
+              <Link to="/pricing" className="text-blue-600 hover:text-blue-800 font-medium">
+                View detailed pricing information
+              </Link>
             </div>
             
             <div className="grid md:grid-cols-3 gap-6">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import {
   AlertCircle,
   Globe
 } from "lucide-react";
-import { getSocialMediaProfiles, getCategories, getAdditionalResults } from "@/utils/socialMediaSearch";
+import { getSocialMediaProfiles, getCategories, getAdditionalResults, groupProfilesByCategory, checkUrlStatus, checkDomainAvailability } from "@/utils/socialMediaSearch";
 import { SocialMediaProfile, SocialMediaCategory } from "@/types/socialMedia";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -35,6 +36,7 @@ import {
 import EmailReportDialog from "@/components/EmailReportDialog";
 import { Progress } from "@/components/ui/progress";
 import DefaultAvatar from "@/components/DefaultAvatar";
+import DomainSuggestions from "@/components/DomainSuggestions";
 
 const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
 const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
@@ -52,6 +54,8 @@ const Index = () => {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
   const [searchTime, setSearchTime] = useState<number | null>(null);
+  const [profilesByCategory, setProfilesByCategory] = useState<Record<string, SocialMediaProfile[]>>({});
+  const [availableDomains, setAvailableDomains] = useState<{tld: string, available: boolean, price: number}[]>([]);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -69,6 +73,7 @@ const Index = () => {
   useEffect(() => {
     if (results.length > 0) {
       setCategories(getCategories(results));
+      setProfilesByCategory(groupProfilesByCategory(results));
     }
   }, [results]);
 
@@ -163,8 +168,26 @@ const Index = () => {
     
     // Get social media profiles
     setTimeout(async () => {
-      const profiles = getSocialMediaProfiles(username, searchQuery);
+      let profiles = getSocialMediaProfiles(username, searchQuery);
       const additionalProfiles = getAdditionalResults(username, searchQuery);
+      
+      // Filter out 404 pages (in a real app, this would check each URL)
+      const activeProfiles = await Promise.all(
+        profiles.map(async profile => {
+          const isActive = await checkUrlStatus(profile.url);
+          return {
+            ...profile,
+            status: isActive ? 'active' : 'inactive'
+          };
+        })
+      );
+      
+      // Only show active profiles or mark others as inactive
+      profiles = activeProfiles.filter(profile => profile.status !== 'inactive');
+      
+      // Check domain availability
+      const domainResults = await checkDomainAvailability(username);
+      setAvailableDomains(domainResults);
       
       clearInterval(progressInterval);
       setSearchProgress(100);
@@ -176,6 +199,7 @@ const Index = () => {
       setTimeout(() => {
         setResults(profiles);
         setAdditionalResults(additionalProfiles);
+        setProfilesByCategory(groupProfilesByCategory(profiles));
         setSelectedCategory(null);
         setIsSearching(false);
         
@@ -451,11 +475,39 @@ const Index = () => {
 
               <Separator className="bg-gray-200 my-6" />
 
-              <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                {filteredResults.map((profile, index) => (
-                  <SocialResultCard key={index} profile={profile} />
-                ))}
-              </div>
+              {/* Display results by category when no specific category is selected */}
+              {!selectedCategory && Object.keys(profilesByCategory).length > 0 ? (
+                <div className="space-y-8">
+                  {Object.entries(profilesByCategory).map(([category, profiles]) => (
+                    <div key={category}>
+                      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        {category}
+                        <span className="ml-2 text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                          {profiles.length}
+                        </span>
+                      </h3>
+                      <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                        {profiles.map((profile, index) => (
+                          <SocialResultCard key={`${category}-${index}`} profile={profile} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                  {filteredResults.map((profile, index) => (
+                    <SocialResultCard key={index} profile={profile} />
+                  ))}
+                </div>
+              )}
+
+              {/* Domain availability section */}
+              {availableDomains.length > 0 && availableDomains.some(d => d.available) && (
+                <div className="mt-12 mb-8">
+                  <DomainSuggestions username={name.toLowerCase().replace(/\s+/g, '')} domains={availableDomains} />
+                </div>
+              )}
 
               {additionalResults.length > 0 && (
                 <>
@@ -585,7 +637,7 @@ const Index = () => {
                   How do I upgrade my account?
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  You can upgrade your account by visiting your profile page and selecting a plan that suits your needs. We offer flexible monthly plans with no long-term commitments.
+                  You can upgrade your account by visiting your <Link to="/profile" className="text-blue-600 hover:underline">profile page</Link> or the <Link to="/pricing" className="text-blue-600 hover:underline">pricing page</Link> and selecting a plan that suits your needs. We offer flexible monthly plans with no long-term commitments.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

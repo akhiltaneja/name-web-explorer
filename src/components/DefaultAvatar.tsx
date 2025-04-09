@@ -41,8 +41,11 @@ const DefaultAvatar: React.FC<DefaultAvatarProps> = ({
     lg: 'w-24 h-24 text-3xl',
   };
 
-  // Array of cartoon animal emojis
-  const animalEmojis = ['🐱', '🐶', '🐰', '🐼', '🦊', '🐻', '🦁', '🐯', '🐭', '🐹'];
+  // Array of cartoon animal emojis with higher quality options
+  const animalEmojis = [
+    '🐱', '🐶', '🐰', '🐼', '🦊', '🐻', '🦁', '🐯', '🐭', '🐹', 
+    '🦝', '🐨', '🐮', '🐷', '🦄', '🦓', '🦒', '🐘', '🦔'
+  ];
   
   // Determine animal emoji based on name hash
   const animalIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % animalEmojis.length;

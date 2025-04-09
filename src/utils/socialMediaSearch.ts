@@ -1,3 +1,4 @@
+
 import { SocialMediaProfile } from "@/types/socialMedia";
 
 /**
@@ -28,6 +29,22 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       icon: "f",
       color: "#4267B2",
       category: "Social network"
+    },
+    {
+      platform: "SoundCloud",
+      url: `https://soundcloud.com/${username}`,
+      username: username,
+      icon: "SC",
+      color: "#FF5500",
+      category: "Music"
+    },
+    {
+      platform: "Flickr",
+      url: `https://www.flickr.com/photos/${username}`,
+      username: username,
+      icon: "F",
+      color: "#0063DC",
+      category: "Photography"
     },
     {
       platform: "GitHub",
@@ -256,6 +273,39 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
   ];
 
   return platforms;
+};
+
+/**
+ * Checks if a URL is active or returns a 404
+ * This would require an actual API in production
+ * Here we'll simulate with random results
+ */
+export const checkUrlStatus = async (url: string): Promise<boolean> => {
+  // In a real app, this would make an actual HTTP request
+  // For this demo, we'll return random results with 80% likelihood of success
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(Math.random() > 0.2);
+    }, 100);
+  });
+};
+
+/**
+ * Check if domains are available for the username
+ */
+export const checkDomainAvailability = async (username: string): Promise<{tld: string, available: boolean, price: number}[]> => {
+  // This would use a domain check API in production
+  // Here we simulate with random availability
+  const tlds = ['.com', '.net', '.org', '.io', '.co', '.me', '.xyz', '.dev', '.in'];
+  
+  return Promise.all(tlds.map(tld => {
+    const available = Math.random() > 0.6; // 40% chance domain is available
+    return {
+      tld,
+      available,
+      price: available ? Math.floor(Math.random() * 15) + 8 : 0 // $8-$23 price range
+    };
+  }));
 };
 
 /**

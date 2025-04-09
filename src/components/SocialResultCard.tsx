@@ -47,9 +47,11 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
       'behance': 'https://cdn.simpleicons.org/behance/1769FF',
       'dribbble': 'https://cdn.simpleicons.org/dribbble/EA4C89',
       'vimeo': 'https://cdn.simpleicons.org/vimeo/1AB7EA',
-      'fiver': 'https://cdn.simpleicons.org/fiverr/1DBF73',
+      'fiverr': 'https://cdn.simpleicons.org/fiverr/1DBF73',
       'devto': 'https://cdn.simpleicons.org/devdotto/0A0A0A',
       'quora': 'https://cdn.simpleicons.org/quora/B92B27',
+      'soundcloud': 'https://cdn.simpleicons.org/soundcloud/FF5500',
+      'flickr': 'https://cdn.simpleicons.org/flickr/0063DC',
     };
     
     return logoMap[normalizedPlatform] || `https://ui-avatars.com/api/?name=${encodeURIComponent(platform)}&background=random&color=fff`;
@@ -59,18 +61,20 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
     <Card className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-0">
         <div className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center space-x-2">
-              <Avatar className="h-6 w-6">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={getLogoUrl(profile.platform)} alt={profile.platform} />
                 <AvatarFallback>{profile.platform.charAt(0)}</AvatarFallback>
               </Avatar>
-              <h3 className="font-semibold text-gray-900">{profile.platform}</h3>
-              {profile.category && (
-                <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300">
-                  {profile.category}
-                </Badge>
-              )}
+              <div>
+                <h3 className="font-semibold text-gray-900">{profile.platform}</h3>
+                {profile.category && (
+                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 mt-1">
+                    {profile.category}
+                  </Badge>
+                )}
+              </div>
             </div>
             <div className="flex items-center space-x-1">
               <Button 
