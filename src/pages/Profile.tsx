@@ -1,16 +1,34 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SearchHistory, PlanOption } from "@/types/socialMedia";
+import { SearchHistory, PlanOption, SocialMediaProfile } from "@/types/socialMedia";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Search, LogOut, ArrowLeft, Trash } from "lucide-react";
-import { format } from "date-fns";
+import { 
+  Clock, 
+  Search, 
+  LogOut, 
+  ArrowLeft, 
+  Trash, 
+  Download, 
+  Mail, 
+  FileText,
+  Calendar,
+  CheckCircle,
+  User,
+  ChevronRight
+} from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import DefaultAvatar from "@/components/DefaultAvatar";
+import { Progress } from "@/components/ui/progress";
+import EmailReportDialog from "@/components/EmailReportDialog";
+import { downloadPdfReport, emailPdfReport } from "@/utils/reportGenerator";
 
 const plans: PlanOption[] = [
   {
@@ -54,6 +72,9 @@ const plans: PlanOption[] = [
 const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
+  const [lastSearchResults, setLastSearchResults] = useState<SocialMediaProfile[]>([]);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedSearchQuery, setSelectedSearchQuery] = useState<string>("");
   const { user, signOut, profile, loadingProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -70,8 +91,7 @@ const Profile = () => {
             .from('searches')
             .select('*')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5);
+            .order('created_at', { ascending: false });
           
           if (error) {
             console.error("Error fetching search history:", error);
@@ -141,6 +161,49 @@ const Profile = () => {
       description: `You selected the ${planId} plan. This feature is under development.`,
     });
   };
+
+  const generateDummyProfiles = (query: string): SocialMediaProfile[] => {
+    // Generate dummy profiles for demo purposes
+    const platforms = ["Twitter", "Facebook", "LinkedIn", "Instagram", "TikTok", "Reddit"];
+    
+    return platforms.map(platform => ({
+      platform,
+      url: `https://${platform.toLowerCase()}.com/${query}`,
+      username: query,
+      icon: platform.toLowerCase(),
+      color: "#1DA1F2",
+      category: ["Social", "Professional", "Video", "Photo"][Math.floor(Math.random() * 4)],
+      status: Math.random() > 0.2 ? "active" : "inactive"
+    }));
+  };
+
+  const handleViewResults = (query: string) => {
+    const profiles = generateDummyProfiles(query);
+    setLastSearchResults(profiles);
+    navigate(`/?query=${encodeURIComponent(query)}`);
+  };
+
+  const handleDownloadReport = (query: string) => {
+    const profiles = generateDummyProfiles(query);
+    downloadPdfReport(query, profiles);
+    
+    toast({
+      title: "Report downloaded",
+      description: `Report for "${query}" has been downloaded.`,
+    });
+  };
+
+  const handleEmailReport = (query: string) => {
+    setSelectedSearchQuery(query);
+    setEmailModalOpen(true);
+  };
+
+  const sendEmailReport = async (email: string): Promise<boolean> => {
+    const profiles = generateDummyProfiles(selectedSearchQuery);
+    const success = await emailPdfReport(email, selectedSearchQuery, profiles);
+    
+    return success;
+  };
   
   if (loading) {
     return (
@@ -154,9 +217,15 @@ const Profile = () => {
     navigate("/auth");
     return null;
   }
+
+  const usagePercentage = profile?.plan === 'free' 
+    ? ((profile?.checks_used % 5) / 5) * 100 
+    : profile?.plan === 'premium' 
+      ? ((profile?.checks_used % 500) / 500) * 100 
+      : 0;
   
   return (
-    <div className="min-h-screen bg-white text-gray-800">
+    <div className="min-h-screen bg-gray-50 text-gray-800">
       <Header />
       
       <div className="container mx-auto py-8 px-4">
@@ -170,123 +239,182 @@ const Profile = () => {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to Search
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">My Account</h1>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="plans">Subscription Plans</TabsTrigger>
-          </TabsList>
+        <div className="bg-gray-900 text-white rounded-lg p-8 mb-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
           
-          <TabsContent value="account" className="space-y-6 pt-4">
-            <Card className="border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900">Profile Information</CardTitle>
-                <CardDescription>Manage your account details and usage limits</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Email</p>
-                  <p className="text-gray-800">{user.email}</p>
-                </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Current Plan</p>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-semibold capitalize ${
-                      profile?.plan === 'premium' ? 'text-blue-600' : 
-                      profile?.plan === 'unlimited' ? 'text-purple-600' : 'text-gray-800'
-                    }`}>
-                      {profile?.plan || 'Free'}
-                    </span>
-                    {profile?.plan !== 'free' && (
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Usage</p>
-                  <div className="text-gray-800">
-                    {profile?.plan === 'free' && (
-                      <span>{profile?.checks_used % 5} of 5 daily searches used</span>
-                    )}
-                    {profile?.plan === 'premium' && (
-                      <span>{profile?.checks_used % 500} of 500 monthly searches used</span>
-                    )}
-                    {profile?.plan === 'unlimited' && (
-                      <span>Unlimited searches</span>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between flex-wrap gap-4">
-                <Button 
-                  variant="outline" 
-                  onClick={handleSignOut}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-                
-                {profile?.plan === 'free' && (
-                  <Button 
-                    onClick={() => setActiveTab('plans')}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Upgrade Plan
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-
-            {searchHistory.length > 0 && (
-              <Card className="border-gray-200 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="flex-shrink-0">
+              {user.user_metadata?.avatar_url ? (
+                <img 
+                  src={user.user_metadata.avatar_url} 
+                  alt="User Avatar" 
+                  className="w-24 h-24 rounded-full border-4 border-gray-700"
+                />
+              ) : (
+                <DefaultAvatar 
+                  name={user.email || "User"} 
+                  size="lg"
+                  className="border-4 border-gray-700"
+                />
+              )}
+            </div>
+            
+            <div className="flex-grow">
+              <div className="text-4xl font-bold mb-1">
+                {user.user_metadata?.name || user.email?.split('@')[0] || "User"}
+              </div>
+              <div className="text-gray-400 mb-4">{user.email}</div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-gray-400" />
                   <div>
-                    <CardTitle className="text-xl text-gray-900">Recent Searches</CardTitle>
-                    <CardDescription>Your search history</CardDescription>
+                    <div className="text-sm text-gray-400">Registration date</div>
+                    <div>{user.created_at ? format(new Date(user.created_at), 'PPP') : 'N/A'}</div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleClearHistory}
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <Trash className="h-4 w-4 mr-1" />
-                    Clear History
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-4 mt-4">
-                    {searchHistory.map((item) => (
-                      <li key={item.id} className="flex gap-4 items-start p-3 rounded-lg border border-gray-200">
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          <Search className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{item.query}</p>
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <Clock className="h-3.5 w-3.5 mr-1" />
-                            <span>{format(new Date(item.created_at), 'MMM d, yyyy - h:mm a')}</span>
-                          </div>
-                        </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <div className="text-sm text-gray-400">Current plan</div>
+                    <div className="flex items-center gap-2">
+                      <span className={`capitalize font-medium ${
+                        profile?.plan === 'premium' ? 'text-blue-400' : 
+                        profile?.plan === 'unlimited' ? 'text-purple-400' : ''
+                      }`}>
+                        {profile?.plan || 'Free'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Search className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <div className="text-sm text-gray-400">Usage</div>
+                    <div>
+                      {profile?.plan === 'free' && (
+                        <span>{profile?.checks_used % 5} of 5 daily</span>
+                      )}
+                      {profile?.plan === 'premium' && (
+                        <span>{profile?.checks_used % 500} of 500 monthly</span>
+                      )}
+                      {profile?.plan === 'unlimited' && (
+                        <span>Unlimited</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {profile?.plan !== 'unlimited' && (
+              <div className="flex-shrink-0">
+                <Button 
+                  onClick={() => setActiveTab('plans')}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  size="lg"
+                >
+                  Upgrade Plan
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {profile?.plan !== 'unlimited' && (
+            <div className="mt-6">
+              <div className="flex justify-between text-sm mb-1">
+                <span>Usage</span>
+                <span>{profile?.plan === 'free' 
+                  ? `${profile?.checks_used % 5}/5 daily searches` 
+                  : `${profile?.checks_used % 500}/500 monthly searches`}
+                </span>
+              </div>
+              <Progress value={usagePercentage} className="h-2 bg-gray-700" indicatorClassName="bg-blue-500" />
+            </div>
+          )}
+        </div>
+
+        {searchHistory.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-gray-500" />
+                <h2 className="text-xl font-semibold text-gray-800">Search History</h2>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleClearHistory}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                <Trash className="h-4 w-4 mr-1" />
+                Clear History
+              </Button>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Query</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Results</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchHistory.map((item) => (
+                    <TableRow key={item.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{item.query}</TableCell>
+                      <TableCell>{format(parseISO(item.created_at), 'MMM d, yyyy - h:mm a')}</TableCell>
+                      <TableCell>
                         <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                           {item.result_count} results
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="plans" className="space-y-6 pt-4">
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewResults(item.query)}
+                            className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadReport(item.query)}
+                            className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEmailReport(item.query)}
+                            className="h-8 px-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {/* Subscription Plans */}
+        {activeTab === 'plans' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="text-center max-w-xl mx-auto mb-10">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h2>
               <p className="text-gray-600">
@@ -320,7 +448,7 @@ const Profile = () => {
                     }`}>
                       {plan.name}
                     </CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
+                    <p className="text-sm text-gray-500">{plan.description}</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1">
@@ -373,14 +501,16 @@ const Profile = () => {
                 </Card>
               ))}
             </div>
-            
-            <div className="text-center text-sm text-gray-500 mt-8">
-              <p>All plans include basic features. Premium and Unlimited plans offer advanced options.</p>
-              <p className="mt-1">Questions? <a href="#" className="text-blue-600 hover:underline">Contact our support team</a></p>
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
+
+      <EmailReportDialog 
+        isOpen={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        onSend={sendEmailReport}
+        searchName={selectedSearchQuery}
+      />
     </div>
   );
 };

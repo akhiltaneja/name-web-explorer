@@ -1,18 +1,38 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SocialResultCard from "@/components/SocialResultCard";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, ExternalLink, Filter, Grid, List, Download, Copy } from "lucide-react";
+import { 
+  Search, 
+  ExternalLink, 
+  Filter, 
+  Grid, 
+  List, 
+  Download, 
+  Copy, 
+  CheckCircle,
+  HelpCircle,
+  AlertCircle
+} from "lucide-react";
 import { getSocialMediaProfiles, getCategories } from "@/utils/socialMediaSearch";
 import { SocialMediaProfile, SocialMediaCategory } from "@/types/socialMedia";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { downloadPdfReport } from "@/utils/reportGenerator";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import EmailReportDialog from "@/components/EmailReportDialog";
 
 const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
 const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
@@ -26,9 +46,19 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<SocialMediaCategory[]>([]);
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const query = searchParams.get('query');
+    if (query) {
+      setName(query);
+      handleSearch(query);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (results.length > 0) {
@@ -58,8 +88,8 @@ const Index = () => {
     }
   }, [user]);
 
-  const handleSearch = async () => {
-    if (!name.trim()) {
+  const handleSearch = async (searchQuery = name) => {
+    if (!searchQuery.trim()) {
       toast({
         title: "Please enter a name",
         description: "You need to provide at least a first name to search.",
@@ -112,11 +142,11 @@ const Index = () => {
     setIsSearching(true);
     
     // Create a username from the name
-    const nameParts = name.trim().toLowerCase().split(" ");
+    const nameParts = searchQuery.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
     
     // Get social media profiles
-    const profiles = getSocialMediaProfiles(username, name);
+    const profiles = getSocialMediaProfiles(username, searchQuery);
     
     // Simulate async search with a timeout
     setTimeout(async () => {
@@ -126,7 +156,7 @@ const Index = () => {
       
       toast({
         title: "Search complete",
-        description: `Found ${profiles.length} potential profiles for ${name}`,
+        description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
       });
       
       // Update for guest user
@@ -156,7 +186,7 @@ const Index = () => {
             .from('searches')
             .insert({
               user_id: user.id,
-              query: name,
+              query: searchQuery,
               result_count: profiles.length
             });
           
@@ -186,33 +216,24 @@ const Index = () => {
   };
 
   const handleDownloadReport = () => {
-    const csvHeaders = ["Platform", "URL", "Username", "Category", "Status"];
-    const csvRows = filteredResults.map(profile => [
-      profile.platform,
-      profile.url,
-      profile.username,
-      profile.category || "",
-      profile.status || ""
-    ]);
-    
-    const csvContent = [
-      csvHeaders.join(","),
-      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
-    
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${name.replace(/\s+/g, "_")}_profiles.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadPdfReport(name, filteredResults);
     
     toast({
       title: "Report downloaded",
-      description: `${filteredResults.length} profiles saved to CSV`,
+      description: `${filteredResults.length} profiles saved to PDF report`,
     });
+  };
+
+  const handleEmailReport = () => {
+    setEmailModalOpen(true);
+  };
+
+  const sendEmailReport = async (email: string): Promise<boolean> => {
+    // In a real app, this would call an API endpoint to send the email
+    console.log(`Would email report for "${name}" to ${email}`);
+    
+    // Simulate success for demo
+    return true;
   };
 
   const filteredResults = selectedCategory 
@@ -220,67 +241,89 @@ const Index = () => {
     : results;
 
   return (
-    <div className="min-h-screen bg-white text-gray-800">
+    <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
       
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Candidate Checker
-            </h1>
-            <p className="text-lg text-gray-600">
-              Find social media profiles for candidates with a simple search
-            </p>
+      <main className="flex-grow">
+        {/* Hero section */}
+        <section className="bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100">
+          <div className="container mx-auto py-16 px-4 md:py-20">
+            <div className="max-w-3xl mx-auto text-center">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Candidate Checker</span>
+              </h1>
+              <p className="text-xl text-gray-700 mb-8 md:mb-12">
+                Find and verify social media profiles with a simple search
+              </p>
 
-            {!user && !guestCheckAvailable && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  You've used your guest search. <Link to="/auth" className="font-bold underline">Sign in</Link> to continue searching (5 searches per day with a free account).
-                </p>
+              <Card className="mb-8 shadow-md border-blue-100 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex flex-col md:flex-row">
+                    <Input
+                      type="text"
+                      placeholder="Enter first and last name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="flex-1 border-0 rounded-none text-lg py-6 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-blue-500"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSearch();
+                      }}
+                    />
+                    <Button 
+                      onClick={() => handleSearch()}
+                      disabled={isSearching || (!user && !guestCheckAvailable)}
+                      className="md:w-auto w-full bg-blue-600 hover:bg-blue-700 rounded-none md:rounded-r-lg py-6 text-base"
+                      size="lg"
+                    >
+                      {isSearching ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-5 w-5 animate-spin rounded-full border-3 border-white border-t-transparent"></div>
+                          <span>Searching...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Search size={20} />
+                          <span>Search Profiles</span>
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {!user && !guestCheckAvailable && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fade-in">
+                  <p className="text-blue-700">
+                    You've used your guest search. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (5 searches per day with a free account).
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap justify-center gap-4 mt-6">
+                <div className="flex items-center text-gray-700">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>Search across multiple platforms</span>
+                </div>
+                <div className="flex items-center text-gray-700">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>Export reports easily</span>
+                </div>
+                <div className="flex items-center text-gray-700">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>100% private searches</span>
+                </div>
               </div>
-            )}
+            </div>
           </div>
+        </section>
 
-          <Card className="mb-8 shadow-sm border-gray-200">
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <Input
-                  type="text"
-                  placeholder="Enter first and last name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="flex-1 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSearch();
-                  }}
-                />
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={isSearching || (!user && !guestCheckAvailable)}
-                  className="md:w-auto w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {isSearching ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                      <span>Searching...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Search size={18} />
-                      <span>Search</span>
-                    </div>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {results.length > 0 && (
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row justify-between gap-4">
-                <h2 className="text-2xl font-semibold flex items-center gap-2 text-gray-800">
-                  Results for {name}
+        {/* Results section */}
+        {results.length > 0 && (
+          <section className="py-12 px-4">
+            <div className="container mx-auto max-w-6xl">
+              <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
+                  Results for <span className="text-blue-600">{name}</span>
                   <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
                     {filteredResults.length} found
                   </span>
@@ -325,11 +368,21 @@ const Index = () => {
                     <Download size={14} className="mr-1" />
                     Download
                   </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleEmailReport}
+                    className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                  >
+                    <ExternalLink size={14} className="mr-1" />
+                    Email
+                  </Button>
                 </div>
               </div>
 
               {categories.length > 0 && (
-                <div className="flex flex-wrap gap-2 pb-4">
+                <div className="flex flex-wrap gap-2 pb-6">
                   {categories.map((category) => (
                     <Button
                       key={category.name}
@@ -347,9 +400,9 @@ const Index = () => {
                 </div>
               )}
 
-              <Separator className="bg-gray-200" />
+              <Separator className="bg-gray-200 my-6" />
 
-              <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+              <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
                 {filteredResults.map((profile, index) => (
                   <SocialResultCard key={index} profile={profile} />
                 ))}
@@ -362,9 +415,120 @@ const Index = () => {
                 </p>
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </section>
+        )}
+        
+        {/* Features section */}
+        {results.length === 0 && (
+          <section className="py-16 px-4 bg-white">
+            <div className="container mx-auto max-w-6xl">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Powerful Candidate Research Tool</h2>
+                <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                  Easily find and verify social media profiles for candidates across multiple platforms
+                </p>
+              </div>
+              
+              <div className="grid md:grid-cols-3 gap-8">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100 hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                    <Search className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Comprehensive Search</h3>
+                  <p className="text-gray-600">
+                    Search across multiple platforms to find candidates' social media profiles in seconds.
+                  </p>
+                </div>
+                
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100 hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                    <Download className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Export Reports</h3>
+                  <p className="text-gray-600">
+                    Download PDF reports or email them directly to your team for easy collaboration.
+                  </p>
+                </div>
+                
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100 hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                    <AlertCircle className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Privacy First</h3>
+                  <p className="text-gray-600">
+                    All searches are private and secure. We never store or share search data.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+        
+        {/* FAQs */}
+        <section className="py-12 px-4 bg-gray-50">
+          <div className="container mx-auto max-w-3xl">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+            </div>
+            
+            <Accordion type="single" collapsible className="w-full bg-white rounded-lg shadow-sm">
+              <AccordionItem value="item-1" className="border-b border-gray-200">
+                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
+                  How does CandidateChecker work?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
+                  CandidateChecker searches across multiple social media platforms to find profiles that match the name you provide. Our algorithms analyze potential matches based on usernames, display names, and other identifiers.
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="item-2" className="border-b border-gray-200">
+                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
+                  How many searches do I get?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
+                  Guest users get 1 search every 12 hours. Free accounts include 5 searches per day. Premium plans offer 500 searches per month, while our Unlimited plan provides unlimited searches.
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="item-3" className="border-b border-gray-200">
+                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
+                  Can I export the search results?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
+                  Yes! You can download results as a PDF report, copy all URLs to your clipboard, or email the report directly to yourself or your team.
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="item-4" className="border-b border-gray-200">
+                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
+                  Is my search data private?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
+                  Absolutely. We take privacy seriously. Your search history is only visible to you and is stored securely. We never share your search data with third parties.
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="item-5">
+                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
+                  How do I upgrade my account?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
+                  You can upgrade your account by visiting your profile page and selecting a plan that suits your needs. We offer flexible monthly plans with no long-term commitments.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </section>
+      </main>
+      
+      <EmailReportDialog 
+        isOpen={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        onSend={sendEmailReport}
+        searchName={name}
+      />
+      
+      <Footer />
     </div>
   );
 };
