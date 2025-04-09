@@ -32,10 +32,12 @@ export interface SearchHistory {
 }
 
 export interface PlanOption {
+  id: string;
   name: string;
-  price: string;
+  price: number;
   features: string[];
-  checksAllowed: number;
-  current: boolean;
-  buttonText: string;
+  limit: string;
+  description: string;
+  current?: boolean;
+  buttonText?: string;
 }

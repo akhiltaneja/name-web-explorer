@@ -58,7 +58,6 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Function to determine which tab to show initially
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'plans' ? 'plans' : 'account';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -137,7 +136,6 @@ const Profile = () => {
   };
 
   const handleSelectPlan = async (planId: string) => {
-    // Placeholder for plan selection logic
     toast({
       title: "Upgrade Coming Soon",
       description: `You selected the ${planId} plan. This feature is under development.`,
