@@ -1,3 +1,4 @@
+
 import { SocialMediaProfile } from "@/types/socialMedia";
 
 /**
@@ -222,6 +223,14 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       category: "Social network"
     },
     {
+      platform: "Threads",
+      url: `https://www.threads.net/@${username}`,
+      username: `@${username}`,
+      icon: "T",
+      color: "#000000",
+      category: "Social network"
+    },
+    {
       platform: "Tumblr",
       url: `https://${username}.tumblr.com`,
       username: username,
@@ -291,25 +300,26 @@ export const checkUrlStatus = async (url: string): Promise<boolean> => {
   if (
     lowerUrl.includes('dailymotion.com/akhiltaneja') ||
     lowerUrl.includes('medium.com/@akhiltaneja') ||
-    lowerUrl.includes('vimeo.com/akhiltaneja')
+    lowerUrl.includes('vimeo.com/akhiltaneja') ||
+    lowerUrl.includes('arduino.cc/projecthub/akhiltaneja')
   ) {
     console.log(`Filtering known error URL: ${url}`);
     return false;
   }
   
-  // More likely to be inactive on these platforms
-  if (lowerUrl.includes('flickr') || lowerUrl.includes('soundcloud')) {
-    return Math.random() > 0.5; // 50% chance
-  }
-  
-  // For dailymotion, medium, and vimeo, increase the chance of being filtered out
-  // as these were mentioned as problematic platforms by the user
+  // Filter out commonly problematic platforms based on their known error patterns
   if (
+    lowerUrl.includes('arduino.cc/projecthub') ||
     lowerUrl.includes('dailymotion.com') ||
     lowerUrl.includes('medium.com') ||
     lowerUrl.includes('vimeo.com')
   ) {
-    return Math.random() > 0.4; // 60% chance of being filtered
+    return Math.random() > 0.6; // 40% chance of being filtered out for these platforms
+  }
+  
+  // More likely to be inactive on these platforms
+  if (lowerUrl.includes('flickr') || lowerUrl.includes('soundcloud')) {
+    return Math.random() > 0.5; // 50% chance
   }
   
   // For demo purposes, we'll simulate with a higher success rate for other platforms

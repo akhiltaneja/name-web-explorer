@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,10 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingCart, CreditCard, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const plans: PlanOption[] = [
   {
@@ -17,7 +20,7 @@ const plans: PlanOption[] = [
     name: 'Free',
     description: 'Perfect for occasional use.',
     price: 0,
-    limit: '5 daily searches',
+    limit: '2 daily searches',
     features: [
       'Basic social media search',
       'Limited profile information',
@@ -54,12 +57,28 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile } = useAuth();
+  const [cartOpen, setCartOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanOption | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  const handleSelectPlan = async (planId: string) => {
-    toast({
-      title: "Upgrade Coming Soon",
-      description: `You selected the ${planId} plan. This feature is under development.`,
-    });
+  const handleSelectPlan = async (plan: PlanOption) => {
+    setSelectedPlan(plan);
+    setCartOpen(true);
+  };
+
+  const handleCheckout = () => {
+    setIsProcessingPayment(true);
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      setIsProcessingPayment(false);
+      setCartOpen(false);
+      toast({
+        title: "Payment Successful!",
+        description: `You have successfully upgraded to the ${selectedPlan?.name} plan.`,
+      });
+      navigate("/profile");
+    }, 2000);
   };
 
   return (
@@ -157,9 +176,10 @@ const Pricing = () => {
                           ? 'bg-blue-600 hover:bg-blue-700' 
                           : 'bg-purple-600 hover:bg-purple-700'
                       }`}
-                      onClick={() => handleSelectPlan(plan.id)}
+                      onClick={() => handleSelectPlan(plan)}
                     >
-                      Upgrade
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Add to Cart
                     </Button>
                   )}
                 </CardFooter>
@@ -188,6 +208,75 @@ const Pricing = () => {
           </div>
         </div>
       </main>
+
+      <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Complete Your Purchase</DialogTitle>
+            <DialogDescription>
+              {selectedPlan && (
+                <div className="text-sm">
+                  You're about to upgrade to our <span className="font-semibold">{selectedPlan.name}</span> plan.
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPlan && (
+            <div className="py-4">
+              <div className="mb-6 p-4 border border-gray-200 rounded-md bg-gray-50">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium">{selectedPlan.name} Plan</span>
+                  <span className="font-bold">${selectedPlan.price}</span>
+                </div>
+                <p className="text-sm text-gray-500">{selectedPlan.limit}</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cardName">Name on Card</Label>
+                  <Input id="cardName" placeholder="John Smith" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cardNumber">Card Number</Label>
+                  <Input id="cardNumber" placeholder="1234 5678 9012 3456" />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="expiry">Expiry Date</Label>
+                    <Input id="expiry" placeholder="MM/YY" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cvv">CVV</Label>
+                    <Input id="cvv" placeholder="123" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCartOpen(false)} disabled={isProcessingPayment}>
+              Cancel
+            </Button>
+            <Button onClick={handleCheckout} disabled={isProcessingPayment}>
+              {isProcessingPayment ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pay ${selectedPlan?.price}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Footer />
     </div>

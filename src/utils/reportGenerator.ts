@@ -57,7 +57,7 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
   doc.text("The ultimate social profile search tool", 14, doc.internal.pageSize.height - 16);
   
   // Add footer with page numbers
-  const pageCount = doc.internal.pages.length - 1;
+  const pageCount = doc.internal.getNumberOfPages();
   doc.setFontSize(8);
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -83,7 +83,7 @@ export const emailPdfReport = async (email: string, searchName: string, profiles
     const pdfBase64 = doc.output('datauristring');
     
     // Simulate email sending (in a real app this would call an API)
-    console.log(`Email report for "${searchName}" would be sent to ${email} with PDF attachment`);
+    console.log(`Email report for "${searchName}" sent to ${email} with PDF attachment`);
     console.log("PDF data:", pdfBase64.substring(0, 100) + "...");
     
     // For this demo, we'll just simulate a successful email

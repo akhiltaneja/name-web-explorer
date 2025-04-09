@@ -41,12 +41,6 @@ const DefaultAvatar: React.FC<DefaultAvatarProps> = ({
     lg: 'w-24 h-24 text-3xl',
   };
 
-  // Array of cartoon animal emojis with higher quality options
-  const animalEmojis = [
-    '🐱', '🐶', '🐰', '🐼', '🦊', '🐻', '🦁', '🐯', '🐭', '🐹', 
-    '🦝', '🐨', '🐮', '🐷', '🦄', '🦓', '🦒', '🐘', '🦔'
-  ];
-  
   // URLs to animal images (high-quality options)
   const animalImages = [
     'https://img.freepik.com/free-vector/cute-cat-gaming-cartoon_138676-2969.jpg',
@@ -62,7 +56,10 @@ const DefaultAvatar: React.FC<DefaultAvatarProps> = ({
   ];
 
   // Get a consistent animal image based on the name
-  const imageIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % animalImages.length;
+  const imageIndex = useMemo(() => {
+    return name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % animalImages.length;
+  }, [name]);
+  
   const animalImageUrl = animalImages[imageIndex];
 
   // Use the image for type 'animal', otherwise show initials
@@ -71,9 +68,7 @@ const DefaultAvatar: React.FC<DefaultAvatarProps> = ({
       <div
         className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center ${className}`}
         style={{ backgroundImage: `url(${animalImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-      >
-        {/* Empty div to maintain structure while using background image */}
-      </div>
+      />
     );
   }
 

@@ -39,7 +39,8 @@ import DomainSuggestions from "@/components/DomainSuggestions";
 
 const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
 const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
-const GUEST_COOLDOWN_HOURS = 12;
+const GUEST_COOLDOWN_HOURS = 24;
+const FREE_PLAN_LIMIT = 2;
 
 const Index = () => {
   const [name, setName] = useState("");
@@ -93,7 +94,7 @@ const Index = () => {
         const now = new Date();
         const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
         
-        if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS && Number(checkCount) >= 1) {
+        if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS && Number(checkCount) >= FREE_PLAN_LIMIT) {
           setGuestCheckAvailable(false);
         } else if (hoursSinceLastCheck >= GUEST_COOLDOWN_HOURS) {
           localStorage.setItem(GUEST_COUNT_KEY, "0");
@@ -116,7 +117,7 @@ const Index = () => {
     if (!user) {
       const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
       
-      if (checkCount >= 1) {
+      if (checkCount >= FREE_PLAN_LIMIT) {
         const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
         
         if (lastCheckTime) {
@@ -138,8 +139,8 @@ const Index = () => {
         }
       }
     } else if (profile) {
-      const dailyLimit = profile.plan === 'free' ? 5 : profile.plan === 'premium' ? 500 : Infinity;
-      const checksUsed = profile.checks_used % (profile.plan === 'free' ? 5 : 500);
+      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : profile.plan === 'premium' ? 500 : Infinity;
+      const checksUsed = profile.checks_used % (profile.plan === 'free' ? FREE_PLAN_LIMIT : 500);
       
       if (checksUsed >= dailyLimit && profile.plan !== 'unlimited') {
         toast({
@@ -213,7 +214,7 @@ const Index = () => {
           localStorage.setItem(GUEST_COUNT_KEY, String(currentCount + 1));
           localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
           
-          if (currentCount + 1 >= 1) {
+          if (currentCount + 1 >= FREE_PLAN_LIMIT) {
             setGuestCheckAvailable(false);
           }
         } else {
@@ -374,7 +375,7 @@ const Index = () => {
               {!user && !guestCheckAvailable && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fade-in">
                   <p className="text-blue-700">
-                    You've used your guest search. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (5 searches per day with a free account).
+                    You've used your guest search. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (2 searches per day with a free account).
                   </p>
                 </div>
               )}
@@ -617,7 +618,7 @@ const Index = () => {
                   How many searches do I get?
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  Guest users get 1 search every 12 hours. Free accounts include 5 searches per day. Premium plans offer 500 searches per month, while our Unlimited plan provides unlimited searches.
+                  Guest users get 1 search every 12 hours. Free accounts include 2 searches per day. Premium plans offer 500 searches per month, while our Unlimited plan provides unlimited searches.
                 </AccordionContent>
               </AccordionItem>
               

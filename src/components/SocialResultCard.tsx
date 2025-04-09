@@ -30,7 +30,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
   const getLogoUrl = (platform: string): string => {
     const normalizedPlatform = platform.toLowerCase().replace(/\s+/g, '');
     const logoMap: Record<string, string> = {
-      'twitter': 'https://cdn.simpleicons.org/x/000000', // Using the X logo for Twitter
+      'twitter': 'https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023.png', // Using the X logo for Twitter
       'linkedin': 'https://cdn.simpleicons.org/linkedin/0A66C2',
       'facebook': 'https://cdn.simpleicons.org/facebook/1877F2',
       'instagram': 'https://cdn.simpleicons.org/instagram/E4405F',
@@ -58,6 +58,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
       'etsy': 'https://cdn.simpleicons.org/etsy/F1641E',
       'blogger': 'https://cdn.simpleicons.org/blogger/FF5722',
       'dailymotion': 'https://cdn.simpleicons.org/dailymotion/0066DC',
+      'threads': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Threads_%28app%29_logo.svg/512px-Threads_%28app%29_logo.svg.png',
     };
     
     return logoMap[normalizedPlatform] || `https://ui-avatars.com/api/?name=${encodeURIComponent(platform)}&background=random&color=fff`;

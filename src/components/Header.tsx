@@ -2,12 +2,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { LogIn, User, CreditCard } from "lucide-react";
+import { LogIn, User, CreditCard, LayoutDashboard } from "lucide-react";
 import DefaultAvatar from "./DefaultAvatar";
 
 const Header = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  // For demo purposes, consider the admin email as admin@example.com
+  const isAdmin = user?.email === "admin@example.com";
 
   return (
     <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-10 shadow-sm">
@@ -20,6 +23,17 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center space-x-3">
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/admin')}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Admin
+            </Button>
+          )}
+          
           {user ? (
             <>
               <Button 
@@ -27,19 +41,11 @@ const Header = () => {
                 onClick={() => navigate('/profile')}
                 className="border-gray-300 text-gray-700 hover:bg-gray-100"
               >
-                {user.user_metadata?.avatar_url ? (
-                  <img 
-                    src={user.user_metadata.avatar_url} 
-                    alt="Avatar" 
-                    className="w-6 h-6 rounded-full mr-2"
-                  />
-                ) : (
-                  <DefaultAvatar name={user.email || "User"} size="sm" className="mr-2" />
-                )}
+                <DefaultAvatar name={user.email || "User"} size="sm" className="mr-2" />
                 My Account
               </Button>
               <Button 
-                onClick={() => navigate('/profile?tab=plans')}
+                onClick={() => navigate('/pricing')}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
