@@ -7,6 +7,16 @@ import { format } from "date-fns";
 declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
+    internal: {
+      pageSize: {
+        width: number;
+        height: number;
+        getWidth: () => number;
+        getHeight: () => number;
+      };
+      pages: any[];
+      getNumberOfPages: () => number;
+    };
   }
 }
 
