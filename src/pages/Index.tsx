@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { downloadPdfReport } from "@/utils/reportGenerator";
+import { downloadPdfReport, emailPdfReport } from "@/utils/reportGenerator";
 import { 
   Accordion,
   AccordionContent,
@@ -61,6 +61,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   useEffect(() => {
     const query = searchParams.get('query');
@@ -68,7 +69,12 @@ const Index = () => {
       setName(query);
       handleSearch(query);
     }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+    
+    const state = location.state as { returnTo?: string; action?: string } | null;
+    if (state?.action === "emailReport" && user) {
+      setEmailModalOpen(true);
+    }
+  }, [searchParams, location, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (results.length > 0) {
@@ -258,6 +264,15 @@ const Index = () => {
   };
 
   const handleDownloadReport = () => {
+    if (filteredResults.length === 0) {
+      toast({
+        title: "No results to download",
+        description: "Please perform a search first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     downloadPdfReport(name, filteredResults);
     
     toast({
@@ -267,12 +282,28 @@ const Index = () => {
   };
 
   const handleEmailReport = () => {
+    if (filteredResults.length === 0) {
+      toast({
+        title: "No results to email",
+        description: "Please perform a search first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setEmailModalOpen(true);
   };
 
   const sendEmailReport = async (email: string): Promise<boolean> => {
-    console.log(`Would email report for "${name}" to ${email}`);
-    return true;
+    if (!email) return false;
+    
+    try {
+      const success = await emailPdfReport(email, name, filteredResults);
+      return success;
+    } catch (error) {
+      console.error("Error sending email report:", error);
+      return false;
+    }
   };
 
   const filteredResults = selectedCategory 

@@ -1,11 +1,13 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Send, X } from "lucide-react";
+import { Send, X, Lock, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface EmailReportDialogProps {
   isOpen: boolean;
@@ -18,9 +20,30 @@ const EmailReportDialog: React.FC<EmailReportDialogProps> = ({ isOpen, onClose, 
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Set email to user's email if they're logged in
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      // If not logged in, redirect to auth page
+      toast({
+        title: "Login required",
+        description: "You need to log in to email reports. Redirecting to login page...",
+      });
+      
+      onClose();
+      navigate("/auth", { state: { returnTo: window.location.pathname, action: "emailReport" } });
+      return;
+    }
     
     if (!email.trim() || !email.includes('@')) {
       toast({
@@ -64,22 +87,45 @@ const EmailReportDialog: React.FC<EmailReportDialogProps> = ({ isOpen, onClose, 
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="recipient@example.com"
-                className="col-span-3"
-                required
-              />
+          {user ? (
+            <div className="py-4">
+              <div className="flex items-center gap-3 p-3 rounded-md bg-blue-50">
+                <Mail className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium">Sending to your account email</p>
+                  <p className="text-xs text-gray-500">{email}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 p-3 rounded-md bg-amber-50 mb-4">
+                <Lock className="h-5 w-5 text-amber-500" />
+                <div>
+                  <p className="text-sm font-medium">Login required</p>
+                  <p className="text-xs text-gray-500">You'll need to log in before sending reports</p>
+                </div>
+              </div>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="recipient@example.com"
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={sending}>
               <X className="mr-2 h-4 w-4" />
@@ -94,7 +140,7 @@ const EmailReportDialog: React.FC<EmailReportDialogProps> = ({ isOpen, onClose, 
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  Send Report
+                  {user ? "Send Report" : "Login & Send"}
                 </>
               )}
             </Button>

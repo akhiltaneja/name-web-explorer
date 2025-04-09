@@ -48,7 +48,15 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
     margin: { top: 10 },
   });
   
-  // Add footer
+  // Add branding
+  doc.setFontSize(12);
+  doc.setTextColor(66, 135, 245);
+  doc.text("CandidateChecker.io", 14, doc.internal.pageSize.height - 20);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("The ultimate social profile search tool", 14, doc.internal.pageSize.height - 16);
+  
+  // Add footer with page numbers
   const pageCount = doc.internal.pages.length - 1;
   doc.setFontSize(8);
   for (let i = 1; i <= pageCount; i++) {

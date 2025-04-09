@@ -47,11 +47,7 @@ const DefaultAvatar: React.FC<DefaultAvatarProps> = ({
     '🦝', '🐨', '🐮', '🐷', '🦄', '🦓', '🦒', '🐘', '🦔'
   ];
   
-  // Determine animal emoji based on name hash
-  const animalIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % animalEmojis.length;
-  const animalEmoji = animalEmojis[animalIndex];
-
-  // URLs to cartoon animal images
+  // URLs to animal images (high-quality options)
   const animalImages = [
     'https://img.freepik.com/free-vector/cute-cat-gaming-cartoon_138676-2969.jpg',
     'https://img.freepik.com/free-vector/cute-dog-sitting-cartoon-vector-icon-illustration-animal-nature-icon-concept-isolated-premium-vector-flat-cartoon-style_138676-3671.jpg',

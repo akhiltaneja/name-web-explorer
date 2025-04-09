@@ -30,7 +30,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
   const getLogoUrl = (platform: string): string => {
     const normalizedPlatform = platform.toLowerCase().replace(/\s+/g, '');
     const logoMap: Record<string, string> = {
-      'twitter': 'https://cdn.simpleicons.org/x/000000', // Updated Twitter (X) logo
+      'twitter': 'https://cdn.simpleicons.org/x/000000', // Using the X logo for Twitter
       'linkedin': 'https://cdn.simpleicons.org/linkedin/0A66C2',
       'facebook': 'https://cdn.simpleicons.org/facebook/1877F2',
       'instagram': 'https://cdn.simpleicons.org/instagram/E4405F',
@@ -57,6 +57,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
       'patreon': 'https://cdn.simpleicons.org/patreon/F96854',
       'etsy': 'https://cdn.simpleicons.org/etsy/F1641E',
       'blogger': 'https://cdn.simpleicons.org/blogger/FF5722',
+      'dailymotion': 'https://cdn.simpleicons.org/dailymotion/0066DC',
     };
     
     return logoMap[normalizedPlatform] || `https://ui-avatars.com/api/?name=${encodeURIComponent(platform)}&background=random&color=fff`;
@@ -64,51 +65,48 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
 
   return (
     <Card className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-0">
-        <div className="p-3">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center space-x-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={getLogoUrl(profile.platform)} alt={profile.platform} />
-                <AvatarFallback>{profile.platform.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold text-gray-900">{profile.platform}</h3>
-                {profile.category && (
-                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 mt-1">
-                    {profile.category}
-                  </Badge>
-                )}
+      <CardContent className="p-3">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={getLogoUrl(profile.platform)} alt={profile.platform} />
+              <AvatarFallback>{profile.platform.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-semibold text-gray-900">{profile.platform}</h3>
+              {profile.category && (
+                <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 mt-1">
+                  {profile.category}
+                </Badge>
+              )}
+              <div className="text-sm text-gray-700 mt-1">
+                <span className="font-medium">Username:</span> {profile.username}
               </div>
             </div>
-            <div className="flex items-center space-x-1">
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
-                onClick={handleCopy}
-              >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost"  
-                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
-                asChild
-              >
-                <a href={profile.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
-            </div>
           </div>
-          
-          <div className="mb-1">
-            <div className="text-sm text-gray-700 truncate">
-              <span className="font-medium">Username:</span> {profile.username}
-            </div>
+          <div className="flex items-center space-x-1">
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
+              onClick={handleCopy}
+            >
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"  
+              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
+              asChild
+            >
+              <a href={profile.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
-          
+        </div>
+        
+        <div className="mt-2">
           <a
             href={profile.url}
             target="_blank"
