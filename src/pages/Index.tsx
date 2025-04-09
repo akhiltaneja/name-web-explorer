@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,7 +55,8 @@ const Index = () => {
   const [searchTime, setSearchTime] = useState<number | null>(null);
   const [profilesByCategory, setProfilesByCategory] = useState<Record<string, SocialMediaProfile[]>>({});
   const [availableDomains, setAvailableDomains] = useState<{tld: string, available: boolean, price: number}[]>([]);
-  
+  const resultsRef = useRef<HTMLDivElement>(null);
+
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
@@ -78,7 +78,6 @@ const Index = () => {
   }, [results]);
 
   useEffect(() => {
-    // Check if guest search is available
     if (!user) {
       const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
       const checkCount = localStorage.getItem(GUEST_COUNT_KEY);
@@ -91,7 +90,6 @@ const Index = () => {
         if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS && Number(checkCount) >= 1) {
           setGuestCheckAvailable(false);
         } else if (hoursSinceLastCheck >= GUEST_COOLDOWN_HOURS) {
-          // Reset after cooldown period
           localStorage.setItem(GUEST_COUNT_KEY, "0");
           setGuestCheckAvailable(true);
         }
@@ -109,7 +107,6 @@ const Index = () => {
       return;
     }
 
-    // Check usage limits logic
     if (!user) {
       const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
       
@@ -135,7 +132,6 @@ const Index = () => {
         }
       }
     } else if (profile) {
-      // Check usage limits for logged in users
       const dailyLimit = profile.plan === 'free' ? 5 : profile.plan === 'premium' ? 500 : Infinity;
       const checksUsed = profile.checks_used % (profile.plan === 'free' ? 5 : 500);
       
@@ -154,11 +150,9 @@ const Index = () => {
     setSearchProgress(0);
     const startTime = performance.now();
     
-    // Create a username from the name
     const nameParts = searchQuery.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
     
-    // Simulate progress
     const progressInterval = setInterval(() => {
       setSearchProgress(prev => {
         const newProgress = prev + (Math.random() * 15);
@@ -166,12 +160,10 @@ const Index = () => {
       });
     }, 200);
     
-    // Get social media profiles
     setTimeout(async () => {
       let profiles = getSocialMediaProfiles(username, searchQuery);
       const additionalProfiles = getAdditionalResults(username, searchQuery);
       
-      // Filter out 404 pages (in a real app, this would check each URL)
       const activeProfiles = await Promise.all(
         profiles.map(async profile => {
           const isActive = await checkUrlStatus(profile.url);
@@ -182,10 +174,8 @@ const Index = () => {
         })
       );
       
-      // Only show active profiles or mark others as inactive
-      profiles = activeProfiles.filter(profile => profile.status !== 'inactive');
+      profiles = activeProfiles.filter(profile => profile.status === 'active');
       
-      // Check domain availability
       const domainResults = await checkDomainAvailability(username);
       setAvailableDomains(domainResults);
       
@@ -208,7 +198,10 @@ const Index = () => {
           description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
         });
         
-        // Update search history
+        if (resultsRef.current) {
+          resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
         if (!user) {
           const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
           localStorage.setItem(GUEST_COUNT_KEY, String(currentCount + 1));
@@ -218,10 +211,8 @@ const Index = () => {
             setGuestCheckAvailable(false);
           }
         } else {
-          // Save search to database if user is logged in
           const saveSearchHistory = async () => {
             try {
-              // Increment checks_used count
               const { error: profileError } = await supabase
                 .from('profiles')
                 .update({ 
@@ -231,7 +222,6 @@ const Index = () => {
               
               if (profileError) throw profileError;
               
-              // Save search history
               const { error: searchError } = await supabase
                 .from('searches')
                 .insert({
@@ -242,18 +232,15 @@ const Index = () => {
               
               if (searchError) throw searchError;
               
-              // Refresh profile to get updated checks_used
               refreshProfile();
-              
             } catch (error) {
               console.error("Error saving search:", error);
             }
           };
           
-          // Execute the async function
           saveSearchHistory();
         }
-      }, 500); // small delay for visual feedback
+      }, 500);
     }, 1500);
   };
 
@@ -284,10 +271,7 @@ const Index = () => {
   };
 
   const sendEmailReport = async (email: string): Promise<boolean> => {
-    // In a real app, this would call an API endpoint to send the email
     console.log(`Would email report for "${name}" to ${email}`);
-    
-    // Simulate success for demo
     return true;
   };
 
@@ -304,7 +288,6 @@ const Index = () => {
       <Header />
       
       <main className="flex-grow">
-        {/* Hero section */}
         <section className="bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100">
           <div className="container mx-auto py-16 px-4 md:py-20">
             <div className="max-w-3xl mx-auto text-center">
@@ -383,166 +366,160 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Results section */}
-        {results.length > 0 && (
-          <section className="py-12 px-4">
-            <div className="container mx-auto max-w-6xl">
-              <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
-                    Results for <span className="text-blue-600">{name}</span>
-                    <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
-                      {filteredResults.length} found
-                    </span>
-                  </h2>
-                  {searchTime && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      Results found in {searchTime}ms
-                    </p>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                    className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                  >
-                    {viewMode === "grid" ? <List size={16} /> : <Grid size={16} />}
-                  </Button>
-                  
-                  <Button 
-                    variant={selectedCategory ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setSelectedCategory(null)}
-                    className={`${!selectedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-gray-300 hover:bg-gray-100 text-gray-700'}`}
-                  >
-                    <Filter size={14} className="mr-1" />
-                    All
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleCopyAll}
-                    className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                  >
-                    <Copy size={14} className="mr-1" />
-                    Copy All
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleDownloadReport}
-                    className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                  >
-                    <Download size={14} className="mr-1" />
-                    Download
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleEmailReport}
-                    className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                  >
-                    <ExternalLink size={14} className="mr-1" />
-                    Email
-                  </Button>
-                </div>
+        <section className="py-8 px-4" ref={resultsRef}>
+          <div className="container mx-auto max-w-6xl">
+            <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
+                  Results for <span className="text-blue-600">{name}</span>
+                  <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                    {filteredResults.length} found
+                  </span>
+                </h2>
+                {searchTime && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Results found in {searchTime}ms
+                  </p>
+                )}
               </div>
-
-              {categories.length > 0 && (
-                <div className="flex flex-wrap gap-2 pb-6">
-                  {categories.map((category) => (
-                    <Button
-                      key={category.name}
-                      variant={selectedCategory === category.name ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(selectedCategory === category.name ? null : category.name)}
-                      className={selectedCategory === category.name ? "bg-blue-600 hover:bg-blue-700" : "border-gray-300 hover:bg-gray-100 text-gray-700"}
-                    >
-                      {category.name}
-                      <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
-                        {category.count}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              )}
-
-              <Separator className="bg-gray-200 my-6" />
-
-              {/* Display results by category when no specific category is selected */}
-              {!selectedCategory && Object.keys(profilesByCategory).length > 0 ? (
-                <div className="space-y-8">
-                  {Object.entries(profilesByCategory).map(([category, profiles]) => (
-                    <div key={category}>
-                      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                        {category}
-                        <span className="ml-2 text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
-                          {profiles.length}
-                        </span>
-                      </h3>
-                      <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                        {profiles.map((profile, index) => (
-                          <SocialResultCard key={`${category}-${index}`} profile={profile} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                  {filteredResults.map((profile, index) => (
-                    <SocialResultCard key={index} profile={profile} />
-                  ))}
-                </div>
-              )}
-
-              {/* Domain availability section */}
-              {availableDomains.length > 0 && availableDomains.some(d => d.available) && (
-                <div className="mt-12 mb-8">
-                  <DomainSuggestions username={name.toLowerCase().replace(/\s+/g, '')} domains={availableDomains} />
-                </div>
-              )}
-
-              {additionalResults.length > 0 && (
-                <>
-                  <div className="mt-12 mb-6">
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-                      <Globe className="h-5 w-5 text-blue-500" />
-                      Additional Web Results
-                      <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
-                        {filteredAdditionalResults.length} found
-                      </span>
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Additional profiles found from across the web
-                    </p>
-                  </div>
-
-                  <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                    {filteredAdditionalResults.map((profile, index) => (
-                      <SocialResultCard key={`additional-${index}`} profile={profile} />
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <div className="mt-8 text-center text-sm text-gray-500">
-                <p className="flex items-center justify-center gap-1">
-                  <ExternalLink size={14} />
-                  Links will open in a new tab
-                </p>
+              
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                >
+                  {viewMode === "grid" ? <List size={16} /> : <Grid size={16} />}
+                </Button>
+                
+                <Button 
+                  variant={selectedCategory ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedCategory(null)}
+                  className={`${!selectedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-gray-300 hover:bg-gray-100 text-gray-700'}`}
+                >
+                  <Filter size={14} className="mr-1" />
+                  All
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCopyAll}
+                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                >
+                  <Copy size={14} className="mr-1" />
+                  Copy All
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownloadReport}
+                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                >
+                  <Download size={14} className="mr-1" />
+                  Download
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleEmailReport}
+                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                >
+                  <ExternalLink size={14} className="mr-1" />
+                  Email
+                </Button>
               </div>
             </div>
-          </section>
-        )}
-        
-        {/* Features section */}
+
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-2 pb-6">
+                {categories.map((category) => (
+                  <Button
+                    key={category.name}
+                    variant={selectedCategory === category.name ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(selectedCategory === category.name ? null : category.name)}
+                    className={selectedCategory === category.name ? "bg-blue-600 hover:bg-blue-700" : "border-gray-300 hover:bg-gray-100 text-gray-700"}
+                  >
+                    {category.name}
+                    <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                      {category.count}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            <Separator className="bg-gray-200 my-4" />
+
+            {!selectedCategory && Object.keys(profilesByCategory).length > 0 ? (
+              <div className="space-y-6">
+                {Object.entries(profilesByCategory).map(([category, profiles]) => (
+                  <div key={category}>
+                    <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center">
+                      {category}
+                      <span className="ml-2 text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                        {profiles.length}
+                      </span>
+                    </h3>
+                    <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                      {profiles.map((profile, index) => (
+                        <SocialResultCard key={`${category}-${index}`} profile={profile} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                {filteredResults.map((profile, index) => (
+                  <SocialResultCard key={index} profile={profile} />
+                ))}
+              </div>
+            )}
+
+            {additionalResults.length > 0 && (
+              <>
+                <div className="mt-10 mb-4">
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
+                    <Globe className="h-5 w-5 text-blue-500" />
+                    Additional Web Results
+                    <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                      {filteredAdditionalResults.length} found
+                    </span>
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Additional profiles found from across the web
+                  </p>
+                </div>
+
+                <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                  {filteredAdditionalResults.map((profile, index) => (
+                    <SocialResultCard key={`additional-${index}`} profile={profile} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {availableDomains.length > 0 && availableDomains.some(d => d.available) && (
+              <div className="mt-10 mb-6">
+                <DomainSuggestions username={name.toLowerCase().replace(/\s+/g, '')} domains={availableDomains} />
+              </div>
+            )}
+
+            <div className="mt-6 text-center text-sm text-gray-500">
+              <p className="flex items-center justify-center gap-1">
+                <ExternalLink size={14} />
+                Links will open in a new tab
+              </p>
+            </div>
+          </div>
+        </section>
+
         {results.length === 0 && (
           <section className="py-16 px-4 bg-white">
             <div className="container mx-auto max-w-6xl">
@@ -587,8 +564,7 @@ const Index = () => {
             </div>
           </section>
         )}
-        
-        {/* FAQs */}
+
         <section className="py-12 px-4 bg-gray-50">
           <div className="container mx-auto max-w-3xl">
             <div className="text-center mb-8">

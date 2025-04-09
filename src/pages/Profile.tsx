@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -85,7 +84,6 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
-    // Scroll to plans section if 'plans' tab is active
     if (activeTab === 'plans' && plansRef.current) {
       plansRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -324,9 +322,11 @@ const Profile = () => {
                 <Button 
                   onClick={() => {
                     setActiveTab('plans');
-                    if (plansRef.current) {
-                      plansRef.current.scrollIntoView({ behavior: 'smooth' });
-                    }
+                    setTimeout(() => {
+                      if (plansRef.current) {
+                        plansRef.current.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }, 100);
                   }}
                   className="bg-blue-600 hover:bg-blue-700"
                   size="lg"
@@ -426,7 +426,7 @@ const Profile = () => {
         )}
 
         {activeTab === 'plans' && (
-          <div ref={plansRef} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div ref={plansRef} id="plans-section" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <div className="text-center max-w-xl mx-auto mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h2>
               <p className="text-gray-600 mb-2">

@@ -30,7 +30,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
   const getLogoUrl = (platform: string): string => {
     const normalizedPlatform = platform.toLowerCase().replace(/\s+/g, '');
     const logoMap: Record<string, string> = {
-      'twitter': 'https://cdn.simpleicons.org/twitter/1DA1F2',
+      'twitter': 'https://cdn.simpleicons.org/x/000000', // Updated Twitter (X) logo
       'linkedin': 'https://cdn.simpleicons.org/linkedin/0A66C2',
       'facebook': 'https://cdn.simpleicons.org/facebook/1877F2',
       'instagram': 'https://cdn.simpleicons.org/instagram/E4405F',
@@ -52,6 +52,11 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
       'quora': 'https://cdn.simpleicons.org/quora/B92B27',
       'soundcloud': 'https://cdn.simpleicons.org/soundcloud/FF5500',
       'flickr': 'https://cdn.simpleicons.org/flickr/0063DC',
+      'spotify': 'https://cdn.simpleicons.org/spotify/1DB954',
+      'substack': 'https://cdn.simpleicons.org/substack/FF6719',
+      'patreon': 'https://cdn.simpleicons.org/patreon/F96854',
+      'etsy': 'https://cdn.simpleicons.org/etsy/F1641E',
+      'blogger': 'https://cdn.simpleicons.org/blogger/FF5722',
     };
     
     return logoMap[normalizedPlatform] || `https://ui-avatars.com/api/?name=${encodeURIComponent(platform)}&background=random&color=fff`;
@@ -60,10 +65,10 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
   return (
     <Card className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-0">
-        <div className="p-4">
-          <div className="flex justify-between items-start mb-3">
+        <div className="p-3">
+          <div className="flex justify-between items-start mb-2">
             <div className="flex items-center space-x-3">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-10 w-10">
                 <AvatarImage src={getLogoUrl(profile.platform)} alt={profile.platform} />
                 <AvatarFallback>{profile.platform.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -98,7 +103,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
             </div>
           </div>
           
-          <div className="mb-2">
+          <div className="mb-1">
             <div className="text-sm text-gray-700 truncate">
               <span className="font-medium">Username:</span> {profile.username}
             </div>
@@ -114,7 +119,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
           </a>
           
           {profile.status && (
-            <div className="mt-2">
+            <div className="mt-1">
               <Badge 
                 variant="outline" 
                 className={`text-xs ${

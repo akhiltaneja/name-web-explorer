@@ -281,8 +281,19 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
  * Here we'll simulate with random results
  */
 export const checkUrlStatus = async (url: string): Promise<boolean> => {
-  // In a real app, this would make an actual HTTP request
+  // In a real app, this would make an actual HTTP request and check for:
+  // 1. HTTP status 404
+  // 2. Page content containing "404", "not found", "doesn't exist", etc.
+  
   // For this demo, we'll return random results with 80% likelihood of success
+  // With a small bias against certain platforms that are more likely to have inactive profiles
+  const lowerUrl = url.toLowerCase();
+  
+  if (lowerUrl.includes('flickr') || lowerUrl.includes('soundcloud')) {
+    // Less likely to have active profiles on these platforms
+    return Math.random() > 0.3;
+  }
+  
   return new Promise(resolve => {
     setTimeout(() => {
       resolve(Math.random() > 0.2);
