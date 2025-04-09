@@ -1,9 +1,10 @@
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Copy, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, ExternalLink, Check } from "lucide-react";
 import { SocialMediaProfile } from "@/types/socialMedia";
-import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface SocialResultCardProps {
@@ -18,67 +19,78 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
     navigator.clipboard.writeText(profile.url);
     setCopied(true);
     toast({
-      title: "Copied to clipboard",
-      description: `${profile.platform} URL has been copied`,
+      title: "URL copied",
+      description: `Copied ${profile.platform} profile URL to clipboard`,
     });
-    
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <Card className="social-card overflow-hidden shadow hover:shadow-md bg-gray-800 border-gray-700 text-gray-100">
+    <Card className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-0">
-        <div className="p-4 hover:bg-gray-700/50">
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-              style={{ backgroundColor: profile.color }}
-            >
-              <span className="text-xl">{profile.icon}</span>
-            </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-gray-100">{profile.platform}</h3>
-              <p className="text-sm text-gray-400">{profile.username}</p>
+        <div className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex items-center space-x-2">
+              <h3 className="font-semibold text-gray-900">{profile.platform}</h3>
               {profile.category && (
-                <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-300">
+                <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300">
                   {profile.category}
-                </span>
-              )}
-              {profile.status && (
-                <span className="inline-flex items-center ml-2 mt-1 px-2 py-0.5 rounded text-xs bg-green-900/30 text-green-300 border border-green-800">
-                  {profile.status}
-                </span>
+                </Badge>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center space-x-1">
               <Button 
-                size="icon" 
+                size="sm" 
                 variant="ghost" 
-                className="h-8 w-8 text-gray-400 hover:text-gray-100 hover:bg-gray-700"
+                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
                 onClick={handleCopy}
               >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-400" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
               <Button 
-                size="icon" 
-                variant="ghost" 
-                className="h-8 w-8 text-gray-400 hover:text-gray-100 hover:bg-gray-700"
+                size="sm" 
+                variant="ghost"  
+                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
                 asChild
               >
-                <a 
-                  href={profile.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
+                <a href={profile.url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </Button>
             </div>
           </div>
+          
+          <div className="mb-2">
+            <div className="text-sm text-gray-700 truncate">
+              <span className="font-medium">Username:</span> {profile.username}
+            </div>
+          </div>
+          
+          <a
+            href={profile.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:underline break-all"
+          >
+            {profile.url}
+          </a>
+          
+          {profile.status && (
+            <div className="mt-2">
+              <Badge 
+                variant="outline" 
+                className={`text-xs ${
+                  profile.status === 'active' 
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200' 
+                    : profile.status === 'inactive' 
+                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200'
+                      : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200'
+                }`}
+              >
+                {profile.status}
+              </Badge>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

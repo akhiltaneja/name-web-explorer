@@ -1,10 +1,8 @@
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SearchHistory, PlanOption } from "@/types/socialMedia";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
@@ -12,312 +10,378 @@ import { Clock, Search, LogOut, ArrowLeft, Trash } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Header from "@/components/Header";
+
+const plans: PlanOption[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    description: 'Perfect for occasional use.',
+    price: 0,
+    limit: '5 daily searches',
+    features: [
+      'Basic social media search',
+      'Limited profile information',
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    description: 'For regular users needing more searches.',
+    price: 19,
+    limit: '500 monthly searches',
+    features: [
+      'Unlimited social media search',
+      'Enhanced profile details',
+      'Priority support',
+    ],
+  },
+  {
+    id: 'unlimited',
+    name: 'Unlimited',
+    description: 'For power users with high search needs.',
+    price: 49,
+    limit: 'Unlimited searches',
+    features: [
+      'Unlimited social media search',
+      'Full profile information',
+      '24/7 priority support',
+      'Advanced analytics',
+    ],
+  },
+];
 
 const Profile = () => {
-  const { user, profile, signOut, refreshProfile } = useAuth();
-  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
+  const { user, signOut, profile, loadingProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Function to determine which tab to show initially
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'plans' ? 'plans' : 'account';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
   useEffect(() => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    const fetchSearchHistory = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('searches')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          
+          if (error) {
+            console.error("Error fetching search history:", error);
+            toast({
+              title: "Error",
+              description: "Failed to load search history",
+              variant: "destructive",
+            });
+          } else {
+            setSearchHistory(data || []);
+          }
+        } catch (error) {
+          console.error("Error fetching search history:", error);
+        }
+      }
+    };
 
     fetchSearchHistory();
-  }, [user, navigate]);
+  }, [user, toast]);
 
-  const fetchSearchHistory = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('searches')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error('Error fetching search history:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load search history",
-          variant: "destructive",
-        });
-      } else {
-        setSearchHistory(data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching search history:', error);
-    } finally {
+  useEffect(() => {
+    if (!loadingProfile) {
       setLoading(false);
     }
+  }, [loadingProfile]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
   };
 
-  const clearSearchHistory = async () => {
-    try {
-      const { error } = await supabase
-        .from('searches')
-        .delete()
-        .eq('user_id', user?.id);
-
-      if (error) {
-        throw error;
+  const handleClearHistory = async () => {
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('searches')
+          .delete()
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error("Error clearing search history:", error);
+          toast({
+            title: "Error",
+            description: "Failed to clear search history",
+            variant: "destructive",
+          });
+        } else {
+          setSearchHistory([]);
+          toast({
+            title: "Search history cleared",
+            description: "Your search history has been successfully cleared.",
+          });
+        }
+      } catch (error) {
+        console.error("Error clearing search history:", error);
       }
-      
-      setSearchHistory([]);
-      toast({
-        title: "Success",
-        description: "Search history cleared",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to clear history",
-        variant: "destructive",
-      });
     }
   };
 
-  const handleUpgrade = async (plan: 'premium' | 'unlimited') => {
-    // In a real app, this would redirect to a payment processor
-    try {
-      toast({
-        title: "Upgrading Plan",
-        description: "This would redirect to a payment page in a real application",
-      });
-      
-      // Mock the upgrade process for demonstration
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          plan: plan,
-          plan_start_date: new Date().toISOString(),
-          plan_end_date: endDate.toISOString(),
-        })
-        .eq('id', user?.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Plan Updated",
-        description: `Your account has been upgraded to ${plan} plan`,
-      });
-      
-      refreshProfile();
-      
-    } catch (error: any) {
-      toast({
-        title: "Upgrade Failed",
-        description: error.message || "Failed to upgrade plan",
-        variant: "destructive",
-      });
-    }
+  const handleSelectPlan = async (planId: string) => {
+    // Placeholder for plan selection logic
+    toast({
+      title: "Upgrade Coming Soon",
+      description: `You selected the ${planId} plan. This feature is under development.`,
+    });
   };
-
-  const planOptions: PlanOption[] = [
-    {
-      name: "Free",
-      price: "$0/mo",
-      features: ["5 candidate checks per day", "Basic search functionality"],
-      checksAllowed: 5,
-      current: profile?.plan === 'free',
-      buttonText: "Current Plan",
-    },
-    {
-      name: "Premium",
-      price: "$5/mo",
-      features: ["500 candidate checks per month", "Download reports", "Search history"],
-      checksAllowed: 500,
-      current: profile?.plan === 'premium',
-      buttonText: profile?.plan === 'premium' ? "Current Plan" : "Upgrade",
-    },
-    {
-      name: "Unlimited",
-      price: "$20/mo",
-      features: ["Unlimited candidate checks", "Priority support", "Advanced analytics"],
-      checksAllowed: Infinity,
-      current: profile?.plan === 'unlimited',
-      buttonText: profile?.plan === 'unlimited' ? "Current Plan" : "Upgrade",
-    },
-  ];
-
-  if (!user || !profile) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase();
-  };
-
-  const checksRemaining = () => {
-    if (profile.plan === 'unlimited') return 'Unlimited';
-    if (profile.plan === 'premium') return 500 - (profile.checks_used % 500);
-    return 5 - (profile.checks_used % 5);
-  };
-
+  if (!user) {
+    navigate("/auth");
+    return null;
+  }
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 p-4">
-      <div className="container mx-auto max-w-5xl">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/')} 
-          className="mb-6 text-gray-300 hover:text-white hover:bg-gray-700"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
-        </Button>
-        
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="space-y-6">
-            <Card className="bg-gray-800 border-gray-700 text-gray-100">
+    <div className="min-h-screen bg-white text-gray-800">
+      <Header />
+      
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex items-center mb-6 gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/')}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Search
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">My Account</h1>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="plans">Subscription Plans</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="account" className="space-y-6 pt-4">
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription className="text-gray-400">Your account information</CardDescription>
+                <CardTitle className="text-xl text-gray-900">Profile Information</CardTitle>
+                <CardDescription>Manage your account details and usage limits</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col items-center">
-                <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={profile.avatar_url || ''} />
-                  <AvatarFallback className="bg-primary text-primary-foreground">{getInitials(profile.email)}</AvatarFallback>
-                </Avatar>
-                <h3 className="text-xl font-medium">{profile.email}</h3>
-                <div className="mt-2 flex items-center justify-center px-3 py-1 rounded-full bg-blue-900/30 text-blue-300 border border-blue-800">
-                  <span className="capitalize">{profile.plan} Plan</span>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Email</p>
+                  <p className="text-gray-800">{user.email}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Current Plan</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold capitalize ${
+                      profile?.plan === 'premium' ? 'text-blue-600' : 
+                      profile?.plan === 'unlimited' ? 'text-purple-600' : 'text-gray-800'
+                    }`}>
+                      {profile?.plan || 'Free'}
+                    </span>
+                    {profile?.plan !== 'free' && (
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Usage</p>
+                  <div className="text-gray-800">
+                    {profile?.plan === 'free' && (
+                      <span>{profile?.checks_used % 5} of 5 daily searches used</span>
+                    )}
+                    {profile?.plan === 'premium' && (
+                      <span>{profile?.checks_used % 500} of 500 monthly searches used</span>
+                    )}
+                    {profile?.plan === 'unlimited' && (
+                      <span>Unlimited searches</span>
+                    )}
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between border-t border-gray-700 pt-4">
-                <div>
-                  <p className="text-gray-400 text-sm">Checks Remaining</p>
-                  <p className="text-lg font-medium">{checksRemaining()}</p>
-                </div>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={async () => {
-                    await signOut();
-                    navigate('/');
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
-                </Button>
-              </CardFooter>
-            </Card>
-            
-            <Card className="bg-gray-800 border-gray-700 text-gray-100">
-              <CardHeader>
-                <CardTitle>Search History</CardTitle>
-                <CardDescription className="text-gray-400">Your recent searches</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                  </div>
-                ) : searchHistory.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-8 text-gray-400">
-                    <Search className="h-10 w-10 mb-2 opacity-50" />
-                    <p>No search history yet</p>
-                    <p className="text-sm">Your recent searches will appear here</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {searchHistory.map((search) => (
-                      <div key={search.id} className="flex items-start p-3 rounded-lg bg-gray-700/50">
-                        <div className="mr-3 mt-0.5">
-                          <Search className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{search.query}</p>
-                          <div className="flex items-center mt-1 text-xs text-gray-400">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span>
-                              {format(new Date(search.created_at), 'MMM d, yyyy • h:mm a')}
-                            </span>
-                            <span className="mx-2">•</span>
-                            <span>{search.result_count} results</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="border-t border-gray-700 pt-4">
+              <CardFooter className="flex justify-between flex-wrap gap-4">
                 <Button 
                   variant="outline" 
-                  size="sm" 
-                  className="w-full bg-gray-700 hover:bg-gray-600 border-gray-600"
-                  onClick={clearSearchHistory}
-                  disabled={searchHistory.length === 0}
+                  onClick={handleSignOut}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
-                  <Trash className="mr-2 h-4 w-4" /> Clear History
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
                 </Button>
+                
+                {profile?.plan === 'free' && (
+                  <Button 
+                    onClick={() => setActiveTab('plans')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Upgrade Plan
+                  </Button>
+                )}
               </CardFooter>
             </Card>
-          </div>
-          
-          <div className="md:col-span-2">
-            <Card className="bg-gray-800 border-gray-700 text-gray-100">
-              <CardHeader>
-                <CardTitle>Subscription Plans</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Choose the plan that works best for you
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="free" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 bg-gray-700">
-                    <TabsTrigger value="free">Free</TabsTrigger>
-                    <TabsTrigger value="premium">Premium</TabsTrigger>
-                    <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
-                  </TabsList>
-                  {planOptions.map((plan) => (
-                    <TabsContent key={plan.name.toLowerCase()} value={plan.name.toLowerCase()}>
-                      <div className="rounded-lg border border-gray-700 p-6 bg-gray-800/50">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-xl font-bold">{plan.name}</h3>
-                            <p className="text-3xl font-bold mt-2">{plan.price}</p>
+
+            {searchHistory.length > 0 && (
+              <Card className="border-gray-200 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div>
+                    <CardTitle className="text-xl text-gray-900">Recent Searches</CardTitle>
+                    <CardDescription>Your search history</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleClearHistory}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                  >
+                    <Trash className="h-4 w-4 mr-1" />
+                    Clear History
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-4 mt-4">
+                    {searchHistory.map((item) => (
+                      <li key={item.id} className="flex gap-4 items-start p-3 rounded-lg border border-gray-200">
+                        <div className="bg-blue-100 p-2 rounded-full">
+                          <Search className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{item.query}</p>
+                          <div className="flex items-center text-xs text-gray-500 mt-1">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            <span>{format(new Date(item.created_at), 'MMM d, yyyy - h:mm a')}</span>
                           </div>
-                          {plan.current && (
-                            <div className="px-3 py-1 bg-green-900/30 text-green-300 border border-green-800 rounded-full text-sm">
-                              Current Plan
-                            </div>
-                          )}
                         </div>
-                        
-                        <Separator className="my-6 bg-gray-700" />
-                        
-                        <div className="space-y-4">
-                          <h4 className="font-medium">What's included:</h4>
-                          <ul className="space-y-3">
-                            {plan.features.map((feature, i) => (
-                              <li key={i} className="flex items-start">
-                                <div className="h-5 w-5 mr-2 text-green-400 shrink-0 mt-0.5">✓</div>
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        
-                        <Button 
-                          className={`w-full mt-6 ${plan.current ? 'bg-gray-600 cursor-default' : ''}`}
-                          disabled={plan.current}
-                          onClick={() => plan.name !== 'Free' && handleUpgrade(plan.name.toLowerCase() as 'premium' | 'unlimited')}
-                        >
-                          {plan.buttonText}
-                        </Button>
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                          {item.result_count} results
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="plans" className="space-y-6 pt-4">
+            <div className="text-center max-w-xl mx-auto mb-10">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h2>
+              <p className="text-gray-600">
+                Get more searches and unlock powerful features with our premium plans.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              {plans.map((plan) => (
+                <Card key={plan.id} className={`relative border-gray-200 shadow-sm ${
+                  plan.id === 'premium' 
+                    ? 'border-blue-200 shadow-blue-100' 
+                    : plan.id === 'unlimited' 
+                      ? 'border-purple-200 shadow-purple-100'
+                      : ''
+                }`}>
+                  {plan.id === 'premium' && (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                        Popular Choice
+                      </span>
+                    </div>
+                  )}
+                  <CardHeader>
+                    <CardTitle className={`text-xl ${
+                      plan.id === 'premium' 
+                        ? 'text-blue-600' 
+                        : plan.id === 'unlimited' 
+                          ? 'text-purple-600'
+                          : 'text-gray-900'
+                    }`}>
+                      {plan.name}
+                    </CardTitle>
+                    <CardDescription>{plan.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-3xl font-bold text-gray-900">${plan.price}<span className="text-sm font-normal text-gray-500">{plan.id !== 'free' ? '/month' : ''}</span></p>
+                      <p className="text-sm text-gray-500">{plan.limit}</p>
+                    </div>
+                    
+                    <Separator className="bg-gray-200" />
+                    
+                    <div>
+                      <p className="text-sm font-medium mb-2 text-gray-700">Features:</p>
+                      <ul className="space-y-3">
+                        {plan.features.map((feature, i) => (
+                          <li key={i} className="flex items-start">
+                            <div className="h-5 w-5 mr-2 text-green-500 shrink-0 mt-0.5">✓</div>
+                            <span className="text-gray-700">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    {profile?.plan === plan.id ? (
+                      <Button 
+                        className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 cursor-not-allowed" 
+                        disabled
+                      >
+                        Current Plan
+                      </Button>
+                    ) : plan.id === 'free' ? (
+                      <Button 
+                        className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800" 
+                        disabled
+                      >
+                        Free Default
+                      </Button>
+                    ) : (
+                      <Button 
+                        className={`w-full ${
+                          plan.id === 'premium' 
+                            ? 'bg-blue-600 hover:bg-blue-700' 
+                            : 'bg-purple-600 hover:bg-purple-700'
+                        }`}
+                        onClick={() => handleSelectPlan(plan.id)}
+                      >
+                        Upgrade
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+            
+            <div className="text-center text-sm text-gray-500 mt-8">
+              <p>All plans include basic features. Premium and Unlimited plans offer advanced options.</p>
+              <p className="mt-1">Questions? <a href="#" className="text-blue-600 hover:underline">Contact our support team</a></p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
