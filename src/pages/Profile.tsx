@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -163,7 +162,6 @@ const Profile = () => {
   };
 
   const generateDummyProfiles = (query: string): SocialMediaProfile[] => {
-    // Generate dummy profiles for demo purposes
     const platforms = ["Twitter", "Facebook", "LinkedIn", "Instagram", "TikTok", "Reddit"];
     
     return platforms.map(platform => ({
@@ -241,8 +239,8 @@ const Profile = () => {
           </Button>
         </div>
 
-        <div className="bg-gray-900 text-white rounded-lg p-8 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
+        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-8 mb-6 relative overflow-hidden shadow-sm border border-blue-100">
+          <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500 to-purple-500"></div>
           
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="flex-shrink-0">
@@ -250,40 +248,41 @@ const Profile = () => {
                 <img 
                   src={user.user_metadata.avatar_url} 
                   alt="User Avatar" 
-                  className="w-24 h-24 rounded-full border-4 border-gray-700"
+                  className="w-24 h-24 rounded-full border-4 border-white shadow-md"
                 />
               ) : (
                 <DefaultAvatar 
                   name={user.email || "User"} 
                   size="lg"
-                  className="border-4 border-gray-700"
+                  type="animal"
+                  className="border-4 border-white shadow-md"
                 />
               )}
             </div>
             
             <div className="flex-grow">
-              <div className="text-4xl font-bold mb-1">
+              <div className="text-4xl font-bold mb-1 text-gray-800">
                 {user.user_metadata?.name || user.email?.split('@')[0] || "User"}
               </div>
-              <div className="text-gray-400 mb-4">{user.email}</div>
+              <div className="text-gray-600 mb-4">{user.email}</div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-gray-400" />
+                  <Calendar className="h-5 w-5 text-blue-500" />
                   <div>
-                    <div className="text-sm text-gray-400">Registration date</div>
-                    <div>{user.created_at ? format(new Date(user.created_at), 'PPP') : 'N/A'}</div>
+                    <div className="text-sm text-gray-500">Registration date</div>
+                    <div className="text-gray-700">{user.created_at ? format(new Date(user.created_at), 'PPP') : 'N/A'}</div>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-gray-400" />
+                  <CheckCircle className="h-5 w-5 text-blue-500" />
                   <div>
-                    <div className="text-sm text-gray-400">Current plan</div>
+                    <div className="text-sm text-gray-500">Current plan</div>
                     <div className="flex items-center gap-2">
                       <span className={`capitalize font-medium ${
-                        profile?.plan === 'premium' ? 'text-blue-400' : 
-                        profile?.plan === 'unlimited' ? 'text-purple-400' : ''
+                        profile?.plan === 'premium' ? 'text-blue-600' : 
+                        profile?.plan === 'unlimited' ? 'text-purple-600' : 'text-gray-700'
                       }`}>
                         {profile?.plan || 'Free'}
                       </span>
@@ -292,10 +291,10 @@ const Profile = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Search className="h-5 w-5 text-gray-400" />
+                  <Search className="h-5 w-5 text-blue-500" />
                   <div>
-                    <div className="text-sm text-gray-400">Usage</div>
-                    <div>
+                    <div className="text-sm text-gray-500">Usage</div>
+                    <div className="text-gray-700">
                       {profile?.plan === 'free' && (
                         <span>{profile?.checks_used % 5} of 5 daily</span>
                       )}
@@ -327,13 +326,13 @@ const Profile = () => {
           {profile?.plan !== 'unlimited' && (
             <div className="mt-6">
               <div className="flex justify-between text-sm mb-1">
-                <span>Usage</span>
-                <span>{profile?.plan === 'free' 
+                <span className="text-gray-600">Usage</span>
+                <span className="text-gray-600">{profile?.plan === 'free' 
                   ? `${profile?.checks_used % 5}/5 daily searches` 
                   : `${profile?.checks_used % 500}/500 monthly searches`}
                 </span>
               </div>
-              <Progress value={usagePercentage} className="h-2 bg-gray-700" indicatorClassName="bg-blue-500" />
+              <Progress value={usagePercentage} className="h-2 bg-gray-200" indicatorClassName="bg-gradient-to-r from-blue-500 to-purple-500" />
             </div>
           )}
         </div>
@@ -412,7 +411,6 @@ const Profile = () => {
           </div>
         )}
 
-        {/* Subscription Plans */}
         {activeTab === 'plans' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="text-center max-w-xl mx-auto mb-10">

@@ -1,3 +1,4 @@
+
 import { SocialMediaProfile } from "@/types/socialMedia";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
@@ -60,8 +61,12 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
 };
 
 export const downloadPdfReport = (searchName: string, profiles: SocialMediaProfile[]): void => {
-  const doc = generatePdfReport(searchName, profiles);
-  doc.save(`${searchName.replace(/\s+/g, "_")}_social_report.pdf`);
+  try {
+    const doc = generatePdfReport(searchName, profiles);
+    doc.save(`${searchName.replace(/\s+/g, "_")}_social_report.pdf`);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+  }
 };
 
 export const emailPdfReport = async (email: string, searchName: string, profiles: SocialMediaProfile[]): Promise<boolean> => {
@@ -69,11 +74,14 @@ export const emailPdfReport = async (email: string, searchName: string, profiles
     const doc = generatePdfReport(searchName, profiles);
     const pdfBase64 = doc.output('datauristring');
     
-    // In a real implementation, you would call an API to send the email
+    // Simulate email sending (in a real app this would call an API)
     console.log(`Email report for "${searchName}" would be sent to ${email} with PDF attachment`);
+    console.log("PDF data:", pdfBase64.substring(0, 100) + "...");
     
-    // For this demo, we'll just return success
-    return true;
+    // For this demo, we'll just simulate a successful email
+    return new Promise(resolve => {
+      setTimeout(() => resolve(true), 1500);
+    });
   } catch (error) {
     console.error("Error generating email report:", error);
     return false;

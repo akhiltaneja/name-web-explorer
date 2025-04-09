@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,10 @@ import {
   Copy, 
   CheckCircle,
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  Globe
 } from "lucide-react";
-import { getSocialMediaProfiles, getCategories } from "@/utils/socialMediaSearch";
+import { getSocialMediaProfiles, getCategories, getAdditionalResults } from "@/utils/socialMediaSearch";
 import { SocialMediaProfile, SocialMediaCategory } from "@/types/socialMedia";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -33,6 +33,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import EmailReportDialog from "@/components/EmailReportDialog";
+import { Progress } from "@/components/ui/progress";
 
 const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
 const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
@@ -41,12 +42,16 @@ const GUEST_COOLDOWN_HOURS = 12;
 const Index = () => {
   const [name, setName] = useState("");
   const [results, setResults] = useState<SocialMediaProfile[]>([]);
+  const [additionalResults, setAdditionalResults] = useState<SocialMediaProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<SocialMediaCategory[]>([]);
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [searchProgress, setSearchProgress] = useState(0);
+  const [searchTime, setSearchTime] = useState<number | null>(null);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
@@ -98,7 +103,7 @@ const Index = () => {
       return;
     }
 
-    // Check if guest user reached limit
+    // Check usage limits logic
     if (!user) {
       const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
       
@@ -140,65 +145,85 @@ const Index = () => {
     }
 
     setIsSearching(true);
+    setSearchProgress(0);
+    const startTime = performance.now();
     
     // Create a username from the name
     const nameParts = searchQuery.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
     
-    // Get social media profiles
-    const profiles = getSocialMediaProfiles(username, searchQuery);
-    
-    // Simulate async search with a timeout
-    setTimeout(async () => {
-      setResults(profiles);
-      setSelectedCategory(null);
-      setIsSearching(false);
-      
-      toast({
-        title: "Search complete",
-        description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setSearchProgress(prev => {
+        const newProgress = prev + (Math.random() * 15);
+        return newProgress < 90 ? newProgress : prev;
       });
+    }, 200);
+    
+    // Get social media profiles
+    setTimeout(async () => {
+      const profiles = getSocialMediaProfiles(username, searchQuery);
+      const additionalProfiles = getAdditionalResults(username, searchQuery);
       
-      // Update for guest user
-      if (!user) {
-        const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
-        localStorage.setItem(GUEST_COUNT_KEY, String(currentCount + 1));
-        localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+      clearInterval(progressInterval);
+      setSearchProgress(100);
+      
+      const endTime = performance.now();
+      const timeElapsed = Math.round(endTime - startTime);
+      setSearchTime(timeElapsed);
+      
+      setTimeout(() => {
+        setResults(profiles);
+        setAdditionalResults(additionalProfiles);
+        setSelectedCategory(null);
+        setIsSearching(false);
         
-        if (currentCount + 1 >= 1) {
-          setGuestCheckAvailable(false);
+        toast({
+          title: "Search complete",
+          description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
+        });
+        
+        // Update search history
+        if (!user) {
+          const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
+          localStorage.setItem(GUEST_COUNT_KEY, String(currentCount + 1));
+          localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+          
+          if (currentCount + 1 >= 1) {
+            setGuestCheckAvailable(false);
+          }
+        } else {
+          // Save search to database if user is logged in
+          try {
+            // Increment checks_used count
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ 
+                checks_used: (profile?.checks_used || 0) + 1 
+              })
+              .eq('id', user.id);
+            
+            if (profileError) throw profileError;
+            
+            // Save search history
+            const { error: searchError } = await supabase
+              .from('searches')
+              .insert({
+                user_id: user.id,
+                query: searchQuery,
+                result_count: profiles.length
+              });
+            
+            if (searchError) throw searchError;
+            
+            // Refresh profile to get updated checks_used
+            refreshProfile();
+            
+          } catch (error) {
+            console.error("Error saving search:", error);
+          }
         }
-      } else {
-        // Save search to database if user is logged in
-        try {
-          // Increment checks_used count
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ 
-              checks_used: (profile?.checks_used || 0) + 1 
-            })
-            .eq('id', user.id);
-          
-          if (profileError) throw profileError;
-          
-          // Save search history
-          const { error: searchError } = await supabase
-            .from('searches')
-            .insert({
-              user_id: user.id,
-              query: searchQuery,
-              result_count: profiles.length
-            });
-          
-          if (searchError) throw searchError;
-          
-          // Refresh profile to get updated checks_used
-          refreshProfile();
-          
-        } catch (error) {
-          console.error("Error saving search:", error);
-        }
-      }
+      }, 500); // small delay for visual feedback
     }, 1500);
   };
 
@@ -240,6 +265,10 @@ const Index = () => {
     ? results.filter(profile => profile.category === selectedCategory)
     : results;
 
+  const filteredAdditionalResults = selectedCategory 
+    ? additionalResults.filter(profile => profile.category === selectedCategory)
+    : additionalResults;
+
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
@@ -249,10 +278,10 @@ const Index = () => {
         <section className="bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100">
           <div className="container mx-auto py-16 px-4 md:py-20">
             <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6 leading-tight animate-fade-in">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Candidate Checker</span>
               </h1>
-              <p className="text-xl text-gray-700 mb-8 md:mb-12">
+              <p className="text-xl text-gray-700 mb-8 md:mb-12 animate-fade-in" style={{animationDelay: "0.2s"}}>
                 Find and verify social media profiles with a simple search
               </p>
 
@@ -264,7 +293,7 @@ const Index = () => {
                       placeholder="Enter first and last name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="flex-1 border-0 rounded-none text-lg py-6 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-blue-500"
+                      className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-blue-500"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSearch();
                       }}
@@ -272,7 +301,7 @@ const Index = () => {
                     <Button 
                       onClick={() => handleSearch()}
                       disabled={isSearching || (!user && !guestCheckAvailable)}
-                      className="md:w-auto w-full bg-blue-600 hover:bg-blue-700 rounded-none md:rounded-r-lg py-6 text-base"
+                      className="md:w-auto w-full bg-blue-600 hover:bg-blue-700 rounded-none md:rounded-r-lg py-7 text-base"
                       size="lg"
                     >
                       {isSearching ? (
@@ -290,6 +319,13 @@ const Index = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {isSearching && (
+                <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200 shadow-sm animate-fade-in">
+                  <p className="text-blue-700 mb-2">Searching social networks for "{name}"</p>
+                  <Progress value={searchProgress} className="h-2 bg-blue-100" indicatorClassName="bg-blue-500" />
+                </div>
+              )}
 
               {!user && !guestCheckAvailable && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fade-in">
@@ -322,12 +358,19 @@ const Index = () => {
           <section className="py-12 px-4">
             <div className="container mx-auto max-w-6xl">
               <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
-                  Results for <span className="text-blue-600">{name}</span>
-                  <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
-                    {filteredResults.length} found
-                  </span>
-                </h2>
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
+                    Results for <span className="text-blue-600">{name}</span>
+                    <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                      {filteredResults.length} found
+                    </span>
+                  </h2>
+                  {searchTime && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Results found in {searchTime}ms
+                    </p>
+                  )}
+                </div>
                 
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button 
@@ -407,6 +450,29 @@ const Index = () => {
                   <SocialResultCard key={index} profile={profile} />
                 ))}
               </div>
+
+              {additionalResults.length > 0 && (
+                <>
+                  <div className="mt-12 mb-6">
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
+                      <Globe className="h-5 w-5 text-blue-500" />
+                      Additional Web Results
+                      <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                        {filteredAdditionalResults.length} found
+                      </span>
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Additional profiles found from across the web
+                    </p>
+                  </div>
+
+                  <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                    {filteredAdditionalResults.map((profile, index) => (
+                      <SocialResultCard key={`additional-${index}`} profile={profile} />
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="mt-8 text-center text-sm text-gray-500">
                 <p className="flex items-center justify-center gap-1">

@@ -5,9 +5,15 @@ interface DefaultAvatarProps {
   name: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  type?: 'animal' | 'initials';
 }
 
-const DefaultAvatar: React.FC<DefaultAvatarProps> = ({ name, size = 'md', className = '' }) => {
+const DefaultAvatar: React.FC<DefaultAvatarProps> = ({ 
+  name, 
+  size = 'md', 
+  className = '',
+  type = 'animal'
+}) => {
   const initials = name
     .split(' ')
     .map(part => part[0])
@@ -35,11 +41,18 @@ const DefaultAvatar: React.FC<DefaultAvatarProps> = ({ name, size = 'md', classN
     lg: 'w-24 h-24 text-3xl',
   };
 
+  // Array of cartoon animal emojis
+  const animalEmojis = ['🐱', '🐶', '🐰', '🐼', '🦊', '🐻', '🦁', '🐯', '🐭', '🐹'];
+  
+  // Determine animal emoji based on name hash
+  const animalIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % animalEmojis.length;
+  const animalEmoji = animalEmojis[animalIndex];
+
   return (
     <div
       className={`${bgColor} ${sizeClasses[size]} rounded-full flex items-center justify-center text-white font-semibold ${className}`}
     >
-      {initials}
+      {type === 'animal' ? animalEmoji : initials}
     </div>
   );
 };

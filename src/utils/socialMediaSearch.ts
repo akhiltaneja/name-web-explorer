@@ -1,4 +1,3 @@
-
 import { SocialMediaProfile } from "@/types/socialMedia";
 
 /**
@@ -257,6 +256,88 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
   ];
 
   return platforms;
+};
+
+/**
+ * Generates additional "scraped" results to simulate web search findings
+ */
+export const getAdditionalResults = (username: string, fullName: string): SocialMediaProfile[] => {
+  const additionalPlatforms: SocialMediaProfile[] = [
+    {
+      platform: "Spotify",
+      url: `https://open.spotify.com/user/${username}`,
+      username: username,
+      icon: "🎵",
+      color: "#1DB954",
+      category: "Music",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Quora",
+      url: `https://www.quora.com/profile/${username}`,
+      username: username,
+      icon: "Q",
+      color: "#B92B27",
+      category: "Social Q&A",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Etsy",
+      url: `https://www.etsy.com/shop/${username}`,
+      username: username,
+      icon: "E",
+      color: "#F1641E",
+      category: "Marketplace",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Stack Overflow",
+      url: `https://stackoverflow.com/users/${Math.floor(Math.random() * 9000000) + 1000000}/${username}`,
+      username: username,
+      icon: "S",
+      color: "#F48024",
+      category: "Technology",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Substack",
+      url: `https://${username}.substack.com`,
+      username: username,
+      icon: "S",
+      color: "#FF6719",
+      category: "Writing",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Patreon",
+      url: `https://www.patreon.com/${username}`,
+      username: username,
+      icon: "P",
+      color: "#F96854",
+      category: "Crowdfunding",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Medium",
+      url: `https://medium.com/@${username}`,
+      username: `@${username}`,
+      icon: "M",
+      color: "#000000",
+      category: "Writing",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    },
+    {
+      platform: "Blogger",
+      url: `https://${username}.blogspot.com`,
+      username: username,
+      icon: "B",
+      color: "#FF5722",
+      category: "Blogging",
+      status: Math.random() > 0.3 ? "active" : "inactive"
+    }
+  ];
+  
+  return additionalPlatforms.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 5) + 2);
 };
 
 /**
