@@ -1,3 +1,4 @@
+
 import { SocialMediaProfile } from "@/types/socialMedia";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
