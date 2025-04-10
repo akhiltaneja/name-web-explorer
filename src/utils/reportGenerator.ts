@@ -4,7 +4,7 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { format } from "date-fns";
 
-// Define PubSub type to match expected type
+// Define PubSub type
 type PubSub = any;
 
 // Extend the jsPDF interface to include our needed properties
@@ -22,7 +22,7 @@ declare module "jspdf" {
       };
       pages: number[];
       getEncryptor(objectId: number): (data: string) => string;
-      getNumberOfPages(): number;
+      getNumberOfPages(): number; // Add this method to match usage below
     };
   }
 }
