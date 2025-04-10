@@ -4,12 +4,15 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { format } from "date-fns";
 
+// Define PubSub type to match expected type
+type PubSub = any;
+
 // Extend the jsPDF interface to include our needed properties
 declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
     internal: {
-      events: any;
+      events: PubSub;
       scaleFactor: number;
       pageSize: {
         width: number;
