@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, ShoppingCart, CreditCard, Check } from "lucide-react";
+import { ShoppingCart, CreditCard, Check } from "lucide-react";
 
 const plans: PlanOption[] = [
   {
@@ -65,18 +64,6 @@ const Pricing = () => {
       
       <main className="flex-grow py-16 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="flex items-center mb-8 gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate(-1)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-          </div>
-          
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Choose Your Plan</h1>
             <p className="text-xl text-gray-600">

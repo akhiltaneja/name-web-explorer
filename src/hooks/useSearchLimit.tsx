@@ -41,7 +41,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   useEffect(() => {
     if (!user) {
       checkAndUpdateGuestLimits();
-    } else {
+    } else if (profile) {
       setSearchLimitReached(hasReachedSearchLimit());
     }
   }, [user, profile]);
@@ -97,11 +97,15 @@ export const useSearchLimit = (user: any, profile: any) => {
     return false;
   };
 
-  const incrementSearchCount = () => {
+  const incrementSearchCount = async () => {
+    // First check if limit is reached before incrementing
+    if (hasReachedSearchLimit()) {
+      return false;
+    }
+    
     if (!user) {
       const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
       
-      // Check if already at or over limit
       if (currentCount >= FREE_PLAN_LIMIT) {
         setGuestCheckAvailable(false);
         setSearchLimitReached(true);
@@ -123,9 +127,24 @@ export const useSearchLimit = (user: any, profile: any) => {
       }
       
       return true;
+    } else if (profile) {
+      // For logged-in users, check profile plan limit
+      if (profile.plan === 'unlimited') return true;
+      
+      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
+      const checksUsed = profile.plan === 'free' 
+        ? profile.checks_used % FREE_PLAN_LIMIT 
+        : profile.checks_used % 500;
+      
+      if (checksUsed >= dailyLimit) {
+        setSearchLimitReached(true);
+        return false;
+      }
+      
+      return true;
     }
     
-    return true;
+    return false;
   };
 
   const saveSearchHistory = async (searchQuery: string, resultsCount: number) => {

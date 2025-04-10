@@ -46,7 +46,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // Check search limit
+    // Double check search limit - early exit if limit reached
     if (hasReachedSearchLimit()) {
       if (!user) {
         const lastCheckTime = localStorage.getItem("candidate_checker_guest_last_check");
@@ -75,8 +75,16 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     }
 
     // Increment counter before search starts to ensure limits are enforced
-    if (!incrementSearchCount()) {
-      // If incrementSearchCount returns false, we've hit the limit
+    // If incrementSearchCount returns false, we've hit the limit
+    const canProceed = await incrementSearchCount();
+    if (!canProceed) {
+      toast({
+        title: "Search limit reached",
+        description: user 
+          ? `You've reached your ${profile?.plan} plan limit. Please upgrade for more searches.`
+          : "You've reached your 3 daily free searches. Sign in or upgrade for more.",
+        variant: "destructive",
+      });
       return;
     }
 

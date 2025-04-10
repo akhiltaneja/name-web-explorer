@@ -1,287 +1,323 @@
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ArrowLeft, CreditCard, ShoppingCart } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft, CreditCard, PaypalIcon, Check, X } from "lucide-react";
+import { PlanOption } from "@/types/socialMedia";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-const plans = {
-  premium: {
-    name: "Premium",
-    price: 19,
+const plans: PlanOption[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    description: 'Perfect for occasional use.',
+    price: 0,
+    limit: '3 daily searches',
     features: [
-      "500 monthly searches",
-      "Enhanced profile details",
-      "Priority support",
-    ]
+      'Basic social media search',
+      'Limited profile information',
+    ],
   },
-  unlimited: {
-    name: "Unlimited",
-    price: 49,
+  {
+    id: 'premium',
+    name: 'Premium',
+    description: 'For regular users needing more searches.',
+    price: 19,
+    limit: '500 monthly searches',
     features: [
-      "Unlimited searches",
-      "Full profile information",
-      "24/7 priority support",
-      "Advanced analytics",
-    ]
-  }
-};
+      'Unlimited social media search',
+      'Enhanced profile details',
+      'Priority support',
+    ],
+  },
+  {
+    id: 'unlimited',
+    name: 'Unlimited',
+    description: 'For power users with high search needs.',
+    price: 49,
+    limit: 'Unlimited searches',
+    features: [
+      'Unlimited social media search',
+      'Full profile information',
+      '24/7 priority support',
+      'Advanced analytics',
+    ],
+  },
+];
 
 const Cart = () => {
   const [searchParams] = useSearchParams();
   const planId = searchParams.get('plan');
+  const [selectedPlan, setSelectedPlan] = useState<PlanOption | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"paypal" | "card">("paypal");
+  const [loading, setLoading] = useState(false);
+  const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [cartItem, setCartItem] = useState<any>(null);
-  
-  // Form state
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  
+  const { user, profile, refreshProfile } = useAuth();
+
   useEffect(() => {
-    if (planId && (planId === 'premium' || planId === 'unlimited')) {
-      setCartItem(plans[planId as keyof typeof plans]);
-    } else {
-      navigate('/pricing');
-    }
-  }, [planId, navigate]);
-  
-  const handleCheckout = () => {
-    // Form validation
-    if (!cardName.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please enter the name on card",
-        variant: "destructive",
-      });
+    if (!planId) {
+      navigate('/profile?tab=plans');
       return;
     }
-    
-    if (!cardNumber.trim() || !/^\d{16}$/.test(cardNumber.replace(/\s/g, ''))) {
-      toast({
-        title: "Invalid card number",
-        description: "Please enter a valid 16-digit card number",
-        variant: "destructive",
-      });
+
+    const plan = plans.find(p => p.id === planId);
+    if (!plan || plan.id === 'free') {
+      navigate('/profile?tab=plans');
       return;
     }
-    
-    if (!expiry.trim() || !/^\d{2}\/\d{2}$/.test(expiry)) {
-      toast({
-        title: "Invalid expiry date",
-        description: "Please enter expiry date in MM/YY format",
-        variant: "destructive",
+
+    setSelectedPlan(plan);
+
+    // Load PayPal SDK script
+    if (!document.querySelector('script[src*="paypal"]')) {
+      const script = document.createElement('script');
+      script.src = "https://www.paypal.com/sdk/js?client-id=test&currency=USD";
+      script.addEventListener('load', () => {
+        renderPayPalButtons();
       });
+      document.body.appendChild(script);
+    } else if (window.paypal && !paypalButtonsRendered) {
+      renderPayPalButtons();
+    }
+  }, [planId, paypalButtonsRendered]);
+
+  const renderPayPalButtons = () => {
+    if (!selectedPlan || !window.paypal || !document.getElementById('paypal-button-container') || paypalButtonsRendered) {
       return;
     }
+
+    setPaypalButtonsRendered(true);
     
-    if (!cvv.trim() || !/^\d{3}$/.test(cvv)) {
-      toast({
-        title: "Invalid CVV",
-        description: "Please enter a valid 3-digit CVV",
-        variant: "destructive",
-      });
-      return;
+    // Clear previous buttons if any
+    const container = document.getElementById('paypal-button-container');
+    if (container) {
+      container.innerHTML = '';
     }
-    
-    setIsProcessingPayment(true);
-    
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessingPayment(false);
-      toast({
-        title: "Payment Successful!",
-        description: `You have successfully upgraded to the ${cartItem?.name} plan.`,
-      });
-      navigate("/profile");
-    }, 2000);
+
+    window.paypal.Buttons({
+      style: {
+        color: 'blue',
+        shape: 'rect',
+        label: 'pay',
+        height: 45
+      },
+      
+      createOrder: async () => {
+        try {
+          setLoading(true);
+          
+          if (!user) {
+            toast({
+              title: "Authentication required",
+              description: "You need to be logged in to make a purchase.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+            return "";
+          }
+          
+          const response = await supabase.functions.invoke('create-paypal-order', {
+            body: {
+              planId: selectedPlan.id,
+              planName: selectedPlan.name,
+              amount: selectedPlan.price
+            }
+          });
+          
+          if (!response.data || !response.data.id) {
+            throw new Error('Failed to create PayPal order');
+          }
+          
+          return response.data.id;
+        } catch (error) {
+          console.error('Error creating PayPal order:', error);
+          toast({
+            title: "Payment initialization failed",
+            description: "Could not start the payment process. Please try again.",
+            variant: "destructive",
+          });
+          return "";
+        } finally {
+          setLoading(false);
+        }
+      },
+      
+      onApprove: async (data) => {
+        try {
+          setLoading(true);
+          
+          const { orderId } = data;
+          
+          const response = await supabase.functions.invoke('capture-paypal-order', {
+            body: {
+              orderId,
+              userId: user.id,
+              planId: selectedPlan.id
+            }
+          });
+          
+          if (!response.data || !response.data.success) {
+            throw new Error('Failed to capture PayPal payment');
+          }
+          
+          // Payment successful
+          toast({
+            title: "Payment successful!",
+            description: `Your ${selectedPlan.name} plan is now active.`,
+          });
+          
+          await refreshProfile();
+          navigate('/profile');
+        } catch (error) {
+          console.error('Error capturing PayPal payment:', error);
+          toast({
+            title: "Payment failed",
+            description: "There was an issue processing your payment. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      },
+      
+      onCancel: () => {
+        toast({
+          title: "Payment cancelled",
+          description: "You've cancelled the payment process. No payment was made.",
+        });
+      },
+      
+      onError: (err) => {
+        console.error('PayPal error:', err);
+        toast({
+          title: "Payment error",
+          description: "An error occurred during the payment process. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }).render('#paypal-button-container');
   };
-  
-  if (!cartItem) {
-    return null;
+
+  if (!selectedPlan) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <main className="flex-grow py-16 px-4 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Loading...</h1>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       
-      <main className="flex-grow py-12 px-4">
+      <main className="flex-grow py-16 px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="flex items-center mb-8 gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/pricing')}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Pricing
-            </Button>
+          <div className="text-center mb-12">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Checkout</h1>
+            <p className="text-lg text-gray-600">
+              Complete your purchase to unlock more searches
+            </p>
           </div>
           
-          <div className="grid md:grid-cols-5 gap-8">
-            <div className="md:col-span-3">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                  <CreditCard className="mr-2 h-5 w-5 text-gray-600" />
-                  Payment Information
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cardName">Name on Card</Label>
-                    <Input 
-                      id="cardName" 
-                      placeholder="John Smith" 
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Card Number</Label>
-                    <Input 
-                      id="cardNumber" 
-                      placeholder="1234 5678 9012 3456" 
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="expiry">Expiry Date</Label>
-                      <Input 
-                        id="expiry" 
-                        placeholder="MM/YY" 
-                        value={expiry}
-                        onChange={(e) => setExpiry(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cvv">CVV</Label>
-                      <Input 
-                        id="cvv" 
-                        placeholder="123" 
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                  <ShoppingCart className="mr-2 h-5 w-5 text-gray-600" />
-                  Billing Information
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email"
-                      value={user?.email || ""}
-                      readOnly={!!user}
-                      placeholder="your@email.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Billing Address</Label>
-                    <Input id="address" placeholder="123 Main St" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input id="city" placeholder="New York" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="zip">ZIP Code</Label>
-                      <Input id="zip" placeholder="10001" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
+          <div className="grid md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
-              <Card className="sticky top-6">
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                    Order Summary
-                  </h2>
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>Payment Method</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <Button
+                      type="button"
+                      variant={paymentMethod === "paypal" ? "default" : "outline"}
+                      className="h-16 flex items-center justify-center"
+                      onClick={() => setPaymentMethod("paypal")}
+                    >
+                      <svg className="w-16 h-5" viewBox="0 0 101 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M38.594 7.213h-8.011c-0.47 0-0.87 0.344-0.944 0.804l-2.775 17.652c-0.055 0.351 0.213 0.668 0.574 0.668h3.861c0.47 0 0.87-0.343 0.943-0.804l0.75-4.748c0.074-0.46 0.473-0.803 0.943-0.803h2.534c4.523 0 7.133-2.189 7.816-6.528 0.31-1.895 0.013-3.384-0.884-4.426-0.989-1.14-2.738-1.814-5.808-1.814zM39.343 13.643c-0.375 2.455-2.248 2.455-4.062 2.455h-1.032l0.724-4.583c0.043-0.276 0.283-0.476 0.562-0.476h0.473c1.234 0 2.4 0 3.001 0.704 0.359 0.422 0.468 1.047 0.335 1.9zM62.457 13.576h-3.87c-0.28 0-0.519 0.203-0.562 0.476l-0.144 0.917-0.23-0.333c-0.712-1.032-2.296-1.377-3.876-1.377-3.628 0-6.727 2.746-7.332 6.603-0.313 1.922 0.132 3.76 1.22 5.044 1.001 1.184 2.427 1.677 4.127 1.677 2.917 0 4.532-1.873 4.532-1.873l-0.146 0.911c-0.055 0.35 0.213 0.668 0.573 0.668h3.486c0.47 0 0.87-0.343 0.943-0.804l1.776-11.242c0.055-0.35-0.213-0.667-0.574-0.667zM57.138 19.89c-0.317 1.875-1.801 3.133-3.703 3.133-0.952 0-1.713-0.306-2.2-0.886-0.483-0.576-0.666-1.396-0.512-2.308 0.295-1.856 1.805-3.152 3.67-3.152 0.93 0 1.686 0.31 2.183 0.896 0.499 0.59 0.695 1.415 0.562 2.317zM80.493 13.576h-3.885c-0.37 0-0.717 0.185-0.924 0.493l-5.324 7.839-2.256-7.551c-0.142-0.473-0.579-0.794-1.075-0.794h-3.817c-0.463 0-0.788 0.455-0.642 0.895l4.247 12.461-3.994 5.637c-0.314 0.443 0.002 1.056 0.532 1.056h3.881c0.367 0 0.71-0.179 0.921-0.483l12.836-18.498c0.309-0.444-0.005-1.055-0.531-1.055zM88.013 7.213h-8.012c-0.47 0-0.87 0.344-0.944 0.804l-2.775 17.652c-0.055 0.351 0.213 0.668 0.574 0.668h4.169c0.334 0 0.62-0.244 0.673-0.573l0.789-5.003c0.074-0.46 0.473-0.803 0.943-0.803h2.534c4.523 0 7.133-2.189 7.816-6.528 0.31-1.895 0.013-3.384-0.884-4.426-0.988-1.14-2.739-1.814-5.808-1.814zM88.76 13.643c-0.374 2.455-2.248 2.455-4.062 2.455h-1.032l0.724-4.583c0.044-0.276 0.283-0.476 0.562-0.476h0.473c1.234 0 2.4 0 3.001 0.704 0.359 0.422 0.468 1.047 0.334 1.9zM111.874 13.576h-3.87c-0.28 0-0.52 0.203-0.562 0.476l-0.144 0.917-0.229-0.333c-0.713-1.032-2.297-1.377-3.877-1.377-3.628 0-6.727 2.746-7.331 6.603-0.314 1.922 0.131 3.76 1.219 5.044 1.001 1.184 2.427 1.677 4.127 1.677 2.917 0 4.532-1.873 4.532-1.873l-0.146 0.911c-0.055 0.35 0.213 0.668 0.574 0.668h3.486c0.47 0 0.87-0.343 0.943-0.804l1.776-11.242c0.055-0.35-0.213-0.667-0.574-0.667zM106.555 19.89c-0.317 1.875-1.801 3.133-3.703 3.133-0.952 0-1.713-0.306-2.199-0.886-0.483-0.576-0.666-1.396-0.512-2.308 0.295-1.856 1.805-3.152 3.67-3.152 0.93 0 1.686 0.31 2.183 0.896 0.499 0.59 0.695 1.415 0.562 2.317zM15.848 13.576h-3.894c-0.373 0-0.571 0.45-0.32 0.726l9.053 9.94-8.512 12.021c-0.224 0.316 0.004 0.752 0.394 0.752h3.894c0.276 0 0.534-0.133 0.694-0.358l8.493-12.069-9.109-10.27c-0.156-0.176-0.38-0.276-0.613-0.276v-0.005zM26.28 26.209c-0.451 0.266-0.963 0.415-1.504 0.415-1.007 0-1.535-0.609-1.535-1.611 0-0.304 0.031-0.621 0.096-0.979 0.086-0.604 0.594-3.917 0.594-3.917h3.007l0.397-2.459h-3.007l0.47-2.969h-3.64c-0.168 0-0.312 0.122-0.338 0.286l-1.85 11.711c-0.111 0.705-0.171 1.39-0.171 1.993 0 3.184 1.725 5.433 5.089 5.433 1.663 0 3.063-0.343 4.269-1.091l0.85-2.812h-0.012z" fill="#003087"/>
+                        <path d="M11.876 0h-3.984c-0.47 0-0.87 0.344-0.943 0.804l-2.775 17.652c-0.055 0.351 0.213 0.668 0.573 0.668h4.095c0.334 0 0.62-0.244 0.673-0.573l0.789-5.003c0.074-0.46 0.474-0.804 0.944-0.804h2.534c4.522 0 7.132-2.189 7.816-6.527 0.309-1.895 0.012-3.385-0.885-4.427-0.989-1.14-2.739-1.814-5.808-1.814h-0.028zM12.623 6.429c-0.375 2.456-2.248 2.456-4.062 2.456h-1.032l0.724-4.584c0.044-0.276 0.283-0.476 0.562-0.476h0.473c1.234 0 2.4 0 3.001 0.704 0.359 0.422 0.468 1.048 0.335 1.9zM35.737 6.363h-3.871c-0.28 0-0.519 0.203-0.562 0.476l-0.144 0.917-0.23-0.333c-0.712-1.032-2.296-1.377-3.876-1.377-3.628 0-6.727 2.746-7.332 6.602-0.313 1.923 0.132 3.761 1.22 5.045 1.001 1.184 2.427 1.676 4.127 1.676 2.917 0 4.532-1.872 4.532-1.872l-0.146 0.91c-0.055 0.351 0.213 0.668 0.573 0.668h3.486c0.47 0 0.87-0.343 0.943-0.803l1.776-11.243c0.055-0.35-0.213-0.667-0.574-0.667h0.075zM30.418 12.677c-0.317 1.875-1.801 3.134-3.703 3.134-0.952 0-1.713-0.306-2.2-0.885-0.483-0.577-0.666-1.397-0.512-2.308 0.295-1.856 1.805-3.153 3.67-3.153 0.93 0 1.686 0.31 2.183 0.896 0.499 0.59 0.695 1.415 0.562 2.317z" fill="#009CDE"/>
+                      </svg>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={paymentMethod === "card" ? "default" : "outline"}
+                      className="h-16 flex items-center justify-center"
+                      onClick={() => setPaymentMethod("card")}
+                      disabled
+                    >
+                      <CreditCard className="h-6 w-6 mr-2" />
+                      <span>Credit Card</span>
+                    </Button>
+                  </div>
                   
-                  <div className="mb-6 p-4 border border-gray-200 rounded-md bg-gray-50">
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <p className="font-medium text-lg">{cartItem.name} Plan</p>
-                        <p className="text-sm text-gray-500">Monthly subscription</p>
-                      </div>
-                      <span className="font-bold text-lg">${cartItem.price}</span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {cartItem.features.map((feature: string, idx: number) => (
-                        <div key={idx} className="flex items-start">
-                          <div className="h-5 w-5 mr-2 text-green-500 shrink-0 mt-0.5">✓</div>
-                          <span className="text-gray-700">{feature}</span>
+                  {paymentMethod === "paypal" && (
+                    <div className="mb-4">
+                      <div id="paypal-button-container" className="w-full"></div>
+                      {!paypalButtonsRendered && (
+                        <div className="text-center py-4">
+                          <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+                          <p className="mt-2 text-gray-600">Loading payment options...</p>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                  
-                  <div className="space-y-4 mb-6">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span className="text-gray-800">${cartItem.price}.00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tax</span>
-                      <span className="text-gray-800">$0.00</span>
-                    </div>
-                    <div className="flex justify-between pt-4 border-t border-gray-200">
-                      <span className="text-gray-800 font-medium">Total</span>
-                      <span className="text-gray-900 font-bold">${cartItem.price}.00</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700" 
-                    size="lg"
-                    onClick={handleCheckout}
-                    disabled={isProcessingPayment}
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Complete Purchase
-                      </>
-                    )}
-                  </Button>
-                  
-                  <p className="text-xs text-gray-500 mt-4 text-center">
-                    By completing this purchase, you agree to our Terms of Service and Privacy Policy.
-                  </p>
+                  )}
                 </CardContent>
               </Card>
+            </div>
+            
+            <div className="md:col-span-1">
+              <Card className="bg-white shadow-md">
+                <CardHeader className="border-b pb-3">
+                  <CardTitle className="text-lg">Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-700">{selectedPlan.name} Plan</span>
+                      <span className="font-medium">${selectedPlan.price}</span>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-gray-200">
+                      <ul className="space-y-2">
+                        {selectedPlan.features.map((feature, i) => (
+                          <li key={i} className="flex items-start">
+                            <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                            <span className="text-sm text-gray-600">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="bg-gray-50 flex justify-between border-t">
+                  <span className="font-semibold">Total:</span>
+                  <span className="font-bold text-lg">${selectedPlan.price}</span>
+                </CardFooter>
+              </Card>
+              
+              <div className="mt-6">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate('/profile?tab=plans')}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Plans
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -93,11 +93,11 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
           </div>
         </div>
         
-        <div className="flex-shrink-0 flex flex-col gap-2">
+        <div className="flex-shrink-0 flex flex-col gap-2 w-full md:w-auto">
           {profile?.plan !== 'unlimited' && (
             <Button 
               onClick={onUpgradeClick}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
               size="lg"
             >
               Upgrade Plan
@@ -108,7 +108,7 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
             variant="outline" 
             size="lg" 
             onClick={onLogout}
-            className="border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center gap-2 w-full md:w-auto"
           >
             <LogOut className="h-4 w-4" />
             <span>Logout</span>

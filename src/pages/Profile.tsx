@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -143,8 +142,6 @@ const Profile = () => {
             title: "Search history cleared",
             description: "Your search history has been successfully cleared.",
           });
-          // Refresh the history after clearing
-          await fetchSearchHistory();
         }
       } catch (error) {
         console.error("Error clearing search history:", error);
