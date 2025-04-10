@@ -1,4 +1,3 @@
-
 import { SocialMediaProfile } from "@/types/socialMedia";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
@@ -22,7 +21,7 @@ declare module "jspdf" {
       };
       pages: number[];
       getEncryptor(objectId: number): (data: string) => string;
-      getNumberOfPages(): number; // Include this method in the interface
+      getNumberOfPages(): number;
     };
   }
 }
