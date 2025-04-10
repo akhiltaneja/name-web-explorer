@@ -19,7 +19,7 @@ const plans: PlanOption[] = [
     name: 'Free',
     description: 'Perfect for occasional use.',
     price: 0,
-    limit: '5 daily searches',
+    limit: '3 daily searches',
     features: [
       'Basic social media search',
       'Limited profile information',
@@ -146,10 +146,7 @@ const Profile = () => {
   };
 
   const handleSelectPlan = async (planId: string) => {
-    toast({
-      title: "Upgrade Coming Soon",
-      description: `You selected the ${planId} plan. This feature is under development.`,
-    });
+    navigate(`/cart?plan=${planId}`);
   };
 
   const generateDummyProfiles = (query: string): SocialMediaProfile[] => {

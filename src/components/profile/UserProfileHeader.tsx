@@ -1,4 +1,3 @@
-
 import { User } from "@supabase/supabase-js";
 import { Calendar, CheckCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ interface UserProfileHeaderProps {
 
 const UserProfileHeader = ({ user, profile, onUpgradeClick }: UserProfileHeaderProps) => {
   const usagePercentage = profile?.plan === 'free' 
-    ? ((profile?.checks_used % 5) / 5) * 100 
+    ? ((profile?.checks_used % 3) / 3) * 100 
     : profile?.plan === 'premium' 
       ? ((profile?.checks_used % 500) / 500) * 100 
       : 0;
@@ -78,7 +77,7 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick }: UserProfileHeaderP
                 <div className="text-sm text-gray-500">Usage</div>
                 <div className="text-gray-700">
                   {profile?.plan === 'free' && (
-                    <span>{profile?.checks_used % 5} of 5 daily</span>
+                    <span>{profile?.checks_used % 3} of 3 daily</span>
                   )}
                   {profile?.plan === 'premium' && (
                     <span>{profile?.checks_used % 500} of 500 monthly</span>
@@ -110,7 +109,7 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick }: UserProfileHeaderP
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600">Usage</span>
             <span className="text-gray-600">{profile?.plan === 'free' 
-              ? `${profile?.checks_used % 5}/5 daily searches` 
+              ? `${profile?.checks_used % 3}/3 daily searches` 
               : `${profile?.checks_used % 500}/500 monthly searches`}
             </span>
           </div>

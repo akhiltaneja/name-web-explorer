@@ -11,6 +11,7 @@ const Auth = lazy(() => import("@/pages/Auth"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const Cart = lazy(() => import("@/pages/Cart"));
 
 function App() {
   return (
@@ -29,6 +30,8 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/search/:query" element={<Index />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

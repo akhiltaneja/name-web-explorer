@@ -4,6 +4,7 @@ import { Download, FileText, Mail, Search, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SearchHistory } from "@/types/socialMedia";
+import { Link } from "react-router-dom";
 
 interface SearchHistoryTableProps {
   searchHistory: SearchHistory[];
@@ -55,7 +56,14 @@ const SearchHistoryTable = ({
           <TableBody>
             {searchHistory.map((item) => (
               <TableRow key={item.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">{item.query}</TableCell>
+                <TableCell className="font-medium">
+                  <Link 
+                    to={`/search/${encodeURIComponent(item.query)}`} 
+                    className="text-blue-600 hover:underline"
+                  >
+                    {item.query}
+                  </Link>
+                </TableCell>
                 <TableCell>{format(parseISO(item.created_at), 'MMM d, yyyy - h:mm a')}</TableCell>
                 <TableCell>
                   <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">

@@ -71,6 +71,13 @@ const Index = () => {
       handleSearch(query);
     }
     
+    const pathSegments = location.pathname.split('/');
+    if (pathSegments[1] === 'search' && pathSegments[2]) {
+      const searchQuery = decodeURIComponent(pathSegments[2]);
+      setName(searchQuery);
+      handleSearch(searchQuery);
+    }
+    
     const state = location.state as { returnTo?: string; action?: string } | null;
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
@@ -204,6 +211,8 @@ const Index = () => {
           title: "Search complete",
           description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
         });
+        
+        navigate(`/search/${encodeURIComponent(searchQuery)}`, { replace: true });
         
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -400,72 +409,76 @@ const Index = () => {
 
         <section className="py-8 px-4" ref={resultsRef}>
           <div className="container mx-auto max-w-6xl">
-            <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
-                  Results for <span className="text-blue-600">{name}</span>
-                  <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
-                    {filteredResults.length} found
-                  </span>
-                </h2>
-                {searchTime && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Results found in {searchTime}ms
-                  </p>
+            {name && (
+              <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
+                    Results for <span className="text-blue-600">{name}</span>
+                    <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                      {filteredResults.length} found
+                    </span>
+                  </h2>
+                  {searchTime && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Results found in {searchTime}ms
+                    </p>
+                  )}
+                </div>
+                
+                {filteredResults.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                      className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                    >
+                      {viewMode === "grid" ? <List size={16} /> : <Grid size={16} />}
+                    </Button>
+                    
+                    <Button 
+                      variant={selectedCategory ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setSelectedCategory(null)}
+                      className={`${!selectedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-gray-300 hover:bg-gray-100 text-gray-700'}`}
+                    >
+                      <Filter size={14} className="mr-1" />
+                      All
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleCopyAll}
+                      className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                    >
+                      <Copy size={14} className="mr-1" />
+                      Copy All
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleDownloadReport}
+                      className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                    >
+                      <Download size={14} className="mr-1" />
+                      Download
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleEmailReport}
+                      className="border-gray-300 hover:bg-gray-100 text-gray-700"
+                    >
+                      <ExternalLink size={14} className="mr-1" />
+                      Email
+                    </Button>
+                  </div>
                 )}
               </div>
-              
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                >
-                  {viewMode === "grid" ? <List size={16} /> : <Grid size={16} />}
-                </Button>
-                
-                <Button 
-                  variant={selectedCategory ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                  className={`${!selectedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-gray-300 hover:bg-gray-100 text-gray-700'}`}
-                >
-                  <Filter size={14} className="mr-1" />
-                  All
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleCopyAll}
-                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                >
-                  <Copy size={14} className="mr-1" />
-                  Copy All
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleDownloadReport}
-                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                >
-                  <Download size={14} className="mr-1" />
-                  Download
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleEmailReport}
-                  className="border-gray-300 hover:bg-gray-100 text-gray-700"
-                >
-                  <ExternalLink size={14} className="mr-1" />
-                  Email
-                </Button>
-              </div>
-            </div>
+            )}
 
             {categories.length > 0 && (
               <div className="flex flex-wrap gap-2 pb-6">
@@ -486,19 +499,19 @@ const Index = () => {
               </div>
             )}
 
-            <Separator className="bg-gray-200 my-4" />
+            {filteredResults.length > 0 && <Separator className="bg-gray-200 my-4" />}
 
             {!selectedCategory && Object.keys(profilesByCategory).length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {Object.entries(profilesByCategory).map(([category, profiles]) => (
                   <div key={category}>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center">
                       {category}
                       <span className="ml-2 text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
                         {profiles.length}
                       </span>
                     </h3>
-                    <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                    <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
                       {profiles.map((profile, index) => (
                         <SocialResultCard key={`${category}-${index}`} profile={profile} />
                       ))}
@@ -507,7 +520,7 @@ const Index = () => {
                 ))}
               </div>
             ) : (
-              <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+              <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
                 {filteredResults.map((profile, index) => (
                   <SocialResultCard key={index} profile={profile} />
                 ))}
@@ -516,7 +529,7 @@ const Index = () => {
 
             {additionalResults.length > 0 && (
               <>
-                <div className="mt-10 mb-4">
+                <div className="mt-8 mb-3">
                   <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
                     <Globe className="h-5 w-5 text-blue-500" />
                     Additional Web Results
@@ -529,7 +542,7 @@ const Index = () => {
                   </p>
                 </div>
 
-                <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
                   {filteredAdditionalResults.map((profile, index) => (
                     <SocialResultCard key={`additional-${index}`} profile={profile} />
                   ))}
@@ -551,6 +564,25 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        {results.length === 0 && !isSearching && name && (
+          <section className="py-8 px-4 text-center">
+            <div className="container mx-auto max-w-3xl">
+              <div className="bg-gray-50 p-8 rounded-lg border border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">No Results Found</h2>
+                <p className="text-gray-600 mb-6">
+                  We couldn't find any social media profiles matching "{name}". Try a different name or check your spelling.
+                </p>
+                <Button 
+                  onClick={() => setName("")}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Try Another Search
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
 
         {results.length === 0 && (
           <section className="py-16 px-4 bg-white">
