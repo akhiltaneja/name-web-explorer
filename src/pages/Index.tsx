@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,8 @@ import {
   CheckCircle,
   HelpCircle,
   AlertCircle,
-  Globe
+  Globe,
+  Lock
 } from "lucide-react";
 import { getSocialMediaProfiles, getCategories, getAdditionalResults, groupProfilesByCategory, checkUrlStatus, checkDomainAvailability } from "@/utils/socialMediaSearch";
 import { SocialMediaProfile, SocialMediaCategory } from "@/types/socialMedia";
@@ -87,7 +89,7 @@ const Index = () => {
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
     }
-  }, []); // Empty dependency array ensures this only runs once on mount
+  }, []);
 
   useEffect(() => {
     if (results.length > 0) {
@@ -98,23 +100,51 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) {
-      const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
-      const checkCount = localStorage.getItem(GUEST_COUNT_KEY);
-      
-      if (lastCheckTime) {
-        const lastCheck = new Date(lastCheckTime);
-        const now = new Date();
-        const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
-        
-        if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS && Number(checkCount) >= FREE_PLAN_LIMIT) {
-          setGuestCheckAvailable(false);
-        } else if (hoursSinceLastCheck >= GUEST_COOLDOWN_HOURS) {
-          localStorage.setItem(GUEST_COUNT_KEY, "0");
-          setGuestCheckAvailable(true);
-        }
-      }
+      checkAndUpdateGuestLimits();
     }
   }, [user]);
+  
+  // New function to properly check and update guest limits
+  const checkAndUpdateGuestLimits = () => {
+    const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
+    const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
+    
+    if (lastCheckTime) {
+      const lastCheck = new Date(lastCheckTime);
+      const now = new Date();
+      const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS) {
+        if (checkCount >= FREE_PLAN_LIMIT) {
+          setGuestCheckAvailable(false);
+        } else {
+          setGuestCheckAvailable(true);
+        }
+      } else {
+        // Reset counter if 24 hours have passed
+        localStorage.setItem(GUEST_COUNT_KEY, "0");
+        setGuestCheckAvailable(true);
+      }
+    }
+  };
+  
+  // Check if the user has reached their search limit
+  const hasReachedSearchLimit = () => {
+    if (!user) {
+      const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
+      return checkCount >= FREE_PLAN_LIMIT;
+    } else if (profile) {
+      if (profile.plan === 'unlimited') return false;
+      
+      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
+      const checksUsed = profile.plan === 'free' 
+        ? profile.checks_used % FREE_PLAN_LIMIT 
+        : profile.checks_used % 500;
+      
+      return checksUsed >= dailyLimit;
+    }
+    return false;
+  };
 
   const handleSearch = async (searchQuery = name) => {
     if (!searchQuery.trim()) {
@@ -126,43 +156,32 @@ const Index = () => {
       return;
     }
 
-    if (!user) {
-      const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
-      
-      if (checkCount >= FREE_PLAN_LIMIT) {
+    // Check search limit
+    if (hasReachedSearchLimit()) {
+      if (!user) {
         const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
         
         if (lastCheckTime) {
           const lastCheck = new Date(lastCheckTime);
           const now = new Date();
           const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
+          const hoursRemaining = Math.ceil(GUEST_COOLDOWN_HOURS - hoursSinceLastCheck);
           
-          if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS) {
-            const hoursRemaining = Math.ceil(GUEST_COOLDOWN_HOURS - hoursSinceLastCheck);
-            
-            toast({
-              title: "Search limit reached",
-              description: `Please sign in to continue searching or wait ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
-              variant: "destructive",
-            });
-            
-            return;
-          }
+          toast({
+            title: "Search limit reached",
+            description: `Please sign in to continue searching or wait ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
+            variant: "destructive",
+          });
         }
-      }
-    } else if (profile) {
-      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : profile.plan === 'premium' ? 500 : Infinity;
-      const checksUsed = profile.checks_used % (profile.plan === 'free' ? FREE_PLAN_LIMIT : 500);
-      
-      if (checksUsed >= dailyLimit && profile.plan !== 'unlimited') {
+      } else {
         toast({
           title: "Usage limit reached",
-          description: `You've reached your ${profile.plan} plan limit. Please upgrade for more searches.`,
+          description: `You've reached your ${profile?.plan} plan limit. Please upgrade for more searches.`,
           variant: "destructive",
         });
         navigate("/profile");
-        return;
       }
+      return;
     }
 
     setIsSearching(true);
@@ -217,7 +236,10 @@ const Index = () => {
           description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
         });
         
-        window.history.replaceState(null, '', `/search/${encodeURIComponent(searchQuery)}`);
+        // Update URL with the search query
+        if (!location.pathname.includes('/search/')) {
+          navigate(`/search/${encodeURIComponent(searchQuery)}`, { replace: true });
+        }
         
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -225,10 +247,11 @@ const Index = () => {
         
         if (!user) {
           const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
-          localStorage.setItem(GUEST_COUNT_KEY, String(currentCount + 1));
+          const newCount = currentCount + 1;
+          localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
           localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
           
-          if (currentCount + 1 >= FREE_PLAN_LIMIT) {
+          if (newCount >= FREE_PLAN_LIMIT) {
             setGuestCheckAvailable(false);
           }
         } else {
@@ -329,6 +352,8 @@ const Index = () => {
     ? additionalResults.filter(profile => profile.category === selectedCategory)
     : additionalResults;
 
+  const searchLimitReached = hasReachedSearchLimit();
+
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
@@ -344,9 +369,30 @@ const Index = () => {
                 Find and verify social media profiles with a simple search
               </p>
 
-              <Card className="mb-8 shadow-md border-blue-100 overflow-hidden">
+              <Card className={`mb-8 shadow-md border-blue-100 overflow-hidden ${searchLimitReached ? 'opacity-75' : ''}`}>
                 <CardContent className="p-0">
-                  <div className="flex flex-col md:flex-row">
+                  <div className="flex flex-col md:flex-row relative">
+                    {searchLimitReached && (
+                      <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <div className="text-center p-4">
+                          <Lock className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                          <h3 className="text-lg font-semibold text-gray-800 mb-2">Search Limit Reached</h3>
+                          <p className="text-gray-600 mb-4">
+                            You've used all your {FREE_PLAN_LIMIT} daily searches.
+                            {!user ? " Sign in for more searches." : ""}
+                          </p>
+                          {!user ? (
+                            <Link to="/auth">
+                              <Button className="mr-2">Sign In</Button>
+                            </Link>
+                          ) : (
+                            <Button onClick={() => navigate("/profile?tab=plans")}>
+                              Upgrade Plan
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <Input
                       type="text"
                       placeholder="Enter first and last name"
@@ -354,12 +400,13 @@ const Index = () => {
                       onChange={(e) => setName(e.target.value)}
                       className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-blue-500"
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSearch();
+                        if (e.key === "Enter" && !searchLimitReached) handleSearch();
                       }}
+                      disabled={searchLimitReached}
                     />
                     <Button 
                       onClick={() => handleSearch()}
-                      disabled={isSearching || (!user && !guestCheckAvailable)}
+                      disabled={isSearching || searchLimitReached}
                       className="md:w-auto w-full bg-blue-600 hover:bg-blue-700 rounded-none md:rounded-r-lg py-7 text-base"
                       size="lg"
                     >
@@ -386,10 +433,10 @@ const Index = () => {
                 </div>
               )}
 
-              {!user && !guestCheckAvailable && (
+              {!user && !guestCheckAvailable && !isSearching && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fade-in">
                   <p className="text-blue-700">
-                    You've used your guest search. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (3 searches per day with a free account).
+                    You've used your {FREE_PLAN_LIMIT} daily searches. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (3 searches per day with a free account).
                   </p>
                 </div>
               )}
