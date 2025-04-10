@@ -10,7 +10,7 @@ import EmailReportDialog from "@/components/EmailReportDialog";
 import DomainSuggestions from "@/components/DomainSuggestions";
 import { emailTextReport, downloadTextReport } from "@/utils/reportGenerator";
 
-// Import the new refactored components
+// Import the refactored components
 import Hero from "@/components/search/Hero";
 import ResultsHeader from "@/components/search/ResultsHeader";
 import CategoryFilter from "@/components/search/CategoryFilter";
@@ -18,6 +18,7 @@ import ResultsList from "@/components/search/ResultsList";
 import AdditionalResults from "@/components/search/AdditionalResults";
 import EmptyResults from "@/components/search/EmptyResults";
 import Features from "@/components/search/Features";
+import FAQ from "@/components/search/FAQ";
 import { useSearch } from "@/hooks/useSearch";
 
 const Index = () => {
@@ -205,7 +206,12 @@ const Index = () => {
           onReset={() => setName("")}
         />
 
-        {!name && !isSearching && results.length === 0 && <Features />}
+        {!name && !isSearching && results.length === 0 && (
+          <>
+            <Features />
+            <FAQ />
+          </>
+        )}
       </main>
       
       <EmailReportDialog 

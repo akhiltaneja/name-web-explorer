@@ -1,3 +1,4 @@
+
 import { SocialMediaProfile } from "@/types/socialMedia";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -48,10 +49,20 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
     },
     didDrawCell: (data) => {
       // Add URL hyperlinking for the URL column (index 5)
-      if (data.section === 'body' && data.column.index === 5) {
+      if (data.section === 'body' && data.column.index === 5 && data.cell.text.length > 0) {
         const url = data.cell.text[0];
+        const textWidth = doc.getStringUnitWidth(url) * data.cell.styles.fontSize / doc.internal.scaleFactor;
+        
+        // Clear the default text to avoid shadow effect
+        doc.setFillColor(255, 255, 255);
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        
+        // Draw the link text
         doc.setTextColor(0, 0, 255);
-        doc.textWithLink(url, data.cell.x + 1, data.cell.y + 4, { url });
+        doc.textWithLink(url, data.cell.x + 1, data.cell.y + 4, { 
+          url: url,
+          newWindow: true  // This makes links open in a new tab
+        });
         doc.setTextColor(0);
       }
     }
@@ -74,7 +85,7 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
   return doc;
 };
 
-// This function has been updated to generate a text report (keeping for backward compatibility)
+// This function has been kept for backward compatibility
 export const generateTextReport = (searchName: string, profiles: SocialMediaProfile[]): string => {
   const date = new Date();
   const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });

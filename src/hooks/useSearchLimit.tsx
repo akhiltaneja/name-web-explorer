@@ -1,14 +1,41 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
 const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
+const GUEST_ID_KEY = "candidate_checker_guest_id";
 const GUEST_COOLDOWN_HOURS = 24;
 const FREE_PLAN_LIMIT = 3;
 
+// Generate a unique ID for the device/browser
+const generateUniqueId = () => {
+  const existingId = localStorage.getItem(GUEST_ID_KEY);
+  if (existingId) return existingId;
+  
+  // Create a unique ID based on browser and device info
+  const navInfo = window.navigator.userAgent + window.navigator.language;
+  const screenInfo = `${window.screen.height}x${window.screen.width}x${window.screen.colorDepth}`;
+  const uniqueString = navInfo + screenInfo + new Date().getTime();
+  
+  // Create a simple hash
+  let hash = 0;
+  for (let i = 0; i < uniqueString.length; i++) {
+    const char = uniqueString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  const uniqueId = Math.abs(hash).toString(36);
+  localStorage.setItem(GUEST_ID_KEY, uniqueId);
+  return uniqueId;
+};
+
 export const useSearchLimit = (user: any, profile: any) => {
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
+  const { toast } = useToast();
+  const guestId = generateUniqueId();
 
   useEffect(() => {
     if (!user) {
@@ -34,8 +61,14 @@ export const useSearchLimit = (user: any, profile: any) => {
       } else {
         // Reset counter if 24 hours have passed
         localStorage.setItem(GUEST_COUNT_KEY, "0");
+        localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
         setGuestCheckAvailable(true);
       }
+    } else {
+      // First time user
+      localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+      localStorage.setItem(GUEST_COUNT_KEY, "0");
+      setGuestCheckAvailable(true);
     }
   };
   
@@ -65,6 +98,11 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       if (newCount >= FREE_PLAN_LIMIT) {
         setGuestCheckAvailable(false);
+        toast({
+          title: "Daily search limit reached",
+          description: "You've reached your 3 daily free searches. Sign in or upgrade for more.",
+          variant: "destructive",
+        });
       }
     }
   };
