@@ -5,7 +5,7 @@ import "jspdf-autotable";
 import { format } from "date-fns";
 
 // Extend the jsPDF interface to include our needed properties
-declare module "jspdf" {  
+declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
     internal: {
