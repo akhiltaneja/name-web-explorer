@@ -74,7 +74,7 @@ export const downloadTextReport = (name: string, profiles: SocialMediaProfile[])
         profile.platform,
         {
           content: profile.url,
-          styles: { textColor: [0, 0, 255] },
+          styles: { textColor: [0, 0, 255] as [number, number, number] },
           link: profile.url
         }
       ]);
@@ -92,7 +92,7 @@ export const downloadTextReport = (name: string, profiles: SocialMediaProfile[])
         didDrawCell: (data) => {
           // Make URLs clickable
           if (data.column.index === 1 && data.cell.section === 'body') {
-            const url = profiles[data.row.index]?.url;
+            const url = profilesByCategory[category][data.row.index]?.url;
             if (url) {
               doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url, newWindow: true });
             }
@@ -174,7 +174,7 @@ export const emailTextReport = async (
         profile.platform,
         {
           content: profile.url,
-          styles: { textColor: [0, 0, 255] },
+          styles: { textColor: [0, 0, 255] as [number, number, number] },
           link: profile.url
         }
       ]);
@@ -192,7 +192,7 @@ export const emailTextReport = async (
         didDrawCell: (data) => {
           // Make URLs clickable
           if (data.column.index === 1 && data.cell.section === 'body') {
-            const url = profiles[data.row.index]?.url;
+            const url = profilesByCategory[category][data.row.index]?.url;
             if (url) {
               doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url, newWindow: true });
             }
