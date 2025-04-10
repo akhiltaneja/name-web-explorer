@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -58,7 +59,7 @@ const Profile = () => {
   const [lastSearchResults, setLastSearchResults] = useState<SocialMediaProfile[]>([]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedSearchQuery, setSelectedSearchQuery] = useState<string>("");
-  const { user, signOut, profile, loadingProfile } = useAuth();
+  const { user, signOut, profile, loadingProfile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const plansRef = useRef<HTMLDivElement>(null);
@@ -74,39 +75,42 @@ const Profile = () => {
   }, [activeTab]);
 
   useEffect(() => {
-    const fetchSearchHistory = async () => {
-      if (user) {
-        try {
-          const { data, error } = await supabase
-            .from('searches')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-          
-          if (error) {
-            console.error("Error fetching search history:", error);
-            toast({
-              title: "Error",
-              description: "Failed to load search history",
-              variant: "destructive",
-            });
-          } else {
-            setSearchHistory(data || []);
-          }
-        } catch (error) {
-          console.error("Error fetching search history:", error);
-        }
-      }
-    };
-
     fetchSearchHistory();
-  }, [user, toast]);
+  }, [user]);
 
   useEffect(() => {
     if (!loadingProfile) {
       setLoading(false);
     }
   }, [loadingProfile]);
+
+  const fetchSearchHistory = async () => {
+    if (user) {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('searches')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching search history:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load search history",
+            variant: "destructive",
+          });
+        } else {
+          setSearchHistory(data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching search history:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -120,6 +124,7 @@ const Profile = () => {
   const handleClearHistory = async () => {
     if (user) {
       try {
+        setLoading(true);
         const { error } = await supabase
           .from('searches')
           .delete()
@@ -138,9 +143,13 @@ const Profile = () => {
             title: "Search history cleared",
             description: "Your search history has been successfully cleared.",
           });
+          // Refresh the history after clearing
+          await fetchSearchHistory();
         }
       } catch (error) {
         console.error("Error clearing search history:", error);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -233,7 +242,8 @@ const Profile = () => {
         <UserProfileHeader 
           user={user} 
           profile={profile} 
-          onUpgradeClick={handleUpgradeClick} 
+          onUpgradeClick={handleUpgradeClick}
+          onLogout={handleSignOut}
         />
 
         <SearchHistoryTable 

@@ -74,6 +74,12 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
+    // Increment counter before search starts to ensure limits are enforced
+    if (!incrementSearchCount()) {
+      // If incrementSearchCount returns false, we've hit the limit
+      return;
+    }
+
     setIsSearching(true);
     setSearchProgress(0);
     const startTime = performance.now();
@@ -89,62 +95,73 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     }, 200);
     
     setTimeout(async () => {
-      let profiles = getSocialMediaProfiles(username, searchQuery);
-      const additionalProfiles = getAdditionalResults(username, searchQuery);
-      
-      const activeProfiles = await Promise.all(
-        profiles.map(async profile => {
-          const isActive = await checkUrlStatus(profile.url);
-          return {
-            ...profile,
-            status: isActive ? 'active' : 'inactive'
-          };
-        })
-      );
-      
-      profiles = activeProfiles.filter(profile => profile.status === 'active');
-      
-      const domainResults = await checkDomainAvailability(username);
-      setAvailableDomains(domainResults);
-      
-      clearInterval(progressInterval);
-      setSearchProgress(100);
-      
-      const endTime = performance.now();
-      const timeElapsed = Math.round(endTime - startTime);
-      setSearchTime(timeElapsed);
-      
-      setTimeout(() => {
-        setResults(profiles);
-        setAdditionalResults(additionalProfiles);
-        const categorizedProfiles = groupProfilesByCategory(profiles);
-        setProfilesByCategory(categorizedProfiles);
-        setCategories(getCategories(profiles));
+      try {
+        let profiles = getSocialMediaProfiles(username, searchQuery);
+        const additionalProfiles = getAdditionalResults(username, searchQuery);
+        
+        const activeProfiles = await Promise.all(
+          profiles.map(async profile => {
+            const isActive = await checkUrlStatus(profile.url);
+            return {
+              ...profile,
+              status: isActive ? 'active' : 'inactive'
+            };
+          })
+        );
+        
+        profiles = activeProfiles.filter(profile => profile.status === 'active');
+        
+        const domainResults = await checkDomainAvailability(username);
+        setAvailableDomains(domainResults);
+        
+        clearInterval(progressInterval);
+        setSearchProgress(100);
+        
+        const endTime = performance.now();
+        const timeElapsed = Math.round(endTime - startTime);
+        setSearchTime(timeElapsed);
+        
+        setTimeout(() => {
+          setResults(profiles);
+          setAdditionalResults(additionalProfiles);
+          const categorizedProfiles = groupProfilesByCategory(profiles);
+          setProfilesByCategory(categorizedProfiles);
+          setCategories(getCategories(profiles));
+          setIsSearching(false);
+          
+          toast({
+            title: "Search complete",
+            description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
+          });
+          
+          // Update URL with the search query
+          if (!location.pathname.includes('/search/')) {
+            navigate(`/search/${encodeURIComponent(searchQuery)}`, { replace: true });
+          }
+          
+          if (resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          
+          if (user) {
+            saveSearchHistory(searchQuery, profiles.length)
+              .then(success => {
+                if (success) refreshProfile();
+              });
+          }
+        }, 500);
+      } catch (error) {
+        console.error("Search error:", error);
+        clearInterval(progressInterval);
         setIsSearching(false);
+        setSearchProgress(0);
         
         toast({
-          title: "Search complete",
-          description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
+          title: "Search failed",
+          description: "An error occurred while searching. Please try again.",
+          variant: "destructive",
         });
-        
-        // Update URL with the search query
-        if (!location.pathname.includes('/search/')) {
-          navigate(`/search/${encodeURIComponent(searchQuery)}`, { replace: true });
-        }
-        
-        if (resultsRef.current) {
-          resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        
-        incrementSearchCount();
-        
-        if (user) {
-          saveSearchHistory(searchQuery, profiles.length)
-            .then(success => {
-              if (success) refreshProfile();
-            });
-        }
-      }, 500);
+      }
     }, 1500);
   };
 

@@ -22,49 +22,82 @@ export const generatePdfReport = (searchName: string, profiles: SocialMediaProfi
   // Add summary
   doc.text(`Found ${profiles.length} social media profiles matching "${searchName}"`, 14, 38);
   
-  // Create profile table data
-  const tableData = profiles.map((profile, index) => [
-    index + 1,
-    profile.platform,
-    profile.username,
-    profile.status || "Unknown",
-    profile.category || "General",
-    profile.url
-  ]);
+  // Group profiles by category for better organization
+  const profilesByCategory: Record<string, SocialMediaProfile[]> = {};
+  profiles.forEach(profile => {
+    const category = profile.category || "Uncategorized";
+    if (!profilesByCategory[category]) {
+      profilesByCategory[category] = [];
+    }
+    profilesByCategory[category].push(profile);
+  });
   
-  // Add profiles table
-  autoTable(doc, {
-    startY: 45,
-    head: [['#', 'Platform', 'Username', 'Status', 'Category', 'URL']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: [66, 133, 244],
-      textColor: 255,
-      fontStyle: 'bold'
-    },
-    columnStyles: {
-      0: { cellWidth: 10 },
-      5: { cellWidth: 'auto' }
-    },
-    didDrawCell: (data) => {
-      // Add URL hyperlinking for the URL column (index 5)
-      if (data.section === 'body' && data.column.index === 5 && data.cell.text.length > 0) {
-        const url = data.cell.text[0];
-        const textWidth = doc.getStringUnitWidth(url) * data.cell.styles.fontSize / doc.internal.scaleFactor;
-        
-        // Clear the default text to avoid shadow effect
-        doc.setFillColor(255, 255, 255);
-        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-        
-        // Draw the link text
-        doc.setTextColor(0, 0, 255);
-        doc.textWithLink(url, data.cell.x + 1, data.cell.y + 4, { 
-          url: url,
-          newWindow: true  // This makes links open in a new tab
-        });
-        doc.setTextColor(0);
+  let yPosition = 45;
+  
+  // Create separate tables for each category
+  Object.entries(profilesByCategory).forEach(([category, categoryProfiles], categoryIndex) => {
+    // Add category header
+    if (categoryIndex > 0) {
+      yPosition += 10; // Add space between categories
+    }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`${category} (${categoryProfiles.length})`, 14, yPosition);
+    yPosition += 8;
+    
+    // Create profiles table data for this category
+    const tableData = categoryProfiles.map((profile, index) => [
+      index + 1,
+      profile.platform,
+      profile.username,
+      profile.status || "Unknown",
+      profile.url
+    ]);
+    
+    // Add profiles table for this category
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['#', 'Platform', 'Username', 'Status', 'URL']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [66, 133, 244],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        4: { cellWidth: 'auto' }
+      },
+      didDrawCell: (data) => {
+        // Add URL hyperlinking for the URL column (index 4)
+        if (data.section === 'body' && data.column.index === 4 && data.cell.text.length > 0) {
+          const url = data.cell.text[0];
+          
+          // Clear the default text to avoid shadow effect
+          doc.setFillColor(255, 255, 255);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+          
+          // Draw the link text
+          doc.setTextColor(0, 0, 255);
+          doc.textWithLink(url, data.cell.x + 1, data.cell.y + 4, { 
+            url: url,
+            newWindow: true  // This makes links open in a new tab
+          });
+          doc.setTextColor(0);
+        }
       }
+    });
+    
+    // Update y-position for the next category
+    yPosition = (doc as any).lastAutoTable.finalY + 10;
+    
+    // Add page break if needed
+    if (categoryIndex < Object.keys(profilesByCategory).length - 1 && 
+        yPosition > doc.internal.pageSize.height - 60) {
+      doc.addPage();
+      yPosition = 20;
     }
   });
   

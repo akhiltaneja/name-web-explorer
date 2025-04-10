@@ -34,14 +34,17 @@ const generateUniqueId = () => {
 
 export const useSearchLimit = (user: any, profile: any) => {
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
+  const [searchLimitReached, setSearchLimitReached] = useState(false);
   const { toast } = useToast();
   const guestId = generateUniqueId();
 
   useEffect(() => {
     if (!user) {
       checkAndUpdateGuestLimits();
+    } else {
+      setSearchLimitReached(hasReachedSearchLimit());
     }
-  }, [user]);
+  }, [user, profile]);
 
   const checkAndUpdateGuestLimits = () => {
     const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
@@ -53,22 +56,27 @@ export const useSearchLimit = (user: any, profile: any) => {
       const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
       
       if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS) {
+        // Within the 24-hour window, check if limit is reached
         if (checkCount >= FREE_PLAN_LIMIT) {
           setGuestCheckAvailable(false);
+          setSearchLimitReached(true);
         } else {
           setGuestCheckAvailable(true);
+          setSearchLimitReached(false);
         }
       } else {
         // Reset counter if 24 hours have passed
         localStorage.setItem(GUEST_COUNT_KEY, "0");
         localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
         setGuestCheckAvailable(true);
+        setSearchLimitReached(false);
       }
     } else {
       // First time user
       localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       localStorage.setItem(GUEST_COUNT_KEY, "0");
       setGuestCheckAvailable(true);
+      setSearchLimitReached(false);
     }
   };
   
@@ -92,19 +100,32 @@ export const useSearchLimit = (user: any, profile: any) => {
   const incrementSearchCount = () => {
     if (!user) {
       const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
+      
+      // Check if already at or over limit
+      if (currentCount >= FREE_PLAN_LIMIT) {
+        setGuestCheckAvailable(false);
+        setSearchLimitReached(true);
+        return false;
+      }
+      
       const newCount = currentCount + 1;
       localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
       localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       
       if (newCount >= FREE_PLAN_LIMIT) {
         setGuestCheckAvailable(false);
+        setSearchLimitReached(true);
         toast({
           title: "Daily search limit reached",
           description: "You've reached your 3 daily free searches. Sign in or upgrade for more.",
           variant: "destructive",
         });
       }
+      
+      return true;
     }
+    
+    return true;
   };
 
   const saveSearchHistory = async (searchQuery: string, resultsCount: number) => {
@@ -139,7 +160,7 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   return { 
     guestCheckAvailable, 
-    hasReachedSearchLimit, 
+    hasReachedSearchLimit: () => searchLimitReached || hasReachedSearchLimit(), 
     incrementSearchCount,
     saveSearchHistory
   };

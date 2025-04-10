@@ -1,5 +1,6 @@
+
 import { User } from "@supabase/supabase-js";
-import { Calendar, CheckCircle, Search } from "lucide-react";
+import { Calendar, CheckCircle, LogOut, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -10,9 +11,10 @@ interface UserProfileHeaderProps {
   user: User;
   profile: UserProfile | null;
   onUpgradeClick: () => void;
+  onLogout: () => void;
 }
 
-const UserProfileHeader = ({ user, profile, onUpgradeClick }: UserProfileHeaderProps) => {
+const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProfileHeaderProps) => {
   const usagePercentage = profile?.plan === 'free' 
     ? ((profile?.checks_used % 3) / 3) * 100 
     : profile?.plan === 'premium' 
@@ -91,8 +93,8 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick }: UserProfileHeaderP
           </div>
         </div>
         
-        {profile?.plan !== 'unlimited' && (
-          <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex flex-col gap-2">
+          {profile?.plan !== 'unlimited' && (
             <Button 
               onClick={onUpgradeClick}
               className="bg-blue-600 hover:bg-blue-700"
@@ -100,8 +102,18 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick }: UserProfileHeaderP
             >
               Upgrade Plan
             </Button>
-          </div>
-        )}
+          )}
+          
+          <Button 
+            variant="outline" 
+            size="lg" 
+            onClick={onLogout}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+          </Button>
+        </div>
       </div>
       
       {profile?.plan !== 'unlimited' && (
