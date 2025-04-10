@@ -40,7 +40,7 @@ import DomainSuggestions from "@/components/DomainSuggestions";
 const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
 const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
 const GUEST_COOLDOWN_HOURS = 24;
-const FREE_PLAN_LIMIT = 2;
+const FREE_PLAN_LIMIT = 3;
 
 const Index = () => {
   const [name, setName] = useState("");
@@ -57,6 +57,7 @@ const Index = () => {
   const [profilesByCategory, setProfilesByCategory] = useState<Record<string, SocialMediaProfile[]>>({});
   const [availableDomains, setAvailableDomains] = useState<{tld: string, available: boolean, price: number}[]>([]);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const searchInitiated = useRef(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -66,23 +67,27 @@ const Index = () => {
 
   useEffect(() => {
     const query = searchParams.get('query');
-    if (query) {
-      setName(query);
-      handleSearch(query);
-    }
-    
     const pathSegments = location.pathname.split('/');
-    if (pathSegments[1] === 'search' && pathSegments[2]) {
-      const searchQuery = decodeURIComponent(pathSegments[2]);
-      setName(searchQuery);
-      handleSearch(searchQuery);
+    
+    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
+      searchInitiated.current = true;
+      
+      let searchQuery = query;
+      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
+        searchQuery = decodeURIComponent(pathSegments[2]);
+      }
+      
+      if (searchQuery) {
+        setName(searchQuery);
+        handleSearch(searchQuery);
+      }
     }
     
     const state = location.state as { returnTo?: string; action?: string } | null;
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
     }
-  }, [searchParams, location, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this only runs once on mount
 
   useEffect(() => {
     if (results.length > 0) {
@@ -212,7 +217,7 @@ const Index = () => {
           description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
         });
         
-        navigate(`/search/${encodeURIComponent(searchQuery)}`, { replace: true });
+        window.history.replaceState(null, '', `/search/${encodeURIComponent(searchQuery)}`);
         
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -384,7 +389,7 @@ const Index = () => {
               {!user && !guestCheckAvailable && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fade-in">
                   <p className="text-blue-700">
-                    You've used your guest search. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (2 searches per day with a free account).
+                    You've used your guest search. <Link to="/auth" className="font-bold underline hover:text-blue-800">Sign in</Link> to continue searching (3 searches per day with a free account).
                   </p>
                 </div>
               )}
@@ -409,7 +414,7 @@ const Index = () => {
 
         <section className="py-8 px-4" ref={resultsRef}>
           <div className="container mx-auto max-w-6xl">
-            {name && (
+            {name && (results.length > 0 || isSearching) && (
               <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
@@ -584,7 +589,7 @@ const Index = () => {
           </section>
         )}
 
-        {results.length === 0 && (
+        {!name && !isSearching && results.length === 0 && (
           <section className="py-16 px-4 bg-white">
             <div className="container mx-auto max-w-6xl">
               <div className="text-center mb-12">
@@ -628,61 +633,6 @@ const Index = () => {
             </div>
           </section>
         )}
-
-        <section className="py-12 px-4 bg-gray-50">
-          <div className="container mx-auto max-w-3xl">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-            </div>
-            
-            <Accordion type="single" collapsible className="w-full bg-white rounded-lg shadow-sm">
-              <AccordionItem value="item-1" className="border-b border-gray-200">
-                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
-                  How does CandidateChecker work?
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  CandidateChecker searches across multiple social media platforms to find profiles that match the name you provide. Our algorithms analyze potential matches based on usernames, display names, and other identifiers.
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="item-2" className="border-b border-gray-200">
-                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
-                  How many searches do I get?
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  Guest users get 1 search every 12 hours. Free accounts include 2 searches per day. Premium plans offer 500 searches per month, while our Unlimited plan provides unlimited searches.
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="item-3" className="border-b border-gray-200">
-                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
-                  Can I export the search results?
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  Yes! You can download results as a PDF report, copy all URLs to your clipboard, or email the report directly to yourself or your team.
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="item-4" className="border-b border-gray-200">
-                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
-                  Is my search data private?
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  Absolutely. We take privacy seriously. Your search history is only visible to you and is stored securely. We never share your search data with third parties.
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="item-5">
-                <AccordionTrigger className="px-4 py-4 hover:bg-gray-50 text-gray-900">
-                  How do I upgrade my account?
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 pt-0 text-gray-600">
-                  You can upgrade your account by visiting your <Link to="/profile" className="text-blue-600 hover:underline">profile page</Link> or the <Link to="/pricing" className="text-blue-600 hover:underline">pricing page</Link> and selecting a plan that suits your needs. We offer flexible monthly plans with no long-term commitments.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        </section>
       </main>
       
       <EmailReportDialog 
