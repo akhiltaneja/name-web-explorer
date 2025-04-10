@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { downloadPdfReport, emailPdfReport } from "@/utils/reportGenerator";
+import { downloadTextReport, emailTextReport } from "@/utils/reportGenerator";
 import { 
   Accordion,
   AccordionContent,
@@ -274,11 +274,11 @@ const Index = () => {
       return;
     }
     
-    downloadPdfReport(name, filteredResults);
+    downloadTextReport(name, filteredResults);
     
     toast({
       title: "Report downloaded",
-      description: `${filteredResults.length} profiles saved to PDF report`,
+      description: `${filteredResults.length} profiles saved to text report`,
     });
   };
 
@@ -299,7 +299,7 @@ const Index = () => {
     if (!email) return false;
     
     try {
-      const success = await emailPdfReport(email, name, filteredResults);
+      const success = await emailTextReport(email, name, filteredResults);
       return success;
     } catch (error) {
       console.error("Error sending email report:", error);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import Header from "@/components/Header";
 import EmailReportDialog from "@/components/EmailReportDialog";
-import { downloadPdfReport, emailPdfReport } from "@/utils/reportGenerator";
+import { downloadTextReport, emailTextReport } from "@/utils/reportGenerator";
 import UserProfileHeader from "@/components/profile/UserProfileHeader";
 import SearchHistoryTable from "@/components/profile/SearchHistoryTable";
 import PlansSection from "@/components/profile/PlansSection";
@@ -175,7 +174,7 @@ const Profile = () => {
 
   const handleDownloadReport = (query: string) => {
     const profiles = generateDummyProfiles(query);
-    downloadPdfReport(query, profiles);
+    downloadTextReport(query, profiles);
     
     toast({
       title: "Report downloaded",
@@ -190,7 +189,7 @@ const Profile = () => {
 
   const sendEmailReport = async (email: string): Promise<boolean> => {
     const profiles = generateDummyProfiles(selectedSearchQuery);
-    const success = await emailPdfReport(email, selectedSearchQuery, profiles);
+    const success = await emailTextReport(email, selectedSearchQuery, profiles);
     
     return success;
   };
