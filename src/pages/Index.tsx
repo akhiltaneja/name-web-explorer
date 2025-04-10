@@ -616,7 +616,7 @@ const Index = () => {
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">Export Reports</h3>
                   <p className="text-gray-600">
-                    Download PDF reports or email them directly to your team for easy collaboration.
+                    Download reports or email them directly to your team for easy collaboration.
                   </p>
                 </div>
                 

@@ -66,73 +66,68 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
 
   return (
     <Card className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-3">
+      <CardContent className="p-2">
         <div className="flex justify-between items-start">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-12 w-12">
+          <div className="flex items-center space-x-2">
+            <Avatar className="h-10 w-10">
               <AvatarImage src={getLogoUrl(profile.platform)} alt={profile.platform} />
               <AvatarFallback>{profile.platform.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold text-gray-900">{profile.platform}</h3>
-              {profile.category && (
-                <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 mt-1">
-                  {profile.category}
-                </Badge>
-              )}
-              <div className="text-sm text-gray-700 mt-1">
-                <span className="font-medium">Username:</span> {profile.username}
+              <div className="flex items-center">
+                <h3 className="font-semibold text-gray-900 text-sm">{profile.platform}</h3>
+                {profile.status && (
+                  <Badge 
+                    variant="outline" 
+                    className={`ml-2 text-xs ${
+                      profile.status === 'active' 
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200' 
+                        : profile.status === 'inactive' 
+                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200'
+                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200'
+                    }`}
+                  >
+                    {profile.status}
+                  </Badge>
+                )}
               </div>
+              {profile.category && (
+                <div className="flex items-center space-x-1">
+                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300">
+                    {profile.category}
+                  </Badge>
+                </div>
+              )}
+              <a
+                href={profile.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline break-all"
+              >
+                {profile.url}
+              </a>
             </div>
           </div>
           <div className="flex items-center space-x-1">
             <Button 
               size="sm" 
               variant="ghost" 
-              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
               onClick={handleCopy}
             >
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
             <Button 
               size="sm" 
               variant="ghost"  
-              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
               asChild
             >
               <a href={profile.url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </Button>
           </div>
-        </div>
-        
-        <div className="mt-2">
-          <a
-            href={profile.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline break-all"
-          >
-            {profile.url}
-          </a>
-          
-          {profile.status && (
-            <div className="mt-1">
-              <Badge 
-                variant="outline" 
-                className={`text-xs ${
-                  profile.status === 'active' 
-                    ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200' 
-                    : profile.status === 'inactive' 
-                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200'
-                      : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200'
-                }`}
-              >
-                {profile.status}
-              </Badge>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

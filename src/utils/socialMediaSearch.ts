@@ -44,7 +44,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "F",
       color: "#0063DC",
-      category: "Photography"
+      category: "Creativity"
     },
     {
       platform: "GitHub",
@@ -52,7 +52,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "🐙",
       color: "#333333",
-      category: "Software development"
+      category: "Professional"
     },
     {
       platform: "Behance",
@@ -60,7 +60,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "Be",
       color: "#053eff",
-      category: "Visual Arts and Design"
+      category: "Creativity"
     },
     {
       platform: "About.me",
@@ -68,7 +68,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "A",
       color: "#00A98F",
-      category: "Technology"
+      category: "Professional"
     },
     {
       platform: "Academia.edu",
@@ -132,7 +132,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "D",
       color: "#2E9FFF",
-      category: "Technology"
+      category: "Online Community"
     },
     {
       platform: "Fiverr",
@@ -148,7 +148,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "G",
       color: "#FF6666",
-      category: "Entertainment"
+      category: "Creativity"
     },
     {
       platform: "Gravatar",
@@ -164,7 +164,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "I",
       color: "#1BB76E",
-      category: "Technology"
+      category: "Creativity"
     },
     {
       platform: "Kaggle",
@@ -212,7 +212,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "S",
       color: "#0077B5",
-      category: "Online Community"
+      category: "Professional"
     },
     {
       platform: "TikTok",
@@ -236,7 +236,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "T",
       color: "#36465D",
-      category: "Images"
+      category: "Social network"
     },
     {
       platform: "Twitch",
@@ -244,7 +244,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "T",
       color: "#9146FF",
-      category: "Online Community"
+      category: "Social network"
     },
     {
       platform: "VSCO",
@@ -252,7 +252,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "V",
       color: "#000000",
-      category: "Online Community"
+      category: "Creativity"
     },
     {
       platform: "Vimeo",
@@ -260,7 +260,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "V",
       color: "#1AB7EA",
-      category: "Video"
+      category: "Social network"
     },
     {
       platform: "Wikipedia",
@@ -276,7 +276,23 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: `@${username}`,
       icon: "▶️",
       color: "#FF0000",
-      category: "Video"
+      category: "Social network"
+    },
+    {
+      platform: "Stack Overflow",
+      url: `https://stackoverflow.com/users/${Math.floor(Math.random() * 9000000) + 1000000}/${username}`,
+      username: username,
+      icon: "S",
+      color: "#F48024",
+      category: "Professional"
+    },
+    {
+      platform: "Spotify",
+      url: `https://open.spotify.com/user/${username}`,
+      username: username,
+      icon: "🎵",
+      color: "#1DB954",
+      category: "Music"
     }
   ];
 
