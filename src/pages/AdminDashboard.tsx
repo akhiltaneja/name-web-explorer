@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -139,17 +138,12 @@ const AdminDashboard = () => {
       
       if (searchesError) throw searchesError;
       
-      // Create admin_logs table if it doesn't exist
-      const { error: logTableError } = await supabase.rpc('create_logs_table_if_not_exists');
-      
-      // Fetch logs data
+      // Try to fetch logs data
       let { data: logsData, error: logsError } = await supabase
         .from('admin_logs')
-        .select('*, profiles!inner(email)')
-        .order('created_at', { ascending: false });
+        .select('*, profiles!inner(email)');
       
-      if (logsError && logsError.code !== 'PGRST116') {
-        // If it's not just a missing table error
+      if (logsError) {
         console.error("Error fetching logs:", logsError);
         logsData = [];
       } else if (!logsData) {
@@ -329,7 +323,7 @@ const AdminDashboard = () => {
       description: "Affiliate link deleted successfully.",
     });
   };
-
+  
   const handleResetDailySearches = async (userId: string) => {
     try {
       const today = new Date();
@@ -346,14 +340,19 @@ const AdminDashboard = () => {
       
       // Log this action
       if (user && user.id) {
-        await supabase
-          .from('admin_logs')
-          .insert({
-            action: 'admin_reset_user_credits',
-            user_id: user.id,
-            target_user_id: userId,
-            details: `Admin reset daily searches for user ${userId}`
-          });
+        try {
+          await supabase
+            .from('admin_logs')
+            .insert({
+              action: 'admin_reset_user_credits',
+              user_id: user.id,
+              target_user_id: userId,
+              details: `Admin reset daily searches for user ${userId}`
+            });
+        } catch (logError) {
+          console.error("Error logging action:", logError);
+          // Continue even if logging fails
+        }
       }
       
       await fetchData();
@@ -865,15 +864,4 @@ const AdminDashboard = () => {
                     </Card>
                   </div>
                 </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default AdminDashboard;
+              </

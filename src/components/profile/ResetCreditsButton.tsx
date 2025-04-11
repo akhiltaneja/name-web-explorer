@@ -38,14 +38,23 @@ const ResetCreditsButton = ({ onReset, userId }: ResetCreditsButtonProps) => {
       
       // Log this action
       if (user && user.id) {
-        await supabase
-          .from('admin_logs')
-          .insert({
-            action: userId ? 'admin_reset_user_credits' : 'user_reset_credits',
-            user_id: user.id,
-            target_user_id: targetUserId,
-            details: `Reset daily searches for user ${targetUserId}`
-          });
+        // Create a more detailed log message
+        const logDetails = `Reset daily searches for user ${targetUserId}${userId ? ' (admin action)' : ' (self-reset)'}`;
+        
+        try {
+          // Using the proper insert format for the admin_logs table
+          await supabase
+            .from('admin_logs')
+            .insert({
+              action: userId ? 'admin_reset_user_credits' : 'user_reset_credits',
+              user_id: user.id,
+              target_user_id: targetUserId,
+              details: logDetails
+            });
+        } catch (logError) {
+          console.error("Error logging action:", logError);
+          // Continue even if logging fails
+        }
       }
       
       toast({
