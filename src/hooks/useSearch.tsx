@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -162,7 +161,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
                   ...profile,
                   url: updatedUrl,
                   username: `@${alternativeUsername}`,
-                  status: 'active',
+                  status: 'active' as 'active',
                   note: 'Alternative profile found'
                 };
               }
@@ -170,7 +169,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             
             return {
               ...profile,
-              status: isActive ? 'active' : 'inactive'
+              status: isActive ? 'active' as 'active' : 'inactive' as 'inactive'
             };
           })
         );

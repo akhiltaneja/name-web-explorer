@@ -33,3 +33,25 @@ export interface CategoryCount {
   name: string;
   count: number;
 }
+
+export interface SocialMediaCategory {
+  name: string;
+  count: number;
+}
+
+export interface PlanOption {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  limit: string;
+  features: string[];
+}
+
+export interface SearchHistory {
+  id: string;
+  user_id: string;
+  query: string;
+  created_at: string;
+  result_count: number;
+}
