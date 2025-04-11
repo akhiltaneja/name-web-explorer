@@ -33,7 +33,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const { 
     guestCheckAvailable, 
     searchLimitReached,
-    setSearchLimitReached, // Make sure we get this from useSearchLimit
+    setSearchLimitReached, 
     checksRemaining,
     hasReachedSearchLimit, 
     incrementSearchCount,
@@ -41,8 +41,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   } = useSearchLimit(user, profile);
 
   const handleSearch = async (searchQuery = name) => {
+    // Convert to string in case a different type is passed
+    const queryString = String(searchQuery);
+    
     // Validate input
-    if (!searchQuery?.trim()) {
+    if (!queryString?.trim()) {
       toast({
         title: "Please enter a name",
         description: "You need to provide at least a first name to search.",
@@ -96,7 +99,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setSearchProgress(0);
     const startTime = performance.now();
     
-    const nameParts = searchQuery.trim().toLowerCase().split(" ");
+    const nameParts = queryString.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
     
     const progressInterval = setInterval(() => {
@@ -108,8 +111,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     
     setTimeout(async () => {
       try {
-        let profiles = getSocialMediaProfiles(username, searchQuery);
-        const additionalProfiles = getAdditionalResults(username, searchQuery);
+        let profiles = getSocialMediaProfiles(username, queryString);
+        const additionalProfiles = getAdditionalResults(username, queryString);
         
         const activeProfiles = await Promise.all(
           profiles.map(async profile => {
@@ -143,12 +146,12 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           
           toast({
             title: "Search complete",
-            description: `Found ${profiles.length} potential profiles for ${searchQuery}`,
+            description: `Found ${profiles.length} potential profiles for ${queryString}`,
           });
           
           // Update URL with the search query
           if (!location.pathname.includes('/search/')) {
-            navigate(`/search/${encodeURIComponent(searchQuery)}`, { replace: true });
+            navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
           }
           
           if (resultsRef.current) {
@@ -156,7 +159,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           }
           
           if (user) {
-            saveSearchHistory(searchQuery, profiles.length)
+            saveSearchHistory(queryString, profiles.length)
               .then(success => {
                 if (success) refreshProfile();
               });

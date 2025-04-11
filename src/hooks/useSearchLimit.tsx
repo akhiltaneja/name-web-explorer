@@ -8,6 +8,7 @@ const GUEST_COUNT_KEY = "people_peeper_guest_check_count";
 const GUEST_ID_KEY = "people_peeper_guest_id";
 const GUEST_COOLDOWN_HOURS = 24;
 const FREE_PLAN_LIMIT = 3;
+const GUEST_LIMIT_REACHED_KEY = "people_peeper_guest_limit_reached";
 
 // Generate a unique ID for the device/browser
 const generateUniqueId = () => {
@@ -33,21 +34,32 @@ const generateUniqueId = () => {
 };
 
 export const useSearchLimit = (user: any, profile: any) => {
+  // Initialize search limit reached from localStorage to maintain persistence across refreshes
+  const initialLimitReached = user ? false : localStorage.getItem(GUEST_LIMIT_REACHED_KEY) === 'true';
+  
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
-  const [searchLimitReached, setSearchLimitReached] = useState(false);
+  const [searchLimitReached, setSearchLimitReached] = useState(initialLimitReached);
   const [checksRemaining, setChecksRemaining] = useState(FREE_PLAN_LIMIT);
   const { toast } = useToast();
   const guestId = generateUniqueId();
+
+  // Set search limit reached to localStorage for persistence
+  const setSearchLimitReachedWithStorage = (limitReached: boolean) => {
+    setSearchLimitReached(limitReached);
+    if (!user) {
+      localStorage.setItem(GUEST_LIMIT_REACHED_KEY, limitReached.toString());
+    }
+  };
 
   // Initialize and check limits on component mount and when user/profile changes
   useEffect(() => {
     if (!user) {
       const limitStatus = checkGuestLimits();
-      setSearchLimitReached(!limitStatus.available);
+      setSearchLimitReachedWithStorage(!limitStatus.available);
       setChecksRemaining(limitStatus.remaining);
     } else if (profile) {
       const limitReached = hasReachedUserSearchLimit();
-      setSearchLimitReached(limitReached);
+      setSearchLimitReachedWithStorage(limitReached);
       
       // Calculate remaining checks for user
       const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 
@@ -65,7 +77,7 @@ export const useSearchLimit = (user: any, profile: any) => {
         
         // If no searches remaining, set the limit reached flag
         if (remaining <= 0) {
-          setSearchLimitReached(true);
+          setSearchLimitReachedWithStorage(true);
         }
       }
     }
@@ -102,6 +114,7 @@ export const useSearchLimit = (user: any, profile: any) => {
         // Reset counter if 24 hours have passed
         localStorage.setItem(GUEST_COUNT_KEY, "0");
         localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+        localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'false');
         setGuestCheckAvailable(true);
         return { 
           available: true, 
@@ -113,6 +126,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       // First time user
       localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       localStorage.setItem(GUEST_COUNT_KEY, "0");
+      localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'false');
       setGuestCheckAvailable(true);
       return { 
         available: true, 
@@ -151,7 +165,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   const incrementSearchCount = async () => {
     // Double check if limit is already reached to prevent any bypassing
     if (hasReachedSearchLimit() || checksRemaining <= 0) {
-      setSearchLimitReached(true);
+      setSearchLimitReachedWithStorage(true);
       
       if (!user) {
         const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
@@ -193,7 +207,9 @@ export const useSearchLimit = (user: any, profile: any) => {
       // If this search puts us at the limit, set the flag
       if (remaining <= 0) {
         setGuestCheckAvailable(false);
-        setSearchLimitReached(true);
+        setSearchLimitReachedWithStorage(true);
+        // Ensure the limit is stored
+        localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'true');
       }
       
       return true;
@@ -207,7 +223,7 @@ export const useSearchLimit = (user: any, profile: any) => {
         : (profile.checks_used % 500);
       
       if (checksUsed >= dailyLimit) {
-        setSearchLimitReached(true);
+        setSearchLimitReachedWithStorage(true);
         setChecksRemaining(0);
         
         toast({
@@ -225,7 +241,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       // If this search puts us at the limit, set the flag
       if (remaining <= 0) {
-        setSearchLimitReached(true);
+        setSearchLimitReachedWithStorage(true);
       }
       
       return true;
@@ -289,7 +305,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   return { 
     guestCheckAvailable,
     searchLimitReached,
-    setSearchLimitReached,
+    setSearchLimitReached: setSearchLimitReachedWithStorage,
     checksRemaining,
     hasReachedSearchLimit,
     incrementSearchCount,

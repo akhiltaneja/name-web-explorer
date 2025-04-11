@@ -42,7 +42,7 @@ const SearchBar = ({
   const navigate = useNavigate();
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !searchLimitReached && !isSearching && name.trim()) {
+    if (e.key === "Enter" && !searchLimitReached && !isSearching && name.trim() && checksRemaining > 0) {
       handleSearch();
     } else if (e.key === "Enter" && (searchLimitReached || checksRemaining <= 0)) {
       if (!user) {
@@ -141,8 +141,13 @@ const SearchBar = ({
         </CardContent>
       </Card>
 
-      {/* Search Limit Modal */}
-      <Dialog open={showLimitModal} onOpenChange={setShowLimitModal}>
+      {/* Search Limit Modal - Make this modal persistent when at limit */}
+      <Dialog open={showLimitModal} onOpenChange={(open) => {
+        // Only allow closing if not at search limit
+        if (!searchLimitReached) {
+          setShowLimitModal(open);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
@@ -160,7 +165,6 @@ const SearchBar = ({
             <Button
               className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
               onClick={() => {
-                setShowLimitModal(false);
                 navigate("/profile?tab=plans");
               }}
             >
