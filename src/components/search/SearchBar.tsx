@@ -170,64 +170,6 @@ const SearchBar = ({
         </CardContent>
       </Card>
 
-      {/* Search Limit Modal - Only show when the button is clicked and limit is reached */}
-      <Dialog 
-        open={showLimitModal} 
-        onOpenChange={(open) => {
-          // Allow closing the modal
-          setShowLimitModal(open);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
-            <DialogDescription className="text-center">
-              <div className="flex justify-center my-4">
-                <Lock className="h-12 w-12 text-red-500" />
-              </div>
-              <p className="mb-4">
-                You've used all your available searches. 
-                {!user ? " Please sign in or upgrade your plan to continue searching." :
-                         " You've reached your daily limit of 3 searches. Please upgrade your plan to continue searching."}
-              </p>
-              {!user && (
-                <p className="text-sm text-gray-500">
-                  Free users are limited to 3 searches per day.
-                </p>
-              )}
-              {user && profile?.plan === 'free' && (
-                <p className="text-sm text-gray-500">
-                  Your free plan allows 3 searches per day. Upgrade for more searches.
-                </p>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center gap-2">
-            {!user && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  navigate("/auth");
-                  setShowLimitModal(false);
-                }}
-              >
-                Sign In
-              </Button>
-            )}
-            <Button
-              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
-              onClick={() => {
-                navigate(user ? "/profile?tab=plans" : "/pricing");
-                setShowLimitModal(false);
-              }}
-            >
-              Upgrade Now
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Grade App Dialog */}
       <GradeAppDialog 
         open={showGradeDialog} 

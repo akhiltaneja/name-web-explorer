@@ -6,8 +6,11 @@ import GuestLimitWarning from "./GuestLimitWarning";
 import RecentSearches from "./RecentSearches";
 import SearchFeatures from "./SearchFeatures";
 import GradeAppDialog from "./GradeAppDialog";
-import { PlanLimitModal } from "../profile/PlanLimitModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface HeroProps {
   name: string;
@@ -49,7 +52,11 @@ const Hero = ({
   verificationProgress = 0
 }: HeroProps) => {
   const [showRating, setShowRating] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { user: authUser } = useAuth();
+  const navigate = useNavigate();
+  
+  // Updated to use user prop instead of isAuthenticated
+  const isAuthenticated = !!user;
 
   // Show rating dialog after a successful search for logged in users
   useEffect(() => {
@@ -78,7 +85,7 @@ const Hero = ({
         }
       }
     }
-  }, [isSearching, searchProgress, name, isAuthenticated]);
+  }, [isSearching, searchProgress, name, isAuthenticated, showRating]);
 
   return (
     <section className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-16">
@@ -100,6 +107,10 @@ const Hero = ({
             isSearching={isSearching || isDeepVerifying}
             checksRemaining={checksRemaining}
             searchLimitReached={searchLimitReached}
+            user={user}
+            profile={profile}
+            showLimitModal={showLimitModal}
+            setShowLimitModal={setShowLimitModal}
           />
 
           <SearchProgress 
@@ -111,16 +122,18 @@ const Hero = ({
           />
           
           {!user && (
-            <GuestLimitWarning
+            <GuestLimitWarning 
+              user={user}
               guestCheckAvailable={guestCheckAvailable}
-              searchCount={3 - checksRemaining}
+              isSearching={isSearching}
+              searchLimitReached={searchLimitReached}
             />
           )}
 
           {recentSearches.length > 0 && !isSearching && !name && (
             <RecentSearches
-              searches={recentSearches}
-              onSelectSearch={(search) => {
+              recentSearches={recentSearches}
+              onSearch={(search) => {
                 setName(search);
                 handleSearch(search);
               }}
@@ -133,17 +146,67 @@ const Hero = ({
         </div>
       </div>
 
-      <PlanLimitModal
-        isOpen={showLimitModal}
-        onClose={() => setShowLimitModal(false)}
-        isAuthenticated={!!user}
-        searchCount={checksRemaining}
-        profile={profile}
-      />
+      {/* Plan Limit Modal */}
+      <Dialog 
+        open={showLimitModal} 
+        onOpenChange={(open) => {
+          // Allow closing the modal
+          setShowLimitModal(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
+            <DialogDescription className="text-center">
+              <div className="flex justify-center my-4">
+                <Lock className="h-12 w-12 text-red-500" />
+              </div>
+              <p className="mb-4">
+                You've used all your available searches. 
+                {!user ? " Please sign in or upgrade your plan to continue searching." :
+                         " You've reached your daily limit of 3 searches. Please upgrade your plan to continue searching."}
+              </p>
+              {!user && (
+                <p className="text-sm text-gray-500">
+                  Free users are limited to 3 searches per day.
+                </p>
+              )}
+              {user && profile?.plan === 'free' && (
+                <p className="text-sm text-gray-500">
+                  Your free plan allows 3 searches per day. Upgrade for more searches.
+                </p>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-2">
+            {!user && (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  navigate("/auth");
+                  setShowLimitModal(false);
+                }}
+              >
+                Sign In
+              </Button>
+            )}
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+              onClick={() => {
+                navigate(user ? "/profile?tab=plans" : "/pricing");
+                setShowLimitModal(false);
+              }}
+            >
+              Upgrade Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <GradeAppDialog
-        isOpen={showRating}
-        onClose={() => setShowRating(false)}
+      <GradeAppDialog 
+        open={showRating} 
+        setOpen={setShowRating} 
       />
     </section>
   );
