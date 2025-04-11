@@ -80,16 +80,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: "destructive",
         });
       } else if (data) {
-        // Special handling for admin user
-        if (data.email === "akhiltaneja92@gmail.com" && data.plan !== "unlimited") {
-          // Update user plan to unlimited if not already set
+        // Special handling for admin user (akhiltaneja92@gmail.com)
+        if (data.email === "akhiltaneja92@gmail.com") {
+          // Always ensure this user has unlimited plan and admin role
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ plan: "unlimited" })
+            .update({ 
+              plan: "unlimited",
+              role: "admin"
+            })
             .eq('id', userId);
             
           if (!updateError) {
             data.plan = "unlimited";
+            data.role = "admin";
           }
         }
         

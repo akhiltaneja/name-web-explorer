@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -70,7 +71,7 @@ interface LogData {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -105,9 +106,18 @@ const AdminDashboard = () => {
 
     const checkAdmin = async () => {
       try {
-        setIsAdmin(true);
-        
-        await fetchData();
+        // Check if user is admin (email is akhiltaneja92@gmail.com)
+        if (profile && profile.email === "akhiltaneja92@gmail.com") {
+          setIsAdmin(true);
+          await fetchData();
+        } else {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access the admin dashboard.",
+            variant: "destructive",
+          });
+          navigate("/");
+        }
       } catch (error) {
         console.error("Error checking admin status:", error);
         toast({
@@ -120,7 +130,7 @@ const AdminDashboard = () => {
     };
     
     checkAdmin();
-  }, [navigate, user]);
+  }, [navigate, user, profile, toast]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -591,17 +601,7 @@ const AdminDashboard = () => {
                           onChange={(e) => setUserSearch(e.target.value)}
                           className="w-64"
                         />
-                        <Button onClick={() => {
-                          if (userSearch.trim() === "") {
-                            setFilteredUsers(users);
-                          } else {
-                            setFilteredUsers(
-                              users.filter((user) =>
-                                user.email.toLowerCase().includes(userSearch.toLowerCase())
-                              )
-                            );
-                          }
-                        }}>
+                        <Button onClick={handleUserSearch}>
                           <Filter className="h-4 w-4 mr-2" />
                           Filter
                         </Button>
@@ -667,7 +667,7 @@ const AdminDashboard = () => {
                             <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                             <TableCell className="text-right">
                               <ResetCreditsButton 
-                                onReset={() => fetchData()} 
+                                onReset={() => handleResetDailySearches(user.id)} 
                                 userId={user.id}
                               />
                             </TableCell>
@@ -700,17 +700,7 @@ const AdminDashboard = () => {
                           onChange={(e) => setQuerySearch(e.target.value)}
                           className="w-64"
                         />
-                        <Button onClick={() => {
-                          if (querySearch.trim() === "") {
-                            setFilteredSearches(searches);
-                          } else {
-                            setFilteredSearches(
-                              searches.filter((search) =>
-                                search.query.toLowerCase().includes(querySearch.toLowerCase())
-                              )
-                            );
-                          }
-                        }}>
+                        <Button onClick={handleQuerySearch}>
                           <Filter className="h-4 w-4 mr-2" />
                           Filter
                         </Button>
@@ -768,19 +758,7 @@ const AdminDashboard = () => {
                           onChange={(e) => setLogSearch(e.target.value)}
                           className="w-64"
                         />
-                        <Button onClick={() => {
-                          if (logSearch.trim() === "") {
-                            setFilteredLogs(logs);
-                          } else {
-                            setFilteredLogs(
-                              logs.filter((log) =>
-                                log.details?.toLowerCase().includes(logSearch.toLowerCase()) ||
-                                log.action.toLowerCase().includes(logSearch.toLowerCase()) ||
-                                (log.user_email && log.user_email.toLowerCase().includes(logSearch.toLowerCase()))
-                              )
-                            );
-                          }
-                        }}>
+                        <Button onClick={handleLogSearch}>
                           <Filter className="h-4 w-4 mr-2" />
                           Filter
                         </Button>
@@ -874,4 +852,88 @@ const AdminDashboard = () => {
                                 <TableCell>{link.name}</TableCell>
                                 <TableCell>
                                   <div className="max-w-xs truncate">
-                                    <a href={link.url} target="_blank" rel
+                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                      {link.url}
+                                    </a>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{link.description}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={() => handleDeleteAffiliateLink(link.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="md:col-span-1">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Add Affiliate Link</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input 
+                              id="name" 
+                              value={newLink.name}
+                              onChange={(e) => setNewLink({...newLink, name: e.target.value})}
+                              placeholder="e.g. Namecheap"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="url">URL</Label>
+                            <Input 
+                              id="url" 
+                              value={newLink.url}
+                              onChange={(e) => setNewLink({...newLink, url: e.target.value})}
+                              placeholder="https://example.com/?ref=YOUR_ID"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Input 
+                              id="description"
+                              value={newLink.description}
+                              onChange={(e) => setNewLink({...newLink, description: e.target.value})}
+                              placeholder="What service does this company provide?"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button 
+                          className="w-full" 
+                          onClick={handleAddAffiliateLink}
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Add Affiliate Link
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default AdminDashboard;
