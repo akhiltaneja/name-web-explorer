@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -59,7 +58,6 @@ const Index = () => {
     setEmailModalOpen
   } = useSearch(user, profile, refreshProfile);
 
-  // Load recent searches from localStorage on initial render
   useEffect(() => {
     const storedSearches = localStorage.getItem(RECENT_SEARCHES_KEY);
     if (storedSearches) {
@@ -74,30 +72,21 @@ const Index = () => {
     }
   }, []);
 
-  // Add search to recent searches when a search is completed
   useEffect(() => {
     if (name && results.length > 0 && !isSearching) {
       addToRecentSearches(name);
     }
   }, [name, results, isSearching]);
 
-  // Add a search to recent searches
   const addToRecentSearches = (searchTerm: string) => {
     setRecentSearches(prevSearches => {
-      // Filter out the search term if it already exists to avoid duplicates
       const filteredSearches = prevSearches.filter(s => s !== searchTerm);
-      
-      // Add the new search term to the beginning
       const newSearches = [searchTerm, ...filteredSearches].slice(0, MAX_RECENT_SEARCHES);
-      
-      // Save to localStorage
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(newSearches));
-      
       return newSearches;
     });
   };
 
-  // Clear a specific search from recent searches
   const clearRecentSearch = (searchTerm: string) => {
     setRecentSearches(prevSearches => {
       const newSearches = prevSearches.filter(s => s !== searchTerm);
@@ -106,7 +95,6 @@ const Index = () => {
     });
   };
 
-  // Clear all recent searches
   const clearAllRecentSearches = () => {
     setRecentSearches([]);
     localStorage.removeItem(RECENT_SEARCHES_KEY);
@@ -116,7 +104,6 @@ const Index = () => {
     });
   };
 
-  // Handle search navigation and URL updates
   useEffect(() => {
     const query = searchParams.get('query');
     const pathSegments = location.pathname.split('/');
@@ -218,6 +205,7 @@ const Index = () => {
           searchProgress={searchProgress}
           searchLimitReached={searchLimitReached}
           user={user}
+          profile={profile}
           guestCheckAvailable={guestCheckAvailable}
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}

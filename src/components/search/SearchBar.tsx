@@ -26,6 +26,7 @@ interface SearchBarProps {
   checksRemaining: number;
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
+  profile?: any; // Add profile to the interface
 }
 
 const SearchBar = ({ 
@@ -37,7 +38,8 @@ const SearchBar = ({
   user,
   checksRemaining,
   showLimitModal = false,
-  setShowLimitModal = () => {}
+  setShowLimitModal = () => {},
+  profile // Destructure profile from props
 }: SearchBarProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -204,3 +206,4 @@ const SearchBar = ({
 };
 
 export default SearchBar;
+

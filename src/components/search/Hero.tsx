@@ -14,6 +14,7 @@ interface HeroProps {
   searchProgress: number;
   searchLimitReached: boolean;
   user: any;
+  profile?: any; // Add profile to the interface
   guestCheckAvailable: boolean;
   checksRemaining: number;
   showLimitModal?: boolean;
@@ -31,6 +32,7 @@ const Hero = ({
   searchProgress,
   searchLimitReached,
   user,
+  profile, // Destructure profile
   guestCheckAvailable,
   checksRemaining,
   showLimitModal,
@@ -69,6 +71,7 @@ const Hero = ({
           isSearching={isSearching}
           searchLimitReached={searchLimitReached}
           user={user}
+          profile={profile} // Pass profile to SearchBar
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
@@ -107,3 +110,4 @@ const Hero = ({
 };
 
 export default Hero;
+
