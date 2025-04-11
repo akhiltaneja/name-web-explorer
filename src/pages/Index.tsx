@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +24,6 @@ import { useSearch } from "@/hooks/useSearch";
 const Index = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { toast } = useToast();
   const { user, profile, refreshProfile } = useAuth();
@@ -49,7 +49,9 @@ const Index = () => {
     searchInitiated,
     resultsRef,
     showLimitModal,
-    setShowLimitModal
+    setShowLimitModal,
+    emailModalOpen,
+    setEmailModalOpen
   } = useSearch(user, profile, refreshProfile);
 
   useEffect(() => {

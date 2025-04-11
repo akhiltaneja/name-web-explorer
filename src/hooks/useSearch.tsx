@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { 
   getSocialMediaProfiles, 
@@ -23,10 +23,12 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [profilesByCategory, setProfilesByCategory] = useState<Record<string, any[]>>({});
   const [categories, setCategories] = useState([]);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const searchInitiated = useRef(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   
@@ -231,7 +233,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     searchInitiated,
     resultsRef,
     showLimitModal,
-    setShowLimitModal
+    setShowLimitModal,
+    emailModalOpen,
+    setEmailModalOpen
   };
 };
-
