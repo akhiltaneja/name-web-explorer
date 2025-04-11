@@ -55,7 +55,11 @@ const Hero = ({
           />
           
           {isSearching && (
-            <SearchProgress progress={searchProgress} />
+            <SearchProgress 
+              isSearching={isSearching} 
+              searchProgress={searchProgress} 
+              name={name}
+            />
           )}
           
           <GuestLimitWarning 
