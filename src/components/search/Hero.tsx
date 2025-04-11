@@ -19,6 +19,7 @@ interface HeroProps {
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
   recentSearches?: string[];
+  searchInitiated?: boolean;
 }
 
 const Hero = ({
@@ -33,7 +34,8 @@ const Hero = ({
   checksRemaining,
   showLimitModal,
   setShowLimitModal,
-  recentSearches = []
+  recentSearches = [],
+  searchInitiated = false,
 }: HeroProps) => {
   const handleSearchSelect = (query: string) => {
     setName(query);
@@ -43,7 +45,7 @@ const Hero = ({
   return (
     <section className="pt-8 pb-6 px-4 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto max-w-6xl">
-        {!name && (
+        {!searchInitiated && (
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Find Anyone's Social Media Profiles
@@ -65,9 +67,10 @@ const Hero = ({
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
+          searchInitiated={searchInitiated}
         />
 
-        {!name && recentSearches && recentSearches.length > 0 && (
+        {!searchInitiated && recentSearches && recentSearches.length > 0 && (
           <RecentSearches 
             recentSearches={recentSearches} 
             onSearchSelect={handleSearchSelect} 

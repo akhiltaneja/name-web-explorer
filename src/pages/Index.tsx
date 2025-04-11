@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
@@ -29,6 +29,7 @@ const Index = () => {
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const {
     name,
@@ -55,6 +56,24 @@ const Index = () => {
     clearResults,
     recentSearches
   } = useSearch(user, profile, refreshProfile);
+
+  // When URL changes, handle the search params
+  useEffect(() => {
+    const pathSegments = location.pathname.split('/');
+    
+    // Check if we're on a search page
+    if (pathSegments[1] === 'search' && pathSegments[2]) {
+      const searchQuery = decodeURIComponent(pathSegments[2]);
+      
+      // Only update the search term if it's different
+      if (name !== searchQuery) {
+        setName(searchQuery);
+      }
+    } else if (pathSegments[1] === '') {
+      // If we're on the home page, clear results
+      clearResults();
+    }
+  }, [location, name, setName, clearResults]);
 
   const handleCopyAll = () => {
     const text = filteredResults
@@ -120,6 +139,9 @@ const Index = () => {
     ? additionalResults.filter(profile => profile.category === selectedCategory)
     : additionalResults;
 
+  // Determine if search has been initiated based on URL
+  const isSearchPage = location.pathname.includes('/search/');
+
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
@@ -138,11 +160,12 @@ const Index = () => {
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
           recentSearches={recentSearches}
+          searchInitiated={isSearchPage}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>
           <div className="container mx-auto max-w-6xl">
-            {name && (results.length > 0 || isSearching) && (
+            {isSearchPage && (results.length > 0 || isSearching) && (
               <ResultsHeader 
                 name={name}
                 filteredResults={filteredResults}
@@ -157,11 +180,13 @@ const Index = () => {
               />
             )}
 
-            <CategoryFilter 
-              categories={categories}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-            />
+            {isSearchPage && (
+              <CategoryFilter 
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+              />
+            )}
 
             <ResultsList 
               filteredResults={filteredResults}
@@ -184,14 +209,19 @@ const Index = () => {
           </div>
         </section>
 
-        <EmptyResults 
-          name={name}
-          isSearching={isSearching}
-          results={results}
-          onReset={clearResults}
-        />
+        {isSearchPage && name && !isSearching && results.length === 0 && (
+          <EmptyResults 
+            name={name}
+            isSearching={isSearching}
+            results={results}
+            onReset={() => {
+              clearResults();
+              navigate('/');
+            }}
+          />
+        )}
 
-        {!name && !isSearching && results.length === 0 && (
+        {!isSearchPage && !isSearching && results.length === 0 && (
           <>
             <Features />
             <FAQ />

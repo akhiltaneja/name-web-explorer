@@ -4,20 +4,30 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { LogIn, User, CreditCard, LayoutDashboard } from "lucide-react";
 import DefaultAvatar from "./DefaultAvatar";
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // For demo purposes, consider the admin email as admin@example.com
   const isAdmin = user?.email === "admin@example.com";
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Clear search and go home
-    navigate('/', { replace: true });
-    // Reset the search by clearing URL parameters
+    
+    // First clear URL parameters
     window.history.replaceState({}, document.title, '/');
+    
+    // Then navigate to home
+    navigate('/', { replace: true });
+    
+    // Show notification
+    toast({
+      title: "Home page",
+      description: "Returned to home page and cleared search results",
+    });
   };
 
   return (

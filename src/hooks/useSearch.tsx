@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -55,29 +54,29 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setSearchTime(null);
     setAvailableDomains([]);
     searchInitiated.current = false;
+    
+    // Clear URL parameters but keep the current route
+    if (location.pathname !== '/') {
+      navigate('/', { replace: true });
+    }
   };
 
   useEffect(() => {
-    const query = searchParams.get('query');
     const pathSegments = location.pathname.split('/');
     
-    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
+    if (pathSegments[1] === 'search' && pathSegments[2]) {
+      // we're on the search results page
+      const searchQuery = decodeURIComponent(pathSegments[2]);
+      
+      setName(searchQuery);
       searchInitiated.current = true;
       
-      let searchQuery = query;
-      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
-        searchQuery = decodeURIComponent(pathSegments[2]);
-      }
-      
-      if (searchQuery) {
-        setName(searchQuery);
-        // Don't auto-search if limit reached
-        if (!searchLimitReached && checksRemaining > 0) {
-          handleSearch(searchQuery);
-        } else {
-          // Just show the modal if we're at limit
-          setShowLimitModal(true);
-        }
+      // Auto-search only if we haven't already searched and are allowed to
+      if (results.length === 0 && !isSearching && !searchLimitReached && checksRemaining > 0) {
+        handleSearch(searchQuery);
+      } else if (searchLimitReached || checksRemaining <= 0) {
+        // Just show the modal if we're at limit
+        setShowLimitModal(true);
       }
     }
     
@@ -85,7 +84,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
     }
-  }, [searchParams, location, searchLimitReached, checksRemaining, user]);
+  }, [location.pathname, searchLimitReached, checksRemaining, user]);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
@@ -198,16 +197,15 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             description: `Found ${profiles.length} potential profiles for ${queryString}`,
           });
           
-          // Update URL with the search query
-          if (!location.pathname.includes('/search/')) {
-            navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
-          }
+          // We're already on the search page, so no need to change URL
           
           if (resultsRef.current) {
             resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           
-          // Save search to history
+          // Save search to history and recent searches
+          addToRecentSearches(queryString);
+          
           saveSearchHistory(queryString, profiles.length)
             .then(success => {
               if (user && success) refreshProfile();
@@ -244,7 +242,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     checksRemaining,
     hasReachedSearchLimit,
     handleSearch,
-    searchInitiated,
+    searchInitiated: location.pathname.includes('/search/'),
     resultsRef,
     showLimitModal,
     setShowLimitModal,

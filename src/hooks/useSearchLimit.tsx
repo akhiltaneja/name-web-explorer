@@ -95,10 +95,6 @@ export const useSearchLimit = (user: any, profile: any) => {
     };
 
     checkAndSetLimits();
-    
-    // Also set up an interval to check periodically (to prevent bypasses)
-    const intervalCheck = setInterval(checkAndSetLimits, 2000);
-    return () => clearInterval(intervalCheck);
   }, [user, profile]);
 
   // Check guest limits and return status with remaining searches
@@ -129,9 +125,9 @@ export const useSearchLimit = (user: any, profile: any) => {
         }
       } else {
         // Reset counter if 24 hours have passed
-        localStorage.setItem(GUEST_COUNT_KEY, "0");
-        localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
-        localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'false');
+        localStorage.removeItem(GUEST_COUNT_KEY);
+        localStorage.removeItem(GUEST_LIMIT_KEY);
+        localStorage.removeItem(GUEST_LIMIT_REACHED_KEY);
         return { 
           available: true, 
           remaining: FREE_PLAN_LIMIT,
@@ -140,9 +136,6 @@ export const useSearchLimit = (user: any, profile: any) => {
       }
     } else {
       // First time user
-      localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
-      localStorage.setItem(GUEST_COUNT_KEY, "0");
-      localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'false');
       return { 
         available: true, 
         remaining: FREE_PLAN_LIMIT,
@@ -238,8 +231,8 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
       
-      // Only update timestamp on first search to establish the 24-hour window
-      if (currentCount === 0) {
+      // Always update timestamp to ensure persistence
+      if (!localStorage.getItem(GUEST_LIMIT_KEY)) {
         localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       }
       

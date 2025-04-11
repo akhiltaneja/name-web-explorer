@@ -26,6 +26,7 @@ interface SearchBarProps {
   checksRemaining: number;
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
+  searchInitiated?: boolean;
 }
 
 const SearchBar = ({ 
@@ -37,34 +38,40 @@ const SearchBar = ({
   user,
   checksRemaining,
   showLimitModal = false,
-  setShowLimitModal = () => {}
+  setShowLimitModal = () => {},
+  searchInitiated = false
 }: SearchBarProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSearching && name.trim()) {
-      if (searchLimitReached || checksRemaining <= 0) {
-        // Show limit modal and toast instead of trying to search
-        setShowLimitModal(true);
-        if (!user) {
-          toast({
-            title: "Request limit reached",
-            description: "You've used all your free searches. Sign in or upgrade for more.",
-            variant: "destructive",
-            duration: 5000, // Longer duration
-          });
-        } else {
-          toast({
-            title: "Request limit reached",
-            description: "Please upgrade to continue searching.",
-            variant: "destructive",
-            duration: 5000, // Longer duration
-          });
-        }
+      // Don't immediately search, navigate to search URL first
+      if (!searchInitiated) {
+        navigate(`/search/${encodeURIComponent(name)}`);
       } else {
-        // Only proceed with search if we have credits
-        handleSearch();
+        if (searchLimitReached || checksRemaining <= 0) {
+          // Show limit modal and toast instead of trying to search
+          setShowLimitModal(true);
+          if (!user) {
+            toast({
+              title: "Request limit reached",
+              description: "You've used all your free searches. Sign in or upgrade for more.",
+              variant: "destructive",
+              duration: 5000, // Longer duration
+            });
+          } else {
+            toast({
+              title: "Request limit reached",
+              description: "Please upgrade to continue searching.",
+              variant: "destructive",
+              duration: 5000, // Longer duration
+            });
+          }
+        } else {
+          // Only proceed with search if we have credits
+          handleSearch();
+        }
       }
     }
   };
@@ -72,119 +79,119 @@ const SearchBar = ({
   const isLimitReached = searchLimitReached || checksRemaining <= 0;
 
   return (
-    <>
-      <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden`}>
-        <CardContent className="p-0">
-          <div className="flex flex-col md:flex-row relative">
-            <Input
-              type="text"
-              placeholder="Enter first and last name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-purple-500"
-              onKeyDown={handleKeyDown}
-              disabled={isSearching}
-            />
-            <Button 
-              onClick={() => {
-                if (isLimitReached) {
-                  setShowLimitModal(true);
-                  toast({
-                    title: "Request limit reached",
-                    description: !user ? "Sign in or upgrade for more searches." : "Please upgrade to continue searching.",
-                    variant: "destructive",
-                    duration: 5000,
-                  });
-                } else {
-                  handleSearch();
-                }
-              }}
-              disabled={isSearching || !name.trim()}
-              className={`md:w-auto w-full ${isLimitReached ? 'bg-gray-500' : 'bg-purple-600 hover:bg-purple-700'} rounded-none md:rounded-r-lg py-7 text-base`}
-              size="lg"
-            >
-              {isSearching ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 animate-spin rounded-full border-3 border-white border-t-transparent"></div>
-                  <span>Searching...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Search size={20} />
-                  <span>Search Profiles</span>
-                </div>
-              )}
-            </Button>
-          </div>
-          <div className="px-6 py-2 bg-gray-50 border-t border-gray-100 text-sm flex justify-between items-center">
-            <span className="text-gray-500">
-              {checksRemaining === Infinity ? (
-                "Unlimited searches available"
-              ) : (
-                <>
-                  <span className={checksRemaining <= 0 ? "text-red-500 font-semibold" : "text-gray-700 font-semibold"}>
-                    {checksRemaining > 0 ? checksRemaining : 0}
-                  </span> 
-                  <span> {checksRemaining === 1 ? "search" : "searches"} remaining</span>
-                </>
-              )}
-            </span>
-            {!user && (
-              <Link to="/auth" className="text-purple-600 hover:text-purple-700 font-medium">
-                Sign in for more
-              </Link>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search Limit Modal - Only show when the button is clicked and limit is reached */}
-      <Dialog 
-        open={showLimitModal} 
-        onOpenChange={(open) => {
-          // Allow closing the modal
-          setShowLimitModal(open);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
-            <DialogDescription className="text-center">
-              <div className="flex justify-center my-4">
-                <Lock className="h-12 w-12 text-red-500" />
+    <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden`}>
+      <CardContent className="p-0">
+        <div className="flex flex-col md:flex-row relative">
+          <Input
+            type="text"
+            placeholder="Enter first and last name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-purple-500"
+            onKeyDown={handleKeyDown}
+            disabled={isSearching}
+          />
+          <Button 
+            onClick={() => {
+              if (!searchInitiated) {
+                navigate(`/search/${encodeURIComponent(name)}`);
+              } else if (isLimitReached) {
+                setShowLimitModal(true);
+                toast({
+                  title: "Request limit reached",
+                  description: !user ? "Sign in or upgrade for more searches." : "Please upgrade to continue searching.",
+                  variant: "destructive",
+                  duration: 5000,
+                });
+              } else {
+                handleSearch();
+              }
+            }}
+            disabled={isSearching || !name.trim()}
+            className={`md:w-auto w-full ${isLimitReached ? 'bg-gray-500' : 'bg-purple-600 hover:bg-purple-700'} rounded-none md:rounded-r-lg py-7 text-base`}
+            size="lg"
+          >
+            {isSearching ? (
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 animate-spin rounded-full border-3 border-white border-t-transparent"></div>
+                <span>Searching...</span>
               </div>
-              <p className="mb-4">
-                You've used all your available searches. 
-                Please {!user ? "sign in or " : ""}upgrade your plan to continue searching.
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center gap-2">
-            {!user && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  navigate("/auth");
-                  setShowLimitModal(false);
-                }}
-              >
-                Sign In
-              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Search size={20} />
+                <span>Search Profiles</span>
+              </div>
             )}
+          </Button>
+        </div>
+        <div className="px-6 py-2 bg-gray-50 border-t border-gray-100 text-sm flex justify-between items-center">
+          <span className="text-gray-500">
+            {checksRemaining === Infinity ? (
+              "Unlimited searches available"
+            ) : (
+              <>
+                <span className={checksRemaining <= 0 ? "text-red-500 font-semibold" : "text-gray-700 font-semibold"}>
+                  {checksRemaining > 0 ? checksRemaining : 0}
+                </span> 
+                <span> {checksRemaining === 1 ? "search" : "searches"} remaining</span>
+              </>
+            )}
+          </span>
+          {!user && (
+            <Link to="/auth" className="text-purple-600 hover:text-purple-700 font-medium">
+              Sign in for more
+            </Link>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Search Limit Modal - Only show when the button is clicked and limit is reached */}
+    <Dialog 
+      open={showLimitModal} 
+      onOpenChange={(open) => {
+        // Allow closing the modal
+        setShowLimitModal(open);
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
+          <DialogDescription className="text-center">
+            <div className="flex justify-center my-4">
+              <Lock className="h-12 w-12 text-red-500" />
+            </div>
+            <p className="mb-4">
+              You've used all your available searches. 
+              Please {!user ? "sign in or " : ""}upgrade your plan to continue searching.
+            </p>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="sm:justify-center gap-2">
+          {!user && (
             <Button
-              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+              variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
-                navigate(user ? "/profile?tab=plans" : "/pricing");
+                navigate("/auth");
                 setShowLimitModal(false);
               }}
             >
-              Upgrade Now
+              Sign In
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          )}
+          <Button
+            className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+            onClick={() => {
+              navigate(user ? "/profile?tab=plans" : "/pricing");
+              setShowLimitModal(false);
+            }}
+          >
+            Upgrade Now
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
