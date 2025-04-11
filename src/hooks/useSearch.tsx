@@ -31,6 +31,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
 
   const { 
     guestCheckAvailable, 
+    searchLimitReached,
+    checksRemaining,
     hasReachedSearchLimit, 
     incrementSearchCount,
     saveSearchHistory
@@ -49,7 +51,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     // Double check search limit - early exit if limit reached
     if (hasReachedSearchLimit()) {
       if (!user) {
-        const lastCheckTime = localStorage.getItem("candidate_checker_guest_last_check");
+        const lastCheckTime = localStorage.getItem("people_peeper_guest_last_check");
         
         if (lastCheckTime) {
           const lastCheck = new Date(lastCheckTime);
@@ -69,7 +71,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           description: `You've reached your ${profile?.plan} plan limit. Please upgrade for more searches.`,
           variant: "destructive",
         });
-        navigate("/profile");
+        navigate("/profile?tab=plans");
       }
       return;
     }
@@ -78,13 +80,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     // If incrementSearchCount returns false, we've hit the limit
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
-      toast({
-        title: "Search limit reached",
-        description: user 
-          ? `You've reached your ${profile?.plan} plan limit. Please upgrade for more searches.`
-          : "You've reached your 3 daily free searches. Sign in or upgrade for more.",
-        variant: "destructive",
-      });
+      // The toast is already shown in incrementSearchCount
       return;
     }
 
@@ -185,6 +181,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     profilesByCategory,
     categories,
     guestCheckAvailable,
+    searchLimitReached,
+    checksRemaining,
     hasReachedSearchLimit,
     handleSearch,
     searchInitiated,

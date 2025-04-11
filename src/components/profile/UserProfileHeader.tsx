@@ -15,11 +15,18 @@ interface UserProfileHeaderProps {
 }
 
 const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProfileHeaderProps) => {
+  // Calculate usage and remaining searches
   const usagePercentage = profile?.plan === 'free' 
-    ? ((profile?.checks_used % 3) / 3) * 100 
+    ? Math.min(((profile?.checks_used % 3) / 3) * 100, 100)
     : profile?.plan === 'premium' 
-      ? ((profile?.checks_used % 500) / 500) * 100 
+      ? Math.min(((profile?.checks_used % 500) / 500) * 100, 100)
       : 0;
+  
+  const remainingSearches = profile?.plan === 'free'
+    ? Math.max(0, 3 - (profile?.checks_used % 3))
+    : profile?.plan === 'premium'
+      ? Math.max(0, 500 - (profile?.checks_used % 500))
+      : Infinity;
 
   return (
     <div className="bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 rounded-lg p-8 mb-6 relative overflow-hidden shadow-sm border border-blue-100">
@@ -76,13 +83,17 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-blue-500" />
               <div>
-                <div className="text-sm text-gray-500">Usage</div>
+                <div className="text-sm text-gray-500">Searches Remaining</div>
                 <div className="text-gray-700">
                   {profile?.plan === 'free' && (
-                    <span>{profile?.checks_used % 3} of 3 daily</span>
+                    <span className={remainingSearches === 0 ? "text-red-600 font-semibold" : ""}>
+                      {remainingSearches} of 3 daily
+                    </span>
                   )}
                   {profile?.plan === 'premium' && (
-                    <span>{profile?.checks_used % 500} of 500 monthly</span>
+                    <span className={remainingSearches === 0 ? "text-red-600 font-semibold" : ""}>
+                      {remainingSearches} of 500 monthly
+                    </span>
                   )}
                   {profile?.plan === 'unlimited' && (
                     <span>Unlimited</span>
@@ -121,8 +132,8 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600">Usage</span>
             <span className="text-gray-600">{profile?.plan === 'free' 
-              ? `${profile?.checks_used % 3}/3 daily searches` 
-              : `${profile?.checks_used % 500}/500 monthly searches`}
+              ? `${3 - remainingSearches}/3 daily searches` 
+              : `${500 - remainingSearches}/500 monthly searches`}
             </span>
           </div>
           <Progress value={usagePercentage} className="h-2 bg-gray-200" />

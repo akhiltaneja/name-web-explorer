@@ -7,10 +7,12 @@ interface GuestLimitWarningProps {
   user: any;
   guestCheckAvailable: boolean;
   isSearching: boolean;
+  searchLimitReached: boolean;
 }
 
-const GuestLimitWarning = ({ user, guestCheckAvailable, isSearching }: GuestLimitWarningProps) => {
-  if (user || guestCheckAvailable || isSearching) return null;
+const GuestLimitWarning = ({ user, guestCheckAvailable, isSearching, searchLimitReached }: GuestLimitWarningProps) => {
+  // Only show for guests who have reached their limit when not actively searching
+  if (user || !searchLimitReached || isSearching) return null;
   
   return (
     <div className="mt-4 p-6 bg-amber-50 rounded-lg border border-amber-200 animate-fade-in flex flex-col sm:flex-row items-center justify-between">

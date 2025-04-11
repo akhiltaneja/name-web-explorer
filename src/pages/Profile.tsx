@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -12,6 +13,7 @@ import { downloadTextReport, emailTextReport } from "@/utils/reportGenerator";
 import UserProfileHeader from "@/components/profile/UserProfileHeader";
 import SearchHistoryTable from "@/components/profile/SearchHistoryTable";
 import PlansSection from "@/components/profile/PlansSection";
+import { useSearchLimit } from "@/hooks/useSearchLimit";
 
 const plans: PlanOption[] = [
   {
@@ -62,6 +64,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const plansRef = useRef<HTMLDivElement>(null);
+  const { clearSearchHistory } = useSearchLimit(user, profile);
 
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'plans' ? 'plans' : 'account';
@@ -124,24 +127,13 @@ const Profile = () => {
     if (user) {
       try {
         setLoading(true);
-        // Delete all search history records for this user
-        const { error } = await supabase
-          .from('searches')
-          .delete()
-          .eq('user_id', user.id);
         
-        if (error) {
-          console.error("Error clearing search history:", error);
-          toast({
-            title: "Error",
-            description: "Failed to clear search history",
-            variant: "destructive",
-          });
-        } else {
+        // Use the clearSearchHistory function from the hook
+        const success = await clearSearchHistory();
+        
+        if (success) {
           // Clear the local search history state
           setSearchHistory([]);
-          // Also reset any cached history in localStorage
-          localStorage.removeItem('user_search_history');
           
           toast({
             title: "Search history cleared",
@@ -150,9 +142,20 @@ const Profile = () => {
           
           // Force refresh profile data
           await refreshProfile();
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to clear search history",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error("Error clearing search history:", error);
+        toast({
+          title: "Error",
+          description: "Failed to clear search history",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }

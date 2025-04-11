@@ -35,19 +35,39 @@ const generateUniqueId = () => {
 export const useSearchLimit = (user: any, profile: any) => {
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
   const [searchLimitReached, setSearchLimitReached] = useState(false);
+  const [checksRemaining, setChecksRemaining] = useState(FREE_PLAN_LIMIT);
   const { toast } = useToast();
   const guestId = generateUniqueId();
 
+  // Initialize and check limits on component mount and when user/profile changes
   useEffect(() => {
     if (!user) {
-      checkAndUpdateGuestLimits();
+      const limitStatus = checkGuestLimits();
+      setSearchLimitReached(!limitStatus.available);
+      setChecksRemaining(limitStatus.remaining);
     } else if (profile) {
-      const limitReached = hasReachedSearchLimit();
+      const limitReached = hasReachedUserSearchLimit();
       setSearchLimitReached(limitReached);
+      
+      // Calculate remaining checks for user
+      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 
+                        profile.plan === 'premium' ? 500 : Infinity;
+      
+      if (profile.plan === 'unlimited') {
+        setChecksRemaining(Infinity);
+      } else {
+        const used = profile.plan === 'free' ? 
+          profile.checks_used % FREE_PLAN_LIMIT : 
+          profile.checks_used % 500;
+        
+        const remaining = Math.max(0, dailyLimit - used);
+        setChecksRemaining(remaining);
+      }
     }
   }, [user, profile]);
 
-  const checkAndUpdateGuestLimits = () => {
+  // Check guest limits and return status with remaining searches
+  const checkGuestLimits = () => {
     const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
     const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
     
@@ -57,80 +77,105 @@ export const useSearchLimit = (user: any, profile: any) => {
       const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
       
       if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS) {
-        // Within the 24-hour window, check if limit is reached
+        // Within the 24-hour window
         if (checkCount >= FREE_PLAN_LIMIT) {
           setGuestCheckAvailable(false);
-          setSearchLimitReached(true);
+          return { 
+            available: false, 
+            remaining: 0,
+            hoursRemaining: Math.ceil(GUEST_COOLDOWN_HOURS - hoursSinceLastCheck)
+          };
         } else {
           setGuestCheckAvailable(true);
-          setSearchLimitReached(false);
+          return { 
+            available: true, 
+            remaining: FREE_PLAN_LIMIT - checkCount,
+            hoursRemaining: 0
+          };
         }
       } else {
         // Reset counter if 24 hours have passed
         localStorage.setItem(GUEST_COUNT_KEY, "0");
         localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
         setGuestCheckAvailable(true);
-        setSearchLimitReached(false);
+        return { 
+          available: true, 
+          remaining: FREE_PLAN_LIMIT,
+          hoursRemaining: 0
+        };
       }
     } else {
       // First time user
       localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       localStorage.setItem(GUEST_COUNT_KEY, "0");
       setGuestCheckAvailable(true);
-      setSearchLimitReached(false);
+      return { 
+        available: true, 
+        remaining: FREE_PLAN_LIMIT,
+        hoursRemaining: 0
+      };
     }
   };
   
+  // Check if a user has reached their search limit
+  const hasReachedUserSearchLimit = () => {
+    if (!profile) return false;
+    
+    if (profile.plan === 'unlimited') return false;
+    
+    const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
+    const checksUsed = profile.plan === 'free' 
+      ? profile.checks_used % FREE_PLAN_LIMIT 
+      : profile.checks_used % 500;
+    
+    return checksUsed >= dailyLimit;
+  };
+  
+  // Check if overall search limit has been reached (guest or user)
   const hasReachedSearchLimit = () => {
     if (!user) {
-      const checkCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
-      return checkCount >= FREE_PLAN_LIMIT;
+      const guestStatus = checkGuestLimits();
+      return !guestStatus.available;
     } else if (profile) {
-      if (profile.plan === 'unlimited') return false;
-      
-      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
-      const checksUsed = profile.plan === 'free' 
-        ? profile.checks_used % FREE_PLAN_LIMIT 
-        : profile.checks_used % 500;
-      
-      return checksUsed >= dailyLimit;
+      return hasReachedUserSearchLimit();
     }
     return false;
   };
 
+  // Increment search count when a search is performed
   const incrementSearchCount = async () => {
-    // First check if limit is reached before incrementing
+    // First check if limit is already reached
     if (hasReachedSearchLimit()) {
       setSearchLimitReached(true);
       return false;
     }
     
     if (!user) {
+      // Handle guest search increment
       const currentCount = Number(localStorage.getItem(GUEST_COUNT_KEY) || "0");
-      
-      if (currentCount >= FREE_PLAN_LIMIT) {
-        setGuestCheckAvailable(false);
-        setSearchLimitReached(true);
-        return false;
-      }
-      
       const newCount = currentCount + 1;
+      
       localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
       localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+      
+      setChecksRemaining(Math.max(0, FREE_PLAN_LIMIT - newCount));
       
       if (newCount >= FREE_PLAN_LIMIT) {
         setGuestCheckAvailable(false);
         setSearchLimitReached(true);
+        
         toast({
           title: "Daily search limit reached",
           description: "You've reached your 3 daily free searches. Sign in or upgrade for more.",
           variant: "destructive",
         });
+        
+        return false;
       }
       
       return true;
     } else if (profile) {
-      // For logged-in users, check profile plan limit
+      // For logged-in users
       if (profile.plan === 'unlimited') return true;
       
       const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
@@ -140,19 +185,31 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       if (checksUsed >= dailyLimit) {
         setSearchLimitReached(true);
+        setChecksRemaining(0);
+        
+        toast({
+          title: "Search limit reached",
+          description: `You've reached your ${profile.plan} plan limit. Please upgrade for more searches.`,
+          variant: "destructive",
+        });
+        
         return false;
       }
       
+      // We'll increment the counter in saveSearchHistory
+      setChecksRemaining(Math.max(0, dailyLimit - checksUsed - 1));
       return true;
     }
     
     return false;
   };
 
+  // Save search history and update profile check count
   const saveSearchHistory = async (searchQuery: string, resultsCount: number) => {
-    if (!user) return;
+    if (!user) return true;
     
     try {
+      // Update the user's check count
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -162,6 +219,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       if (profileError) throw profileError;
       
+      // Save the search to history
       const { error: searchError } = await supabase
         .from('searches')
         .insert({
@@ -179,10 +237,32 @@ export const useSearchLimit = (user: any, profile: any) => {
     }
   };
 
+  // Clear search history for a user
+  const clearSearchHistory = async () => {
+    if (!user) return false;
+    
+    try {
+      const { error } = await supabase
+        .from('searches')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error("Error clearing search history:", error);
+      return false;
+    }
+  };
+
   return { 
-    guestCheckAvailable, 
-    hasReachedSearchLimit: () => searchLimitReached || hasReachedSearchLimit(), 
+    guestCheckAvailable,
+    searchLimitReached, 
+    hasReachedSearchLimit,
+    checksRemaining,
     incrementSearchCount,
-    saveSearchHistory
+    saveSearchHistory,
+    clearSearchHistory
   };
 };

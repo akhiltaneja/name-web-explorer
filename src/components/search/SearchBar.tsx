@@ -16,6 +16,7 @@ interface SearchBarProps {
   isSearching: boolean;
   searchLimitReached: boolean;
   user: any;
+  checksRemaining: number;
 }
 
 const SearchBar = ({ 
@@ -24,7 +25,8 @@ const SearchBar = ({
   handleSearch, 
   isSearching, 
   searchLimitReached,
-  user
+  user,
+  checksRemaining
 }: SearchBarProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -34,16 +36,16 @@ const SearchBar = ({
   };
 
   return (
-    <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden ${searchLimitReached ? 'opacity-75' : ''}`}>
+    <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden ${searchLimitReached ? 'opacity-80' : ''}`}>
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row relative">
           {searchLimitReached && (
-            <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm z-10 flex items-center justify-center">
+            <div className="absolute inset-0 bg-gray-100/90 backdrop-blur-sm z-10 flex items-center justify-center">
               <div className="text-center p-4">
                 <Lock className="h-8 w-8 text-red-500 mx-auto mb-2" />
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Search Limit Reached</h3>
                 <p className="text-gray-600 mb-4">
-                  You've used all your 3 daily searches.
+                  You've used all your {user ? (user.plan === 'free' ? '3 daily' : '500 monthly') : '3 daily'} searches.
                   {!user ? " Sign in for more searches." : ""}
                 </p>
                 {!user ? (
@@ -72,7 +74,7 @@ const SearchBar = ({
           />
           <Button 
             onClick={handleSearch}
-            disabled={isSearching || searchLimitReached}
+            disabled={isSearching || searchLimitReached || !name.trim()}
             className="md:w-auto w-full bg-purple-600 hover:bg-purple-700 rounded-none md:rounded-r-lg py-7 text-base"
             size="lg"
           >
@@ -88,6 +90,25 @@ const SearchBar = ({
               </div>
             )}
           </Button>
+        </div>
+        <div className="px-6 py-2 bg-gray-50 border-t border-gray-100 text-sm flex justify-between items-center">
+          <span className="text-gray-500">
+            {checksRemaining === Infinity ? (
+              "Unlimited searches available"
+            ) : (
+              <>
+                <span className={checksRemaining === 0 ? "text-red-500 font-semibold" : "text-gray-700 font-semibold"}>
+                  {checksRemaining}
+                </span> 
+                <span> {checksRemaining === 1 ? "search" : "searches"} remaining</span>
+              </>
+            )}
+          </span>
+          {!user && (
+            <Link to="/auth" className="text-purple-600 hover:text-purple-700 font-medium">
+              Sign in for more
+            </Link>
+          )}
         </div>
       </CardContent>
     </Card>

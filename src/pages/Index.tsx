@@ -43,6 +43,8 @@ const Index = () => {
     profilesByCategory,
     categories,
     guestCheckAvailable,
+    searchLimitReached,
+    checksRemaining,
     hasReachedSearchLimit,
     handleSearch,
     searchInitiated,
@@ -137,8 +139,6 @@ const Index = () => {
     ? additionalResults.filter(profile => profile.category === selectedCategory)
     : additionalResults;
 
-  const searchLimitReached = hasReachedSearchLimit();
-
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
@@ -153,6 +153,7 @@ const Index = () => {
           searchLimitReached={searchLimitReached}
           user={user}
           guestCheckAvailable={guestCheckAvailable}
+          checksRemaining={checksRemaining}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>
