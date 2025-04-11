@@ -61,6 +61,16 @@ export const useSearchLimit = (user: any, profile: any) => {
         setSearchLimitReachedWithStorage(limitStatus.available === false);
         setChecksRemaining(limitStatus.remaining);
         setGuestCheckAvailable(limitStatus.available);
+        
+        // Reset the "has shown grade dialog" flag at midnight UTC
+        const now = new Date();
+        const tomorrow = new Date();
+        tomorrow.setUTCHours(24, 0, 0, 0);
+        const msTillMidnight = tomorrow.getTime() - now.getTime();
+        
+        setTimeout(() => {
+          localStorage.removeItem('has_shown_grade_dialog_today');
+        }, msTillMidnight);
       } else if (profile) {
         // Logged in user logic
         const limitReached = hasReachedUserSearchLimit();

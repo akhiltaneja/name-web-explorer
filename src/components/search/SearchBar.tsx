@@ -14,7 +14,9 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import CountdownTimer from "./CountdownTimer";
+import GradeAppDialog from "./GradeAppDialog";
 
 interface SearchBarProps {
   name: string;
@@ -43,6 +45,26 @@ const SearchBar = ({
 }: SearchBarProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [showGradeDialog, setShowGradeDialog] = useState(false);
+
+  // Show grade dialog when searches reach 0
+  useEffect(() => {
+    if (checksRemaining === 0 && !isSearching && name.trim() && !showGradeDialog) {
+      // Only show after search is attempted with 0 remaining
+      const hasShownGradeDialog = localStorage.getItem('has_shown_grade_dialog_today');
+      if (!hasShownGradeDialog) {
+        setShowGradeDialog(true);
+        // Mark as shown for today to avoid showing multiple times in a day
+        localStorage.setItem('has_shown_grade_dialog_today', 'true');
+        // Reset this flag at midnight UTC
+        const now = new Date();
+        const msTillMidnight = new Date().setUTCHours(24, 0, 0, 0) - now.getTime();
+        setTimeout(() => {
+          localStorage.removeItem('has_shown_grade_dialog_today');
+        }, msTillMidnight);
+      }
+    }
+  }, [checksRemaining, isSearching, name, showGradeDialog]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSearching && name.trim()) {
@@ -123,18 +145,22 @@ const SearchBar = ({
             </Button>
           </div>
           <div className="px-6 py-2 bg-gray-50 border-t border-gray-100 text-sm flex justify-between items-center">
-            <span className="text-gray-500">
-              {checksRemaining === Infinity ? (
-                "Unlimited searches available"
-              ) : (
-                <>
-                  <span className={checksRemaining <= 0 ? "text-red-500 font-semibold" : "text-gray-700 font-semibold"}>
-                    {checksRemaining > 0 ? checksRemaining : 0}
-                  </span> 
-                  <span> {checksRemaining === 1 ? "search" : "searches"} remaining</span>
-                </>
-              )}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-gray-500">
+                {checksRemaining === Infinity ? (
+                  "Unlimited searches available"
+                ) : (
+                  <>
+                    <span className={checksRemaining <= 0 ? "text-red-500 font-semibold" : "text-gray-700 font-semibold"}>
+                      {checksRemaining > 0 ? checksRemaining : 0}
+                    </span> 
+                    <span> {checksRemaining === 1 ? "search" : "searches"} remaining</span>
+                  </>
+                )}
+              </span>
+              {/* Show countdown timer if checks remaining is 0 */}
+              {checksRemaining === 0 && <CountdownTimer />}
+            </div>
             {!user && (
               <Link to="/auth" className="text-purple-600 hover:text-purple-700 font-medium">
                 Sign in for more
@@ -201,9 +227,14 @@ const SearchBar = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Grade App Dialog */}
+      <GradeAppDialog 
+        open={showGradeDialog} 
+        setOpen={setShowGradeDialog} 
+      />
     </>
   );
 };
 
 export default SearchBar;
-
