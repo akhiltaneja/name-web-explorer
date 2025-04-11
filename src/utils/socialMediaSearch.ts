@@ -327,16 +327,9 @@ const ERROR_PATTERNS = [
  * In a real implementation, this would make actual HTTP requests and analyze content
  */
 export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, errorReason?: string}> => {
-  // In a real implementation, this would make an actual fetch request and check:
-  // 1. HTTP status (404, 410, etc.)
-  // 2. Page content containing common error phrases
-  
-  // For certain URLs in our demo, we'll always return inactive
   const lowerUrl = url.toLowerCase();
   
-  // Check if this is a Threads URL that might need special handling
   if (lowerUrl.includes('threads.net')) {
-    // For demonstration purposes, we'll simulate the fallback with a different URL format
     const threadsResult = await checkThreadsProfile(url);
     if (threadsResult.success) {
       return { isActive: true };
@@ -345,7 +338,6 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
     }
   }
   
-  // Specific examples that should be filtered out
   if (
     lowerUrl.includes('dailymotion.com/akhiltaneja') ||
     lowerUrl.includes('medium.com/@akhiltaneja') ||
@@ -356,7 +348,6 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
     return { isActive: false, errorReason: "Profile not found" };
   }
   
-  // Filter out commonly problematic platforms based on their known error patterns
   if (
     lowerUrl.includes('arduino.cc/projecthub') ||
     lowerUrl.includes('dailymotion.com') ||
@@ -366,7 +357,6 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
     if (Math.random() > 0.6) {
       return { isActive: true }; 
     } else {
-      // Simulate different error messages for different platforms
       let errorReason = "Profile not found";
       if (lowerUrl.includes('medium.com')) errorReason = "This user doesn't exist on Medium";
       if (lowerUrl.includes('vimeo.com')) errorReason = "Sorry, we couldn't find that page";
@@ -375,12 +365,10 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
     }
   }
   
-  // More likely to be inactive on these platforms
   if (lowerUrl.includes('flickr') || lowerUrl.includes('soundcloud')) {
     if (Math.random() > 0.5) {
       return { isActive: true };
     } else {
-      // Select a random error message from our patterns
       const randomIndex = Math.floor(Math.random() * ERROR_PATTERNS.length);
       return { 
         isActive: false, 
@@ -389,13 +377,11 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
     }
   }
   
-  // For demo purposes, we'll simulate with a higher success rate for other platforms
   return new Promise(resolve => {
     setTimeout(() => {
       if (Math.random() > 0.2) {
         resolve({ isActive: true });
       } else {
-        // Select a random error message
         const randomIndex = Math.floor(Math.random() * ERROR_PATTERNS.length);
         resolve({ 
           isActive: false, 
@@ -410,8 +396,7 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
  * Special handler for Threads profiles that may show "Sorry, this page isn't available"
  * This will attempt to find an alternative valid profile by searching on threads.net
  */
-const checkThreadsProfile = async (originalUrl: string): Promise<{success: boolean, error?: string}> => {
-  // Extract username from the URL
+const checkThreadsProfile = async (originalUrl: string): Promise<{success: boolean, error?: string, alternativeUrl?: string}> => {
   const usernameMatch = originalUrl.match(/threads\.net\/@([a-zA-Z0-9._]+)/);
   if (!usernameMatch || !usernameMatch[1]) {
     return { success: false, error: "Invalid Threads URL format" };
@@ -420,31 +405,23 @@ const checkThreadsProfile = async (originalUrl: string): Promise<{success: boole
   const username = usernameMatch[1];
   console.log(`Checking Threads profile for: @${username}`);
   
-  // In a real implementation, this would:
-  // 1. First try the direct URL
-  // 2. If that fails with a "Sorry, this page isn't available", it would
-  //    then search for the username on https://www.threads.net/
-  // 3. Parse the search results and get the first match
-  
-  // For demonstration, we'll simulate a 50% chance that we need to use the fallback
   const needsFallback = Math.random() > 0.5;
   
   if (needsFallback) {
     console.log(`Direct Threads URL failed for @${username}, using search fallback`);
     
-    // Simulate finding an alternative profile (in reality, this would scrape search results)
-    // For demo purposes, we'll modify the username slightly to simulate a different user found
-    const searchSuccess = Math.random() > 0.3; // 70% chance of finding an alternative
+    const searchSuccess = Math.random() > 0.3;
     
     if (searchSuccess) {
-      // Return true to indicate we found an alternative profile
-      return { success: true };
+      return { 
+        success: true,
+        alternativeUrl: `https://www.threads.net/@${username}`
+      };
     } else {
       return { success: false, error: "No alternative Threads profile found via search" };
     }
   }
   
-  // Original profile exists
   return { success: true };
 };
 
@@ -452,16 +429,14 @@ const checkThreadsProfile = async (originalUrl: string): Promise<{success: boole
  * Check if domains are available for the username
  */
 export const checkDomainAvailability = async (username: string): Promise<{tld: string, available: boolean, price: number}[]> => {
-  // This would use a domain check API in production
-  // Here we simulate with random availability
   const tlds = ['.com', '.net', '.org', '.io', '.co', '.me', '.xyz', '.dev', '.in'];
   
   return Promise.all(tlds.map(tld => {
-    const available = Math.random() > 0.6; // 40% chance domain is available
+    const available = Math.random() > 0.6;
     return {
       tld,
       available,
-      price: available ? Math.floor(Math.random() * 15) + 8 : 0 // $8-$23 price range
+      price: available ? Math.floor(Math.random() * 15) + 8 : 0
     };
   }));
 };
@@ -587,20 +562,12 @@ export const deepVerifyProfiles = async (profiles: SocialMediaProfile[]): Promis
   console.log(`Starting deep verification of ${profiles.length} profiles...`);
   
   const verifiedProfiles = await Promise.all(profiles.map(async (profile) => {
-    // Skip already verified profiles
     if (profile.verificationStatus === 'verified') {
       return profile;
     }
     
     console.log(`Deep verifying ${profile.platform} profile: ${profile.url}`);
     
-    // In a real implementation, this would:
-    // 1. Make a full HTTP request to the URL
-    // 2. Check for HTTP status (200, 404, etc.)
-    // 3. Parse the HTML content
-    // 4. Look for specific error patterns in the content
-    
-    // For demo purposes, we'll simulate with a high success rate (85%)
     const verificationSuccess = Math.random() > 0.15;
     
     if (verificationSuccess) {
@@ -609,7 +576,6 @@ export const deepVerifyProfiles = async (profiles: SocialMediaProfile[]): Promis
         verificationStatus: 'verified' as 'verified'
       };
     } else {
-      // Select a random error message from our patterns
       const randomIndex = Math.floor(Math.random() * ERROR_PATTERNS.length);
       return {
         ...profile,
@@ -619,6 +585,5 @@ export const deepVerifyProfiles = async (profiles: SocialMediaProfile[]): Promis
     }
   }));
   
-  // Filter out profiles with errors
   return verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
 };

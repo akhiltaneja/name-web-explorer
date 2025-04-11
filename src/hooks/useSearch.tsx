@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -150,23 +149,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             // For Threads profiles specifically, we need to handle potential URL updates
             if (statusCheck.isActive && profile.platform === "Threads" && profile.url.includes("threads.net")) {
               // In a real implementation, checkUrlStatus would return both status and possibly updated URL
-              // Here we're simulating with the original URL since our mock doesn't actually change URLs
-              
-              // For demo purposes, 30% of the time we'll simulate finding an alternative profile
-              if (Math.random() > 0.7) {
-                const alternativeUsername = username + (Math.random() > 0.5 ? '.real' : '_official');
-                const updatedUrl = `https://www.threads.net/@${alternativeUsername}`;
-                
-                console.log(`Updated Threads URL from ${profile.url} to ${updatedUrl}`);
-                
-                return {
-                  ...profile,
-                  url: updatedUrl,
-                  username: `@${alternativeUsername}`,
-                  status: 'active' as 'active',
-                  note: 'Alternative profile found'
-                };
-              }
+              // Here we're using the original URL since our mock doesn't modify URLs
+              return {
+                ...profile,
+                status: 'active' as 'active',
+              };
             }
             
             return {
