@@ -19,6 +19,7 @@ export interface UserProfile {
   email: string;
   avatar_url: string | null;
   plan: 'free' | 'premium' | 'unlimited';
+  role?: 'user' | 'admin';
   checks_used: number;
   plan_start_date: string | null;
   plan_end_date: string | null;
