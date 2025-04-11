@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import { useEffect } from "react";
 
 interface SearchBarProps {
   name: string;
@@ -25,7 +26,6 @@ interface SearchBarProps {
   checksRemaining: number;
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
-  searchInitiated?: boolean;
 }
 
 const SearchBar = ({ 
@@ -37,40 +37,34 @@ const SearchBar = ({
   user,
   checksRemaining,
   showLimitModal = false,
-  setShowLimitModal = () => {},
-  searchInitiated = false
+  setShowLimitModal = () => {}
 }: SearchBarProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSearching && name.trim()) {
-      // Navigate to search URL first
-      if (!searchInitiated) {
-        navigate(`/search/${encodeURIComponent(name.trim())}`);
-      } else {
-        if (searchLimitReached || checksRemaining <= 0) {
-          // Show limit modal and toast instead of trying to search
-          setShowLimitModal(true);
-          if (!user) {
-            toast({
-              title: "Request limit reached",
-              description: "You've used all your free searches. Sign in or upgrade for more.",
-              variant: "destructive",
-              duration: 5000,
-            });
-          } else {
-            toast({
-              title: "Request limit reached",
-              description: "Please upgrade to continue searching.",
-              variant: "destructive",
-              duration: 5000,
-            });
-          }
+      if (searchLimitReached || checksRemaining <= 0) {
+        // Show limit modal and toast instead of trying to search
+        setShowLimitModal(true);
+        if (!user) {
+          toast({
+            title: "Request limit reached",
+            description: "You've used all your free searches. Sign in or upgrade for more.",
+            variant: "destructive",
+            duration: 5000, // Longer duration
+          });
         } else {
-          // Only proceed with search if we have credits
-          handleSearch();
+          toast({
+            title: "Request limit reached",
+            description: "Please upgrade to continue searching.",
+            variant: "destructive",
+            duration: 5000, // Longer duration
+          });
         }
+      } else {
+        // Only proceed with search if we have credits
+        handleSearch();
       }
     }
   };
@@ -93,9 +87,7 @@ const SearchBar = ({
             />
             <Button 
               onClick={() => {
-                if (!searchInitiated) {
-                  navigate(`/search/${encodeURIComponent(name.trim())}`);
-                } else if (isLimitReached) {
+                if (isLimitReached) {
                   setShowLimitModal(true);
                   toast({
                     title: "Request limit reached",

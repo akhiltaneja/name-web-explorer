@@ -4,38 +4,23 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { LogIn, User, CreditCard, LayoutDashboard } from "lucide-react";
 import DefaultAvatar from "./DefaultAvatar";
-import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   // For demo purposes, consider the admin email as admin@example.com
   const isAdmin = user?.email === "admin@example.com";
 
-  const handleHomeClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    // First clear URL parameters by navigating to root
-    navigate('/', { replace: true });
-    
-    // Show notification
-    toast({
-      title: "Home page",
-      description: "Returned to home page and cleared search results",
-    });
-  };
-
   return (
     <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-10 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
-        <a href="/" onClick={handleHomeClick} className="flex items-center space-x-2">
+        <Link to="/" className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
             <span className="text-white font-bold text-sm">PP</span>
           </div>
           <span className="font-bold text-2xl text-purple-600">PeoplePeeper</span>
-        </a>
+        </Link>
 
         <div className="flex items-center space-x-3">
           {isAdmin && (

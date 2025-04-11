@@ -4,12 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import SearchBar from "@/components/search/SearchBar";
 import SearchProgress from "@/components/search/SearchProgress";
 import GuestLimitWarning from "@/components/search/GuestLimitWarning";
-import RecentSearches from "@/components/search/RecentSearches";
 
 interface HeroProps {
   name: string;
   setName: (name: string) => void;
-  handleSearch: (query?: string) => void;
+  handleSearch: () => void;
   isSearching: boolean;
   searchProgress: number;
   searchLimitReached: boolean;
@@ -18,8 +17,6 @@ interface HeroProps {
   checksRemaining: number;
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
-  recentSearches?: string[];
-  searchInitiated?: boolean;
 }
 
 const Hero = ({
@@ -33,19 +30,12 @@ const Hero = ({
   guestCheckAvailable,
   checksRemaining,
   showLimitModal,
-  setShowLimitModal,
-  recentSearches = [],
-  searchInitiated = false,
+  setShowLimitModal
 }: HeroProps) => {
-  const handleSearchSelect = (query: string) => {
-    setName(query);
-    // No need to call handleSearch here as the navigation happens in RecentSearches component
-  };
-
   return (
     <section className="pt-8 pb-6 px-4 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto max-w-6xl">
-        {!searchInitiated && (
+        {!name && (
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Find Anyone's Social Media Profiles
@@ -67,15 +57,7 @@ const Hero = ({
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
-          searchInitiated={searchInitiated}
         />
-
-        {!searchInitiated && recentSearches && recentSearches.length > 0 && (
-          <RecentSearches 
-            recentSearches={recentSearches} 
-            onSearchSelect={handleSearchSelect} 
-          />
-        )}
 
         {isSearching && (
           <Card className="mb-8 border-purple-100">

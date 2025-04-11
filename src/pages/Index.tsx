@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
@@ -29,7 +29,6 @@ const Index = () => {
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const {
     name,
@@ -52,28 +51,32 @@ const Index = () => {
     showLimitModal,
     setShowLimitModal,
     emailModalOpen,
-    setEmailModalOpen,
-    clearResults,
-    recentSearches
+    setEmailModalOpen
   } = useSearch(user, profile, refreshProfile);
 
-  // When URL changes, handle the search params
   useEffect(() => {
+    const query = searchParams.get('query');
     const pathSegments = location.pathname.split('/');
     
-    // Check if we're on a search page
-    if (pathSegments[1] === 'search' && pathSegments[2]) {
-      const searchQuery = decodeURIComponent(pathSegments[2]);
+    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
+      searchInitiated.current = true;
       
-      // Only update the search term if it's different
-      if (name !== searchQuery) {
-        setName(searchQuery);
+      let searchQuery = query;
+      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
+        searchQuery = decodeURIComponent(pathSegments[2]);
       }
-    } else if (pathSegments[1] === '') {
-      // If we're on the home page, clear results
-      clearResults();
+      
+      if (searchQuery) {
+        setName(searchQuery);
+        handleSearch(searchQuery);
+      }
     }
-  }, [location, name, setName, clearResults]);
+    
+    const state = location.state as { returnTo?: string; action?: string } | null;
+    if (state?.action === "emailReport" && user) {
+      setEmailModalOpen(true);
+    }
+  }, []);
 
   const handleCopyAll = () => {
     const text = filteredResults
@@ -139,9 +142,6 @@ const Index = () => {
     ? additionalResults.filter(profile => profile.category === selectedCategory)
     : additionalResults;
 
-  // Determine if search has been initiated based on URL
-  const isSearchPage = location.pathname.includes('/search/');
-
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
@@ -159,13 +159,11 @@ const Index = () => {
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
-          recentSearches={recentSearches}
-          searchInitiated={isSearchPage}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>
           <div className="container mx-auto max-w-6xl">
-            {isSearchPage && (results.length > 0 || isSearching) && (
+            {name && (results.length > 0 || isSearching) && (
               <ResultsHeader 
                 name={name}
                 filteredResults={filteredResults}
@@ -180,13 +178,11 @@ const Index = () => {
               />
             )}
 
-            {isSearchPage && (
-              <CategoryFilter 
-                categories={categories}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-              />
-            )}
+            <CategoryFilter 
+              categories={categories}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+            />
 
             <ResultsList 
               filteredResults={filteredResults}
@@ -209,19 +205,14 @@ const Index = () => {
           </div>
         </section>
 
-        {isSearchPage && name && !isSearching && results.length === 0 && (
-          <EmptyResults 
-            name={name}
-            isSearching={isSearching}
-            results={results}
-            onReset={() => {
-              clearResults();
-              navigate('/');
-            }}
-          />
-        )}
+        <EmptyResults 
+          name={name}
+          isSearching={isSearching}
+          results={results}
+          onReset={() => setName("")}
+        />
 
-        {!isSearchPage && !isSearching && results.length === 0 && (
+        {!name && !isSearching && results.length === 0 && (
           <>
             <Features />
             <FAQ />

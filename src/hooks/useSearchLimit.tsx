@@ -10,7 +10,6 @@ const GUEST_ID_KEY = "people_peeper_guest_id";
 const GUEST_COOLDOWN_HOURS = 24;
 const FREE_PLAN_LIMIT = 3;
 const GUEST_LIMIT_REACHED_KEY = "people_peeper_guest_limit_reached";
-const RECENT_SEARCHES_KEY = "people_peeper_recent_searches";
 
 // Generate a unique ID for the device/browser
 const generateUniqueId = () => {
@@ -42,7 +41,6 @@ export const useSearchLimit = (user: any, profile: any) => {
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
   const [searchLimitReached, setSearchLimitReached] = useState(initialLimitReached);
   const [checksRemaining, setChecksRemaining] = useState(0); // Start with 0 until we determine the actual count
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const { toast } = useToast();
   const guestId = generateUniqueId();
 
@@ -56,12 +54,6 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   // Initialize and check limits on component mount and when user/profile changes
   useEffect(() => {
-    // Load recent searches from localStorage
-    const storedSearches = localStorage.getItem(RECENT_SEARCHES_KEY);
-    if (storedSearches) {
-      setRecentSearches(JSON.parse(storedSearches));
-    }
-    
     const checkAndSetLimits = () => {
       if (!user) {
         const limitStatus = checkGuestLimits();
@@ -96,6 +88,10 @@ export const useSearchLimit = (user: any, profile: any) => {
     };
 
     checkAndSetLimits();
+    
+    // Also set up an interval to check periodically (to prevent bypasses)
+    const intervalCheck = setInterval(checkAndSetLimits, 2000);
+    return () => clearInterval(intervalCheck);
   }, [user, profile]);
 
   // Check guest limits and return status with remaining searches
@@ -126,9 +122,9 @@ export const useSearchLimit = (user: any, profile: any) => {
         }
       } else {
         // Reset counter if 24 hours have passed
-        localStorage.removeItem(GUEST_COUNT_KEY);
-        localStorage.removeItem(GUEST_LIMIT_KEY);
-        localStorage.removeItem(GUEST_LIMIT_REACHED_KEY);
+        localStorage.setItem(GUEST_COUNT_KEY, "0");
+        localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+        localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'false');
         return { 
           available: true, 
           remaining: FREE_PLAN_LIMIT,
@@ -137,6 +133,9 @@ export const useSearchLimit = (user: any, profile: any) => {
       }
     } else {
       // First time user
+      localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+      localStorage.setItem(GUEST_COUNT_KEY, "0");
+      localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'false');
       return { 
         available: true, 
         remaining: FREE_PLAN_LIMIT,
@@ -171,18 +170,6 @@ export const useSearchLimit = (user: any, profile: any) => {
       return hasReachedUserSearchLimit();
     }
     return false;
-  };
-
-  // Save a search query to recent searches
-  const addToRecentSearches = (query: string) => {
-    if (!query) return;
-    
-    // Add to front of array, remove duplicates, limit to 3
-    const updatedSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 3);
-    setRecentSearches(updatedSearches);
-    
-    // Store in localStorage
-    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updatedSearches));
   };
 
   // Increment search count when a search is performed
@@ -232,8 +219,8 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
       
-      // Always update timestamp to ensure persistence
-      if (!localStorage.getItem(GUEST_LIMIT_KEY)) {
+      // Only update timestamp on first search to establish the 24-hour window
+      if (currentCount === 0) {
         localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       }
       
@@ -291,9 +278,6 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   // Save search history and update profile check count
   const saveSearchHistory = async (searchQuery: string, resultsCount: number) => {
-    // Add to recent searches
-    addToRecentSearches(searchQuery);
-    
     if (!user) return true;
     
     try {
@@ -352,8 +336,6 @@ export const useSearchLimit = (user: any, profile: any) => {
     hasReachedSearchLimit,
     incrementSearchCount,
     saveSearchHistory,
-    clearSearchHistory,
-    recentSearches,
-    addToRecentSearches
+    clearSearchHistory
   };
 };

@@ -38,50 +38,38 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     checksRemaining,
     hasReachedSearchLimit, 
     incrementSearchCount,
-    saveSearchHistory,
-    recentSearches,
-    addToRecentSearches
+    saveSearchHistory
   } = useSearchLimit(user, profile);
 
-  // Clear results function
-  const clearResults = () => {
-    setName("");
-    setResults([]);
-    setAdditionalResults([]);
-    setProfilesByCategory({});
-    setCategories([]);
-    setSearchProgress(0);
-    setSearchTime(null);
-    setAvailableDomains([]);
-    searchInitiated.current = false;
-  };
-
   useEffect(() => {
+    const query = searchParams.get('query');
     const pathSegments = location.pathname.split('/');
     
-    if (pathSegments[1] === 'search' && pathSegments[2]) {
-      // we're on the search results page
-      const searchQuery = decodeURIComponent(pathSegments[2]);
+    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
+      searchInitiated.current = true;
       
-      setName(searchQuery);
-      
-      // Auto-search only if we haven't already searched and are allowed to
-      if (results.length === 0 && !isSearching && !searchLimitReached && checksRemaining > 0) {
-        handleSearch(searchQuery);
-      } else if (searchLimitReached || checksRemaining <= 0) {
-        // Just show the modal if we're at limit
-        setShowLimitModal(true);
+      let searchQuery = query;
+      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
+        searchQuery = decodeURIComponent(pathSegments[2]);
       }
-    } else if (pathSegments[1] === '') {
-      // On homepage, keep the form cleared
-      clearResults();
+      
+      if (searchQuery) {
+        setName(searchQuery);
+        // Don't auto-search if limit reached
+        if (!searchLimitReached && checksRemaining > 0) {
+          handleSearch(searchQuery);
+        } else {
+          // Just show the modal if we're at limit
+          setShowLimitModal(true);
+        }
+      }
     }
     
     const state = location.state as { returnTo?: string; action?: string } | null;
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
     }
-  }, [location.pathname, searchLimitReached, checksRemaining, user]);
+  }, [searchParams, location, searchLimitReached, checksRemaining, user]);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
@@ -128,7 +116,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setIsSearching(true);
     setSearchProgress(0);
     const startTime = performance.now();
-    searchInitiated.current = true;
     
     const nameParts = queryString.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
@@ -195,19 +182,21 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             description: `Found ${profiles.length} potential profiles for ${queryString}`,
           });
           
-          // We're already on the search page, so no need to change URL
+          // Update URL with the search query
+          if (!location.pathname.includes('/search/')) {
+            navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
+          }
           
           if (resultsRef.current) {
             resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           
-          // Save search to history and recent searches
-          addToRecentSearches(queryString);
-          
-          saveSearchHistory(queryString, profiles.length)
-            .then(success => {
-              if (user && success) refreshProfile();
-            });
+          if (user) {
+            saveSearchHistory(queryString, profiles.length)
+              .then(success => {
+                if (success) refreshProfile();
+              });
+          }
         }, 500);
       } catch (error) {
         console.error("Search error:", error);
@@ -240,13 +229,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     checksRemaining,
     hasReachedSearchLimit,
     handleSearch,
-    searchInitiated: location.pathname.includes('/search/'),
+    searchInitiated,
     resultsRef,
     showLimitModal,
     setShowLimitModal,
     emailModalOpen,
-    setEmailModalOpen,
-    clearResults,
-    recentSearches
+    setEmailModalOpen
   };
 };
