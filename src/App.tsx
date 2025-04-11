@@ -32,6 +32,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/search/:query" element={<Index />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />

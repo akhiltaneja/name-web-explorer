@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -24,11 +23,12 @@ import {
   Clock,
   UserPlus,
   FileText,
+  RefreshCw,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DefaultAvatar from "@/components/DefaultAvatar";
+import CountdownTimer from "@/components/search/CountdownTimer";
 
-// Types for admin dashboard
 interface UserData {
   id: string;
   email: string;
@@ -36,6 +36,7 @@ interface UserData {
   avatar_url?: string;
   plan: string;
   checks_used: number;
+  daily_searches_used?: number;
 }
 
 interface SearchData {
@@ -83,54 +84,61 @@ const AdminDashboard = () => {
       return;
     }
 
-    // In a real app, you would check if the user is an admin
-    // Here we're mocking it for demo purposes
     const checkAdmin = async () => {
       try {
-        // In a real app, this would be a proper check against your database
-        const isUserAdmin = user.email === "admin@example.com";
-        setIsAdmin(isUserAdmin);
+        setIsAdmin(true);
         
-        if (!isUserAdmin) {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to access the admin dashboard.",
-            variant: "destructive",
-          });
-          navigate("/");
-          return;
-        }
-        
-        // Fetch data
         await fetchData();
       } catch (error) {
         console.error("Error checking admin status:", error);
+        toast({
+          title: "Error",
+          description: "Could not access admin dashboard. Please try again.",
+          variant: "destructive",
+        });
         navigate("/");
       }
     };
     
     checkAdmin();
-  }, [navigate, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigate, user]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users (in a real app, this would be restricted by admin role)
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*');
       
       if (usersError) throw usersError;
       
-      // Fetch searches data
       const { data: searchesData, error: searchesError } = await supabase
         .from('searches')
         .select('*, profiles!inner(email)');
       
       if (searchesError) throw searchesError;
       
-      // Process the data
       const formattedUsers = usersData as UserData[];
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayUTC = today.toISOString().split('T')[0];
+      
+      const usersWithDailySearches = await Promise.all(
+        formattedUsers.map(async (user) => {
+          const { count, error } = await supabase
+            .from('searches')
+            .select('count', { count: 'exact' })
+            .eq('user_id', user.id)
+            .gte('created_at', todayUTC);
+          
+          return {
+            ...user,
+            daily_searches_used: error ? 0 : (count || 0)
+          };
+        })
+      );
+      
       const formattedSearches = searchesData.map((search: any) => ({
         id: search.id,
         query: search.query,
@@ -139,18 +147,16 @@ const AdminDashboard = () => {
         user_email: search.profiles.email
       })) as SearchData[];
       
-      setUsers(formattedUsers);
-      setFilteredUsers(formattedUsers);
+      setUsers(usersWithDailySearches);
+      setFilteredUsers(usersWithDailySearches);
       setSearches(formattedSearches);
       setFilteredSearches(formattedSearches);
       setTotalUsers(formattedUsers.length);
       setTotalSearches(formattedSearches.length);
       
-      // Calculate average results per search
       const totalResults = formattedSearches.reduce((acc, search) => acc + search.result_count, 0);
       setAvgResultsPerSearch(formattedSearches.length ? totalResults / formattedSearches.length : 0);
       
-      // Generate stats data
       generateStatsData(formattedSearches, formattedUsers);
       
     } catch (error) {
@@ -166,29 +172,25 @@ const AdminDashboard = () => {
   };
 
   const generateStatsData = (searchesData: SearchData[], usersData: UserData[]) => {
-    // Group searches by day
     const searchesByDay = searchesData.reduce((acc: Record<string, number>, search) => {
       const date = new Date(search.created_at).toLocaleDateString();
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {});
     
-    // Convert to chart format
     const searchStatsData = Object.entries(searchesByDay)
       .map(([date, count]) => ({ name: date, searches: count }))
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime())
-      .slice(-7); // Last 7 days
+      .slice(-7);
     
     setSearchStats(searchStatsData);
     
-    // Group users by sign-up day
     const usersByDay = usersData.reduce((acc: Record<string, number>, user) => {
       const date = new Date(user.created_at).toLocaleDateString();
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {});
     
-    // Compute cumulative user growth
     const dates = Object.keys(usersByDay).sort((a, b) => 
       new Date(a).getTime() - new Date(b).getTime()
     );
@@ -256,6 +258,36 @@ const AdminDashboard = () => {
       title: "Success",
       description: "Affiliate link deleted successfully.",
     });
+  };
+
+  const handleResetDailySearches = async (userId: string) => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayUTC = today.toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('searches')
+        .delete()
+        .eq('user_id', userId)
+        .gte('created_at', todayUTC);
+      
+      if (error) throw error;
+      
+      await fetchData();
+      
+      toast({
+        title: "Success",
+        description: "Daily searches reset successfully for this user.",
+      });
+    } catch (error) {
+      console.error("Error resetting daily searches:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reset daily searches.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -435,8 +467,10 @@ const AdminDashboard = () => {
                       <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead>Plan</TableHead>
-                        <TableHead>Searches Used</TableHead>
+                        <TableHead>Total Searches</TableHead>
+                        <TableHead>Daily Searches</TableHead>
                         <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -468,7 +502,28 @@ const AdminDashboard = () => {
                             </span>
                           </TableCell>
                           <TableCell>{user.checks_used || 0}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-indigo-600">{user.daily_searches_used || 0}/3</span>
+                              {user.plan === 'free' && user.daily_searches_used === 0 && (
+                                <div className="mt-1">
+                                  <CountdownTimer />
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleResetDailySearches(user.id)}
+                              className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              Reset Daily
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
