@@ -1,3 +1,4 @@
+
 import { SocialMediaProfile } from "@/types/socialMedia";
 
 /**
@@ -6,11 +7,27 @@ import { SocialMediaProfile } from "@/types/socialMedia";
 export const getSocialMediaProfiles = (username: string, fullName: string): SocialMediaProfile[] => {
   const platforms: SocialMediaProfile[] = [
     {
+      platform: "Facebook",
+      url: `https://facebook.com/${username}`,
+      username: fullName,
+      icon: "f",
+      color: "#4267B2",
+      category: "Social network"
+    },
+    {
       platform: "Twitter",
       url: `https://twitter.com/${username}`,
       username: `@${username}`,
       icon: "𝕏",
       color: "#1DA1F2",
+      category: "Social network"
+    },
+    {
+      platform: "Instagram",
+      url: `https://instagram.com/${username}`,
+      username: `@${username}`,
+      icon: "📷",
+      color: "#E1306C",
       category: "Social network"
     },
     {
@@ -22,172 +39,12 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       category: "Professional"
     },
     {
-      platform: "Facebook",
-      url: `https://facebook.com/${username}`,
-      username: fullName,
-      icon: "f",
-      color: "#4267B2",
+      platform: "TikTok",
+      url: `https://tiktok.com/@${username}`,
+      username: `@${username}`,
+      icon: "T",
+      color: "#000000",
       category: "Social network"
-    },
-    {
-      platform: "SoundCloud",
-      url: `https://soundcloud.com/${username}`,
-      username: username,
-      icon: "SC",
-      color: "#FF5500",
-      category: "Music"
-    },
-    {
-      platform: "Flickr",
-      url: `https://www.flickr.com/photos/${username}`,
-      username: username,
-      icon: "F",
-      color: "#0063DC",
-      category: "Creativity"
-    },
-    {
-      platform: "GitHub",
-      url: `https://github.com/${username}`,
-      username: username,
-      icon: "🐙",
-      color: "#333333",
-      category: "Professional"
-    },
-    {
-      platform: "Behance",
-      url: `https://behance.net/${username}`,
-      username: username,
-      icon: "Be",
-      color: "#053eff",
-      category: "Creativity"
-    },
-    {
-      platform: "About.me",
-      url: `https://about.me/${username}`,
-      username: username,
-      icon: "A",
-      color: "#00A98F",
-      category: "Professional"
-    },
-    {
-      platform: "Academia.edu",
-      url: `https://independent.academia.edu/${username}`,
-      username: username,
-      icon: "A",
-      color: "#41454A",
-      category: "Education"
-    },
-    {
-      platform: "Archive.org",
-      url: `https://archive.org/details/@${username}`,
-      username: username,
-      icon: "📚",
-      color: "#2A4B87",
-      category: "Education"
-    },
-    {
-      platform: "Arduino",
-      url: `https://create.arduino.cc/projecthub/${username}`,
-      username: username,
-      icon: "⚡",
-      color: "#00979D",
-      category: "Technology"
-    },
-    {
-      platform: "Audiojungle",
-      url: `https://audiojungle.net/user/${username}`,
-      username: username,
-      icon: "🎵",
-      color: "#76B852",
-      category: "Music"
-    },
-    {
-      platform: "Bitchute",
-      url: `https://bitchute.com/channel/${username}/`,
-      username: username,
-      icon: "B",
-      color: "#EF4137",
-      category: "Political"
-    },
-    {
-      platform: "BodyBuilding",
-      url: `https://bodyspace.bodybuilding.com/${username}`,
-      username: username,
-      icon: "💪",
-      color: "#2C2C2C",
-      category: "Online Community"
-    },
-    {
-      platform: "DailyMotion",
-      url: `https://www.dailymotion.com/${username}`,
-      username: username,
-      icon: "D",
-      color: "#0066DC",
-      category: "News"
-    },
-    {
-      platform: "Disqus",
-      url: `https://disqus.com/${username}`,
-      username: username,
-      icon: "D",
-      color: "#2E9FFF",
-      category: "Online Community"
-    },
-    {
-      platform: "Fiverr",
-      url: `https://fiverr.com/${username}`,
-      username: username,
-      icon: "Fi",
-      color: "#1DBF73",
-      category: "Marketplace"
-    },
-    {
-      platform: "Giphy",
-      url: `https://giphy.com/${username}`,
-      username: username,
-      icon: "G",
-      color: "#FF6666",
-      category: "Creativity"
-    },
-    {
-      platform: "Gravatar",
-      url: `https://gravatar.com/${username}`,
-      username: username,
-      icon: "G",
-      color: "#1E8CBE",
-      category: "Images"
-    },
-    {
-      platform: "Imgur",
-      url: `https://imgur.com/user/${username}`,
-      username: username,
-      icon: "I",
-      color: "#1BB76E",
-      category: "Creativity"
-    },
-    {
-      platform: "Kaggle",
-      url: `https://www.kaggle.com/${username}`,
-      username: username,
-      icon: "K",
-      color: "#20BEFF",
-      category: "Data science"
-    },
-    {
-      platform: "Mastodon",
-      url: `https://mastodon.social/@${username}`,
-      username: username,
-      icon: "M",
-      color: "#6364FF",
-      category: "Online Community"
-    },
-    {
-      platform: "Medium",
-      url: `https://medium.com/@${username}`,
-      username: username,
-      icon: "M",
-      color: "#00AB6C",
-      category: "News"
     },
     {
       platform: "Pinterest",
@@ -206,68 +63,12 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       category: "Social network"
     },
     {
-      platform: "SlideShare",
-      url: `https://slideshare.net/${username}`,
+      platform: "Snapchat",
+      url: `https://www.snapchat.com/add/${username}`,
       username: username,
-      icon: "S",
-      color: "#0077B5",
-      category: "Professional"
-    },
-    {
-      platform: "TikTok",
-      url: `https://tiktok.com/@${username}`,
-      username: `@${username}`,
-      icon: "T",
-      color: "#000000",
+      icon: "👻",
+      color: "#FFFC00",
       category: "Social network"
-    },
-    {
-      platform: "Threads",
-      url: `https://www.threads.net/@${username}`,
-      username: `@${username}`,
-      icon: "T",
-      color: "#000000",
-      category: "Social network"
-    },
-    {
-      platform: "Tumblr",
-      url: `https://${username}.tumblr.com`,
-      username: username,
-      icon: "T",
-      color: "#36465D",
-      category: "Social network"
-    },
-    {
-      platform: "Twitch",
-      url: `https://www.twitch.tv/${username}`,
-      username: username,
-      icon: "T",
-      color: "#9146FF",
-      category: "Social network"
-    },
-    {
-      platform: "VSCO",
-      url: `https://vsco.co/${username}`,
-      username: username,
-      icon: "V",
-      color: "#000000",
-      category: "Creativity"
-    },
-    {
-      platform: "Vimeo",
-      url: `https://vimeo.com/${username}`,
-      username: username,
-      icon: "V",
-      color: "#1AB7EA",
-      category: "Social network"
-    },
-    {
-      platform: "Wikipedia",
-      url: `https://meta.wikimedia.org/wiki/Special:CentralAuth/${username}`,
-      username: username,
-      icon: "W",
-      color: "#000000",
-      category: "Education"
     },
     {
       platform: "YouTube",
@@ -278,11 +79,83 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       category: "Social network"
     },
     {
-      platform: "Stack Overflow",
-      url: `https://stackoverflow.com/users/${Math.floor(Math.random() * 9000000) + 1000000}/${username}`,
+      platform: "Twitch",
+      url: `https://www.twitch.tv/${username}`,
       username: username,
-      icon: "S",
-      color: "#F48024",
+      icon: "T",
+      color: "#9146FF",
+      category: "Streaming"
+    },
+    {
+      platform: "Discord",
+      url: `https://discord.com/users/${username}`,
+      username: username,
+      icon: "D",
+      color: "#5865F2",
+      category: "Social network"
+    },
+    {
+      platform: "WhatsApp",
+      url: `https://wa.me/${username}`,
+      username: username,
+      icon: "W",
+      color: "#25D366",
+      category: "Messaging"
+    },
+    {
+      platform: "Tumblr",
+      url: `https://${username}.tumblr.com`,
+      username: username,
+      icon: "T",
+      color: "#36465D",
+      category: "Social network"
+    },
+    {
+      platform: "Quora",
+      url: `https://www.quora.com/profile/${username}`,
+      username: username,
+      icon: "Q",
+      color: "#B92B27",
+      category: "Social Q&A"
+    },
+    {
+      platform: "Medium",
+      url: `https://medium.com/@${username}`,
+      username: username,
+      icon: "M",
+      color: "#00AB6C",
+      category: "Blogging"
+    },
+    {
+      platform: "Threads",
+      url: `https://www.threads.net/@${username}`,
+      username: `@${username}`,
+      icon: "T",
+      color: "#000000",
+      category: "Social network"
+    },
+    {
+      platform: "Telegram",
+      url: `https://t.me/${username}`,
+      username: username,
+      icon: "T",
+      color: "#0088cc",
+      category: "Messaging"
+    },
+    {
+      platform: "WeChat",
+      url: `https://weixin.qq.com/${username}`,
+      username: username,
+      icon: "W",
+      color: "#7BB32E",
+      category: "Messaging"
+    },
+    {
+      platform: "GitHub",
+      url: `https://github.com/${username}`,
+      username: username,
+      icon: "🐙",
+      color: "#333333",
       category: "Professional"
     },
     {
@@ -292,6 +165,230 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       icon: "🎵",
       color: "#1DB954",
       category: "Music"
+    },
+    {
+      platform: "SoundCloud",
+      url: `https://soundcloud.com/${username}`,
+      username: username,
+      icon: "SC",
+      color: "#FF5500",
+      category: "Music"
+    },
+    {
+      platform: "Vimeo",
+      url: `https://vimeo.com/${username}`,
+      username: username,
+      icon: "V",
+      color: "#1AB7EA",
+      category: "Video"
+    },
+    {
+      platform: "Flickr",
+      url: `https://www.flickr.com/photos/${username}`,
+      username: username,
+      icon: "F",
+      color: "#0063DC",
+      category: "Creativity"
+    },
+    {
+      platform: "Behance",
+      url: `https://behance.net/${username}`,
+      username: username,
+      icon: "Be",
+      color: "#053eff",
+      category: "Creativity"
+    },
+    {
+      platform: "Dribbble",
+      url: `https://dribbble.com/${username}`,
+      username: username,
+      icon: "D",
+      color: "#EA4C89",
+      category: "Creativity"
+    },
+    {
+      platform: "Line",
+      url: `https://line.me/ti/p/${username}`,
+      username: username,
+      icon: "L",
+      color: "#00C300",
+      category: "Messaging"
+    },
+    {
+      platform: "Patreon",
+      url: `https://www.patreon.com/${username}`,
+      username: username,
+      icon: "P",
+      color: "#F96854",
+      category: "Crowdfunding"
+    },
+    {
+      platform: "Mastodon",
+      url: `https://mastodon.social/@${username}`,
+      username: username,
+      icon: "M",
+      color: "#6364FF",
+      category: "Social network"
+    },
+    {
+      platform: "Meetup",
+      url: `https://www.meetup.com/members/${username}`,
+      username: username,
+      icon: "M",
+      color: "#ED1C40",
+      category: "Events"
+    },
+    {
+      platform: "Stack Overflow",
+      url: `https://stackoverflow.com/users/${Math.floor(Math.random() * 9000000) + 1000000}/${username}`,
+      username: username,
+      icon: "S",
+      color: "#F48024",
+      category: "Professional"
+    },
+    {
+      platform: "Slack",
+      url: `https://app.slack.com/client/${username}`,
+      username: username,
+      icon: "S",
+      color: "#4A154B",
+      category: "Messaging"
+    },
+    {
+      platform: "Clubhouse",
+      url: `https://www.clubhouse.com/@${username}`,
+      username: username,
+      icon: "C",
+      color: "#F1EFE3",
+      category: "Audio"
+    },
+    {
+      platform: "Etsy",
+      url: `https://www.etsy.com/shop/${username}`,
+      username: username,
+      icon: "E",
+      color: "#F1641E",
+      category: "Marketplace"
+    },
+    {
+      platform: "Fiverr",
+      url: `https://fiverr.com/${username}`,
+      username: username,
+      icon: "Fi",
+      color: "#1DBF73",
+      category: "Marketplace"
+    },
+    {
+      platform: "About.me",
+      url: `https://about.me/${username}`,
+      username: username,
+      icon: "A",
+      color: "#00A98F",
+      category: "Professional"
+    },
+    {
+      platform: "ProductHunt",
+      url: `https://www.producthunt.com/@${username}`,
+      username: username,
+      icon: "P",
+      color: "#DA552F",
+      category: "Technology"
+    },
+    {
+      platform: "VSCO",
+      url: `https://vsco.co/${username}`,
+      username: username,
+      icon: "V",
+      color: "#000000",
+      category: "Creativity"
+    },
+    {
+      platform: "Goodreads",
+      url: `https://www.goodreads.com/${username}`,
+      username: username,
+      icon: "g",
+      color: "#553B08",
+      category: "Reading"
+    },
+    {
+      platform: "Substack",
+      url: `https://${username}.substack.com`,
+      username: username,
+      icon: "S",
+      color: "#FF6719",
+      category: "Writing"
+    },
+    {
+      platform: "Trello",
+      url: `https://trello.com/${username}`,
+      username: username,
+      icon: "T",
+      color: "#0079BF",
+      category: "Professional"
+    },
+    {
+      platform: "Strava",
+      url: `https://www.strava.com/athletes/${username}`,
+      username: username,
+      icon: "S",
+      color: "#FC4C02",
+      category: "Fitness"
+    },
+    {
+      platform: "Academia.edu",
+      url: `https://independent.academia.edu/${username}`,
+      username: username,
+      icon: "A",
+      color: "#41454A",
+      category: "Education"
+    },
+    {
+      platform: "SlideShare",
+      url: `https://slideshare.net/${username}`,
+      username: username,
+      icon: "S",
+      color: "#0077B5",
+      category: "Professional"
+    },
+    {
+      platform: "Yelp",
+      url: `https://www.yelp.com/user_details?userid=${username}`,
+      username: username,
+      icon: "Y",
+      color: "#D32323",
+      category: "Reviews"
+    },
+    {
+      platform: "Roblox",
+      url: `https://www.roblox.com/users/${username}/profile`,
+      username: username,
+      icon: "R",
+      color: "#CF0723",
+      category: "Gaming"
+    },
+    {
+      platform: "DeviantArt",
+      url: `https://${username}.deviantart.com`,
+      username: username,
+      icon: "D",
+      color: "#05CC47",
+      category: "Creativity"
+    },
+    {
+      platform: "Steam",
+      url: `https://steamcommunity.com/id/${username}`,
+      username: username,
+      icon: "S",
+      color: "#1B2838",
+      category: "Gaming"
+    },
+    {
+      platform: "500px",
+      url: `https://500px.com/${username}`,
+      username: username,
+      icon: "5",
+      color: "#0099E5",
+      category: "Photography"
     }
   ];
 
@@ -319,7 +416,15 @@ const ERROR_PATTERNS = [
   "account has been disabled",
   "the user has blocked you",
   "doesn't have a profile",
-  "couldn't find that page"
+  "couldn't find that page",
+  "user not available",
+  "no results found",
+  "no such user",
+  "profile no longer exists",
+  "oops! we couldn't find that user",
+  "this account has been deleted",
+  "no matching results",
+  "this username is not registered"
 ];
 
 /**

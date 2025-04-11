@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -29,8 +30,6 @@ const Index = () => {
 
   const { toast } = useToast();
   const { user, profile, refreshProfile } = useAuth();
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
 
   const {
     name,
@@ -73,10 +72,10 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    if (name && results.length > 0 && !isSearching) {
+    if (name && results.length > 0 && !isSearching && !isDeepVerifying) {
       addToRecentSearches(name);
     }
-  }, [name, results, isSearching]);
+  }, [name, results, isSearching, isDeepVerifying]);
 
   const addToRecentSearches = (searchTerm: string) => {
     setRecentSearches(prevSearches => {
@@ -103,30 +102,6 @@ const Index = () => {
       description: "Your search history has been cleared."
     });
   };
-
-  useEffect(() => {
-    const query = searchParams.get('query');
-    const pathSegments = location.pathname.split('/');
-    
-    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
-      searchInitiated.current = true;
-      
-      let searchQuery = query;
-      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
-        searchQuery = decodeURIComponent(pathSegments[2]);
-      }
-      
-      if (searchQuery) {
-        setName(searchQuery);
-        handleSearch(searchQuery);
-      }
-    }
-    
-    const state = location.state as { returnTo?: string; action?: string } | null;
-    if (state?.action === "emailReport" && user) {
-      setEmailModalOpen(true);
-    }
-  }, []);
 
   const handleCopyAll = () => {
     const text = filteredResults
@@ -192,6 +167,10 @@ const Index = () => {
     ? additionalResults.filter(profile => profile.category === selectedCategory)
     : additionalResults;
 
+  const showResults = 
+    (name && (results.length > 0 || isSearching)) && 
+    !(isSearching || isDeepVerifying);
+
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
@@ -213,11 +192,13 @@ const Index = () => {
           recentSearches={recentSearches}
           onClearSearch={clearRecentSearch}
           onClearAllSearches={clearAllRecentSearches}
+          isDeepVerifying={isDeepVerifying}
+          verificationProgress={verificationProgress}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>
           <div className="container mx-auto max-w-6xl">
-            {name && (results.length > 0 || isSearching) && (
+            {showResults && (
               <ResultsHeader 
                 name={name}
                 filteredResults={filteredResults}
@@ -234,26 +215,32 @@ const Index = () => {
               />
             )}
 
-            <CategoryFilter 
-              categories={categories}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-            />
+            {showResults && (
+              <CategoryFilter 
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+              />
+            )}
 
-            <ResultsList 
-              filteredResults={filteredResults}
-              viewMode={viewMode}
-              selectedCategory={selectedCategory}
-              profilesByCategory={profilesByCategory}
-            />
+            {showResults && (
+              <ResultsList 
+                filteredResults={filteredResults}
+                viewMode={viewMode}
+                selectedCategory={selectedCategory}
+                profilesByCategory={profilesByCategory}
+              />
+            )}
 
-            <AdditionalResults 
-              additionalResults={additionalResults}
-              filteredAdditionalResults={filteredAdditionalResults}
-              viewMode={viewMode}
-            />
+            {showResults && additionalResults.length > 0 && (
+              <AdditionalResults 
+                additionalResults={additionalResults}
+                filteredAdditionalResults={filteredAdditionalResults}
+                viewMode={viewMode}
+              />
+            )}
 
-            {availableDomains.length > 0 && availableDomains.some(d => d.available) && (
+            {showResults && availableDomains.length > 0 && availableDomains.some(d => d.available) && (
               <div className="mt-10 mb-6">
                 <DomainSuggestions username={name.toLowerCase().replace(/\s+/g, '')} domains={availableDomains} />
               </div>
@@ -263,12 +250,12 @@ const Index = () => {
 
         <EmptyResults 
           name={name}
-          isSearching={isSearching}
+          isSearching={isSearching || isDeepVerifying}
           results={results}
           onReset={() => setName("")}
         />
 
-        {!name && !isSearching && results.length === 0 && (
+        {!name && !isSearching && !isDeepVerifying && results.length === 0 && (
           <>
             <Features />
             <FAQ />
