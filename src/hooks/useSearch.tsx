@@ -40,22 +40,35 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     saveSearchHistory
   } = useSearchLimit(user, profile);
 
-  // Force show modal when limit is reached on component mount and periodically check
   useEffect(() => {
-    if (searchLimitReached || checksRemaining <= 0) {
-      setShowLimitModal(true);
+    const query = searchParams.get('query');
+    const pathSegments = location.pathname.split('/');
+    
+    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
+      searchInitiated.current = true;
+      
+      let searchQuery = query;
+      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
+        searchQuery = decodeURIComponent(pathSegments[2]);
+      }
+      
+      if (searchQuery) {
+        setName(searchQuery);
+        // Don't auto-search if limit reached
+        if (!searchLimitReached && checksRemaining > 0) {
+          handleSearch(searchQuery);
+        } else {
+          // Just show the modal if we're at limit
+          setShowLimitModal(true);
+        }
+      }
     }
     
-    // Set up a periodic check to prevent bypassing limit by page reload or other browser tricks
-    const limitCheck = setInterval(() => {
-      if (hasReachedSearchLimit() || checksRemaining <= 0) {
-        setSearchLimitReached(true);
-        setShowLimitModal(true);
-      }
-    }, 1000);
-    
-    return () => clearInterval(limitCheck);
-  }, [searchLimitReached, checksRemaining, hasReachedSearchLimit, setSearchLimitReached]);
+    const state = location.state as { returnTo?: string; action?: string } | null;
+    if (state?.action === "emailReport" && user) {
+      setEmailModalOpen(true);
+    }
+  }, []);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
@@ -221,3 +234,4 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setShowLimitModal
   };
 };
+

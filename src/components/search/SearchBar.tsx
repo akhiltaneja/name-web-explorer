@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,13 +42,6 @@ const SearchBar = ({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Force show modal when limit is reached
-  useEffect(() => {
-    if (searchLimitReached || checksRemaining <= 0) {
-      setShowLimitModal(true);
-    }
-  }, [searchLimitReached, checksRemaining, setShowLimitModal]);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSearching && name.trim()) {
       if (searchLimitReached || checksRemaining <= 0) {
@@ -79,33 +73,9 @@ const SearchBar = ({
 
   return (
     <>
-      <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden ${isLimitReached ? 'opacity-80' : ''}`}>
+      <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden`}>
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row relative">
-            {isLimitReached && (
-              <div className="absolute inset-0 bg-gray-100/90 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div className="text-center p-4">
-                  <Lock className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Search Limit Reached</h3>
-                  <p className="text-gray-600 mb-4">
-                    You've used all your {user ? (user.plan === 'free' ? '3 daily' : '500 monthly') : '3 daily'} searches.
-                    {!user ? " Sign in for more searches." : ""}
-                  </p>
-                  {!user ? (
-                    <Link to="/auth">
-                      <Button className="mr-2 bg-purple-600 hover:bg-purple-700">Sign In</Button>
-                    </Link>
-                  ) : (
-                    <Button 
-                      onClick={() => navigate("/profile?tab=plans")}
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      Upgrade Plan
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
             <Input
               type="text"
               placeholder="Enter first and last name"
@@ -113,7 +83,7 @@ const SearchBar = ({
               onChange={(e) => setName(e.target.value)}
               className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-purple-500"
               onKeyDown={handleKeyDown}
-              disabled={isLimitReached || isSearching}
+              disabled={isSearching}
             />
             <Button 
               onClick={() => {
@@ -129,7 +99,7 @@ const SearchBar = ({
                   handleSearch();
                 }
               }}
-              disabled={isSearching || !name.trim() || isLimitReached}
+              disabled={isSearching || !name.trim()}
               className={`md:w-auto w-full ${isLimitReached ? 'bg-gray-500' : 'bg-purple-600 hover:bg-purple-700'} rounded-none md:rounded-r-lg py-7 text-base`}
               size="lg"
             >
@@ -168,33 +138,15 @@ const SearchBar = ({
         </CardContent>
       </Card>
 
-      {/* Search Limit Modal - Make this modal persistent when at limit */}
+      {/* Search Limit Modal - Only show when the button is clicked and limit is reached */}
       <Dialog 
         open={showLimitModal} 
-        onOpenChange={() => {
-          // Always keep it open if limit is reached - ignore all attempts to close
-          if (searchLimitReached || checksRemaining <= 0) {
-            setShowLimitModal(true);
-          }
+        onOpenChange={(open) => {
+          // Allow closing the modal
+          setShowLimitModal(open);
         }}
       >
-        <DialogContent 
-          className="sm:max-w-md"
-          onPointerDownOutside={(e) => {
-            // Prevent closing by clicking outside
-            if (searchLimitReached || checksRemaining <= 0) {
-              e.preventDefault();
-            }
-          }}
-          onEscapeKeyDown={(e) => {
-            // Prevent closing with escape key
-            if (searchLimitReached || checksRemaining <= 0) {
-              e.preventDefault();
-            }
-          }}
-          // Hide the X close button when limit reached
-          hideCloseButton={searchLimitReached || checksRemaining <= 0}
-        >
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
             <DialogDescription className="text-center">
@@ -212,7 +164,10 @@ const SearchBar = ({
               <Button
                 variant="outline"
                 className="w-full sm:w-auto"
-                onClick={() => navigate("/auth")}
+                onClick={() => {
+                  navigate("/auth");
+                  setShowLimitModal(false);
+                }}
               >
                 Sign In
               </Button>
@@ -221,6 +176,7 @@ const SearchBar = ({
               className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
               onClick={() => {
                 navigate(user ? "/profile?tab=plans" : "/pricing");
+                setShowLimitModal(false);
               }}
             >
               Upgrade Now

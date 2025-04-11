@@ -17,6 +17,7 @@ const GuestLimitWarning = ({
   searchLimitReached 
 }: GuestLimitWarningProps) => {
   // Only show warning for guests who have reached their limit AND are not actively searching
+  // AND not showing the modal (since the modal is now dismissible)
   if (user || !searchLimitReached || isSearching) return null;
   
   return (
