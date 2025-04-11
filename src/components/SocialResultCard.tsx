@@ -90,6 +90,14 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                     {profile.status}
                   </Badge>
                 )}
+                {profile.note && (
+                  <Badge 
+                    variant="outline" 
+                    className="ml-2 text-xs bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-200"
+                  >
+                    {profile.note}
+                  </Badge>
+                )}
               </div>
               {profile.category && (
                 <div className="flex items-center space-x-1">

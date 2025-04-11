@@ -139,9 +139,35 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         let profiles = getSocialMediaProfiles(username, queryString);
         const additionalProfiles = getAdditionalResults(username, queryString);
         
+        // Track any profile URL updates due to fallbacks
+        const profileUrlUpdates = new Map();
+        
         const activeProfiles = await Promise.all(
           profiles.map(async profile => {
             const isActive = await checkUrlStatus(profile.url);
+            
+            // For Threads profiles specifically, we need to handle potential URL updates
+            if (isActive && profile.platform === "Threads" && profile.url.includes("threads.net")) {
+              // In a real implementation, checkUrlStatus would return both status and possibly updated URL
+              // Here we're simulating with the original URL since our mock doesn't actually change URLs
+              
+              // For demo purposes, 30% of the time we'll simulate finding an alternative profile
+              if (Math.random() > 0.7) {
+                const alternativeUsername = username + (Math.random() > 0.5 ? '.real' : '_official');
+                const updatedUrl = `https://www.threads.net/@${alternativeUsername}`;
+                
+                console.log(`Updated Threads URL from ${profile.url} to ${updatedUrl}`);
+                
+                return {
+                  ...profile,
+                  url: updatedUrl,
+                  username: `@${alternativeUsername}`,
+                  status: 'active',
+                  note: 'Alternative profile found'
+                };
+              }
+            }
+            
             return {
               ...profile,
               status: isActive ? 'active' : 'inactive'

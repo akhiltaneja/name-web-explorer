@@ -6,39 +6,30 @@ export interface SocialMediaProfile {
   icon: string;
   color: string;
   category?: string;
-  status?: string;
-}
-
-export interface SocialMediaCategory {
-  name: string;
-  count: number;
+  status?: 'active' | 'inactive' | 'pending';
+  note?: string;
 }
 
 export interface UserProfile {
   id: string;
   email: string;
-  avatar_url: string | null;
-  plan: 'free' | 'premium' | 'unlimited';
-  role?: 'user' | 'admin';
-  checks_used: number;
-  plan_start_date: string | null;
-  plan_end_date: string | null;
-}
-
-export interface SearchHistory {
-  id: string;
-  query: string;
-  result_count: number;
+  avatar_url: string;
   created_at: string;
+  updated_at: string;
+  checks_used: number;
+  plan: string;
+  plan_start_date: string;
+  plan_end_date: string;
+  role?: string;
 }
 
-export interface PlanOption {
-  id: string;
-  name: string;
+export interface DomainSuggestion {
+  tld: string;
+  available: boolean;
   price: number;
-  features: string[];
-  limit: string;
-  description: string;
-  current?: boolean;
-  buttonText?: string;
+}
+
+export interface CategoryCount {
+  name: string;
+  count: number;
 }

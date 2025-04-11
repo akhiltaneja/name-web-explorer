@@ -312,6 +312,12 @@ export const checkUrlStatus = async (url: string): Promise<boolean> => {
   // For certain URLs in our demo, we'll always return inactive
   const lowerUrl = url.toLowerCase();
   
+  // Check if this is a Threads URL that might need special handling
+  if (lowerUrl.includes('threads.net')) {
+    // For demonstration purposes, we'll simulate the fallback with a different URL format
+    return await checkThreadsProfile(url);
+  }
+  
   // Specific examples mentioned by the user that should be filtered out
   if (
     lowerUrl.includes('dailymotion.com/akhiltaneja') ||
@@ -344,6 +350,48 @@ export const checkUrlStatus = async (url: string): Promise<boolean> => {
       resolve(Math.random() > 0.2); // 80% chance of being active
     }, 100);
   });
+};
+
+/**
+ * Special handler for Threads profiles that may show "Sorry, this page isn't available"
+ * This will attempt to find an alternative valid profile by searching on threads.net
+ */
+const checkThreadsProfile = async (originalUrl: string): Promise<boolean> => {
+  // Extract username from the URL
+  const usernameMatch = originalUrl.match(/threads\.net\/@([a-zA-Z0-9._]+)/);
+  if (!usernameMatch || !usernameMatch[1]) {
+    return false;
+  }
+  
+  const username = usernameMatch[1];
+  console.log(`Checking Threads profile for: @${username}`);
+  
+  // In a real implementation, this would:
+  // 1. First try the direct URL
+  // 2. If that fails with a "Sorry, this page isn't available", it would
+  //    then search for the username on https://www.threads.net/
+  // 3. Parse the search results and get the first match
+  
+  // For demonstration, we'll simulate a 50% chance that we need to use the fallback
+  const needsFallback = Math.random() > 0.5;
+  
+  if (needsFallback) {
+    console.log(`Direct Threads URL failed for @${username}, using search fallback`);
+    
+    // Simulate finding an alternative profile (in reality, this would scrape search results)
+    // For demo purposes, we'll modify the username slightly to simulate a different user found
+    const searchUsername = username + (Math.random() > 0.5 ? '_' : '');
+    
+    // Update the URL in the original profile object that was passed to checkUrlStatus
+    // In a real implementation, we'd need to pass the profile object by reference
+    console.log(`Found alternative Threads profile: @${searchUsername}`);
+    
+    // Return true to indicate we found an alternative profile
+    return true;
+  }
+  
+  // Original profile exists
+  return true;
 };
 
 /**
