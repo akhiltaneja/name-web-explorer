@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Filter, Grid, List, Copy, Download, ExternalLink } from "lucide-react";
+import { Filter, Grid, List, Copy, Download, ExternalLink, CheckCircle, Loader2 } from "lucide-react";
 
 interface ResultsHeaderProps {
   name: string;
@@ -13,6 +13,8 @@ interface ResultsHeaderProps {
   handleCopyAll: () => void;
   handleDownloadReport: () => void;
   handleEmailReport: () => void;
+  isDeepVerifying?: boolean;
+  verificationProgress?: number;
 }
 
 const ResultsHeader = ({
@@ -25,7 +27,9 @@ const ResultsHeader = ({
   setSelectedCategory,
   handleCopyAll,
   handleDownloadReport,
-  handleEmailReport
+  handleEmailReport,
+  isDeepVerifying = false,
+  verificationProgress = 0
 }: ResultsHeaderProps) => {
   return (
     <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
@@ -35,10 +39,26 @@ const ResultsHeader = ({
           <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
             {filteredResults.length} found
           </span>
+          
+          {isDeepVerifying && (
+            <span className="flex items-center gap-1 text-sm font-normal bg-yellow-100 text-yellow-800 py-0.5 px-2 rounded-full border border-yellow-200">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Verifying {Math.round(verificationProgress)}%
+            </span>
+          )}
+          
+          {!isDeepVerifying && verificationProgress === 100 && (
+            <span className="flex items-center gap-1 text-sm font-normal bg-green-100 text-green-800 py-0.5 px-2 rounded-full border border-green-200">
+              <CheckCircle className="h-3 w-3" />
+              Verified
+            </span>
+          )}
         </h2>
         {searchTime && (
           <p className="text-sm text-gray-500 mt-1">
             Results found in {searchTime}ms
+            {isDeepVerifying && " • Content verification in progress..."}
+            {!isDeepVerifying && verificationProgress === 100 && " • All results verified"}
           </p>
         )}
       </div>

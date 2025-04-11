@@ -1,4 +1,3 @@
-
 export interface SocialMediaProfile {
   platform: string;
   url: string;
@@ -8,6 +7,8 @@ export interface SocialMediaProfile {
   category?: string;
   status?: 'active' | 'inactive' | 'pending';
   note?: string;
+  verificationStatus?: 'verified' | 'error' | 'pending';
+  errorReason?: string;
 }
 
 export interface UserProfile {

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +8,8 @@ import {
   getAdditionalResults, 
   groupProfilesByCategory, 
   checkUrlStatus,
-  checkDomainAvailability 
+  checkDomainAvailability,
+  deepVerifyProfiles
 } from "@/utils/socialMediaSearch";
 import { useSearchLimit } from "./useSearchLimit";
 
@@ -23,6 +25,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [categories, setCategories] = useState([]);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [isDeepVerifying, setIsDeepVerifying] = useState(false);
+  const [verificationProgress, setVerificationProgress] = useState(0);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -138,15 +142,13 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         let profiles = getSocialMediaProfiles(username, queryString);
         const additionalProfiles = getAdditionalResults(username, queryString);
         
-        // Track any profile URL updates due to fallbacks
-        const profileUrlUpdates = new Map();
-        
+        // Check each profile URL and filter inactive ones
         const activeProfiles = await Promise.all(
           profiles.map(async profile => {
-            const isActive = await checkUrlStatus(profile.url);
+            const statusCheck = await checkUrlStatus(profile.url);
             
             // For Threads profiles specifically, we need to handle potential URL updates
-            if (isActive && profile.platform === "Threads" && profile.url.includes("threads.net")) {
+            if (statusCheck.isActive && profile.platform === "Threads" && profile.url.includes("threads.net")) {
               // In a real implementation, checkUrlStatus would return both status and possibly updated URL
               // Here we're simulating with the original URL since our mock doesn't actually change URLs
               
@@ -169,7 +171,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             
             return {
               ...profile,
-              status: isActive ? 'active' as 'active' : 'inactive' as 'inactive'
+              status: statusCheck.isActive ? 'active' as 'active' : 'inactive' as 'inactive',
+              errorReason: statusCheck.errorReason
             };
           })
         );
@@ -193,40 +196,96 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           return;
         }
         
-        setTimeout(() => {
-          setResults(profiles);
-          setAdditionalResults(additionalProfiles);
-          const categorizedProfiles = groupProfilesByCategory(profiles);
-          setProfilesByCategory(categorizedProfiles);
-          setCategories(getCategories(profiles));
-          setIsSearching(false);
-          
-          toast({
-            title: "Search complete",
-            description: `Found ${profiles.length} potential profiles for ${queryString}`,
+        // Start deep verification (content checking) process
+        const preliminaryResults = profiles;
+        setResults(preliminaryResults);
+        setAdditionalResults(additionalProfiles);
+        const categorizedProfiles = groupProfilesByCategory(preliminaryResults);
+        setProfilesByCategory(categorizedProfiles);
+        setCategories(getCategories(preliminaryResults));
+        setIsSearching(false);
+        
+        toast({
+          title: "Initial search complete",
+          description: `Found ${preliminaryResults.length} potential profiles for ${queryString}. Starting content verification...`,
+        });
+        
+        // Update URL with the search query
+        if (!location.pathname.includes('/search/')) {
+          navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
+        }
+        
+        if (resultsRef.current) {
+          resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // Start the deep verification process
+        setIsDeepVerifying(true);
+        setVerificationProgress(0);
+        
+        const verificationInterval = setInterval(() => {
+          setVerificationProgress(prev => {
+            const newProgress = prev + (Math.random() * 10);
+            return newProgress < 95 ? newProgress : prev;
           });
-          
-          // Update URL with the search query
-          if (!location.pathname.includes('/search/')) {
-            navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
+        }, 250);
+        
+        // Allow the user to see some initial results before deep verification completes
+        setTimeout(async () => {
+          try {
+            // Perform the deep verification to check for "User Not Found" in content
+            const verifiedProfiles = await deepVerifyProfiles(preliminaryResults);
+            
+            clearInterval(verificationInterval);
+            setVerificationProgress(100);
+            
+            setTimeout(() => {
+              setResults(verifiedProfiles);
+              const updatedCategorizedProfiles = groupProfilesByCategory(verifiedProfiles);
+              setProfilesByCategory(updatedCategorizedProfiles);
+              setCategories(getCategories(verifiedProfiles));
+              setIsDeepVerifying(false);
+              
+              // Show toast with final verification results
+              const filteredCount = preliminaryResults.length - verifiedProfiles.length;
+              if (filteredCount > 0) {
+                toast({
+                  title: "Content verification complete",
+                  description: `Removed ${filteredCount} false positive results that contained "User Not Found" or similar errors.`,
+                });
+              } else {
+                toast({
+                  title: "Content verification complete",
+                  description: `All ${verifiedProfiles.length} profiles have been verified.`,
+                });
+              }
+              
+              if (user) {
+                saveSearchHistory(queryString, verifiedProfiles.length)
+                  .then(success => {
+                    if (success) refreshProfile();
+                  });
+              }
+            }, 500);
+          } catch (error) {
+            console.error("Verification error:", error);
+            clearInterval(verificationInterval);
+            setIsDeepVerifying(false);
+            
+            toast({
+              title: "Verification incomplete",
+              description: "Some profiles could not be fully verified. Results may contain inactive profiles.",
+              variant: "destructive",
+            });
           }
-          
-          if (resultsRef.current) {
-            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-          
-          if (user) {
-            saveSearchHistory(queryString, profiles.length)
-              .then(success => {
-                if (success) refreshProfile();
-              });
-          }
-        }, 500);
+        }, 3000);
+        
       } catch (error) {
         console.error("Search error:", error);
         clearInterval(progressInterval);
         setIsSearching(false);
         setSearchProgress(0);
+        setIsDeepVerifying(false);
         
         toast({
           title: "Search failed",
@@ -258,6 +317,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     showLimitModal,
     setShowLimitModal,
     emailModalOpen,
-    setEmailModalOpen
+    setEmailModalOpen,
+    isDeepVerifying,
+    verificationProgress
   };
 };

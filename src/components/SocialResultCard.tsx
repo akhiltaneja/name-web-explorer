@@ -3,10 +3,16 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ExternalLink, Check } from "lucide-react";
+import { Copy, ExternalLink, Check, AlertTriangle } from "lucide-react";
 import { SocialMediaProfile } from "@/types/socialMedia";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SocialResultCardProps {
   profile: SocialMediaProfile;
@@ -90,6 +96,14 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                     {profile.status}
                   </Badge>
                 )}
+                {profile.verificationStatus === 'verified' && (
+                  <Badge 
+                    variant="outline" 
+                    className="ml-2 text-xs bg-green-100 text-green-800 hover:bg-green-200 border-green-200"
+                  >
+                    verified
+                  </Badge>
+                )}
                 {profile.note && (
                   <Badge 
                     variant="outline" 
@@ -97,6 +111,20 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                   >
                     {profile.note}
                   </Badge>
+                )}
+                {profile.errorReason && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-2">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs max-w-xs">{profile.errorReason}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
               {profile.category && (

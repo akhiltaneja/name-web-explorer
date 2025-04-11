@@ -9,7 +9,6 @@ import EmailReportDialog from "@/components/EmailReportDialog";
 import DomainSuggestions from "@/components/DomainSuggestions";
 import { emailTextReport, downloadTextReport } from "@/utils/reportGenerator";
 
-// Import the refactored components
 import Hero from "@/components/search/Hero";
 import ResultsHeader from "@/components/search/ResultsHeader";
 import CategoryFilter from "@/components/search/CategoryFilter";
@@ -20,7 +19,6 @@ import Features from "@/components/search/Features";
 import FAQ from "@/components/search/FAQ";
 import { useSearch } from "@/hooks/useSearch";
 
-// Constants
 const RECENT_SEARCHES_KEY = "people_peeper_recent_searches";
 const MAX_RECENT_SEARCHES = 6;
 
@@ -55,7 +53,9 @@ const Index = () => {
     showLimitModal,
     setShowLimitModal,
     emailModalOpen,
-    setEmailModalOpen
+    setEmailModalOpen,
+    isDeepVerifying,
+    verificationProgress
   } = useSearch(user, profile, refreshProfile);
 
   useEffect(() => {
@@ -229,6 +229,8 @@ const Index = () => {
                 handleCopyAll={handleCopyAll}
                 handleDownloadReport={handleDownloadReport}
                 handleEmailReport={handleEmailReport}
+                isDeepVerifying={isDeepVerifying}
+                verificationProgress={verificationProgress}
               />
             )}
 
