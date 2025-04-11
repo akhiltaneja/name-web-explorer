@@ -16,7 +16,7 @@ const GuestLimitWarning = ({
   isSearching, 
   searchLimitReached 
 }: GuestLimitWarningProps) => {
-  // Only show for guests who have reached their limit when not actively searching
+  // Only show warning for guests who have reached their limit AND are not actively searching
   if (user || !searchLimitReached || isSearching) return null;
   
   return (

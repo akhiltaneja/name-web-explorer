@@ -104,6 +104,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       const now = new Date();
       const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
       
+      // Check if 24 hours have passed since the first search
       if (hoursSinceLastCheck < GUEST_COOLDOWN_HOURS) {
         // Within the 24-hour window
         if (checkCount >= FREE_PLAN_LIMIT) {
@@ -217,7 +218,11 @@ export const useSearchLimit = (user: any, profile: any) => {
       const newCount = currentCount + 1;
       
       localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
-      localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+      
+      // Only update timestamp on first search to establish the 24-hour window
+      if (currentCount === 0) {
+        localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
+      }
       
       // Update the remaining checks
       const remaining = Math.max(0, FREE_PLAN_LIMIT - newCount);
@@ -227,7 +232,6 @@ export const useSearchLimit = (user: any, profile: any) => {
       if (remaining <= 0) {
         setGuestCheckAvailable(false);
         setSearchLimitReachedWithStorage(true);
-        localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'true');
       }
       
       return true;

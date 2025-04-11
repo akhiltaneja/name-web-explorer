@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -172,17 +171,30 @@ const SearchBar = ({
       {/* Search Limit Modal - Make this modal persistent when at limit */}
       <Dialog 
         open={showLimitModal} 
-        onOpenChange={(open) => {
-          // Only allow closing if not at search limit
-          if (!isLimitReached) {
-            setShowLimitModal(open);
-          } else {
-            // Force it to stay open
+        onOpenChange={() => {
+          // Always keep it open if limit is reached - ignore all attempts to close
+          if (searchLimitReached || checksRemaining <= 0) {
             setShowLimitModal(true);
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent 
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => {
+            // Prevent closing by clicking outside
+            if (searchLimitReached || checksRemaining <= 0) {
+              e.preventDefault();
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            // Prevent closing with escape key
+            if (searchLimitReached || checksRemaining <= 0) {
+              e.preventDefault();
+            }
+          }}
+          // Hide the X close button when limit reached
+          hideCloseButton={searchLimitReached || checksRemaining <= 0}
+        >
           <DialogHeader>
             <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>
             <DialogDescription className="text-center">

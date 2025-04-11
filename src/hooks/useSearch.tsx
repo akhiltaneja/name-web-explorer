@@ -40,12 +40,22 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     saveSearchHistory
   } = useSearchLimit(user, profile);
 
-  // Force show modal when limit is reached on component mount
+  // Force show modal when limit is reached on component mount and periodically check
   useEffect(() => {
     if (searchLimitReached || checksRemaining <= 0) {
       setShowLimitModal(true);
     }
-  }, [searchLimitReached, checksRemaining]);
+    
+    // Set up a periodic check to prevent bypassing limit by page reload or other browser tricks
+    const limitCheck = setInterval(() => {
+      if (hasReachedSearchLimit() || checksRemaining <= 0) {
+        setSearchLimitReached(true);
+        setShowLimitModal(true);
+      }
+    }, 1000);
+    
+    return () => clearInterval(limitCheck);
+  }, [searchLimitReached, checksRemaining, hasReachedSearchLimit, setSearchLimitReached]);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
@@ -137,6 +147,13 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         const endTime = performance.now();
         const timeElapsed = Math.round(endTime - startTime);
         setSearchTime(timeElapsed);
+        
+        // Final check to make sure user hasn't bypassed limit
+        if (searchLimitReached || hasReachedSearchLimit()) {
+          setIsSearching(false);
+          setShowLimitModal(true);
+          return;
+        }
         
         setTimeout(() => {
           setResults(profiles);
