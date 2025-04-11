@@ -32,6 +32,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const { 
     guestCheckAvailable, 
     searchLimitReached,
+    setSearchLimitReached, // Make sure we get this from useSearchLimit
     checksRemaining,
     hasReachedSearchLimit, 
     incrementSearchCount,
