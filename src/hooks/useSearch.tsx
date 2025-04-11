@@ -54,34 +54,23 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // First, check if we have zero credits remaining - prevent any search entirely
-    if (checksRemaining <= 0 || hasReachedSearchLimit()) {
+    // First, check if we have zero credits remaining or if the search limit is reached
+    if (checksRemaining <= 0 || searchLimitReached || hasReachedSearchLimit()) {
+      setShowLimitModal(true);
       setSearchLimitReached(true);
       
       if (!user) {
-        const lastCheckTime = localStorage.getItem("people_peeper_guest_last_check");
-        
-        if (lastCheckTime) {
-          const lastCheck = new Date(lastCheckTime);
-          const now = new Date();
-          const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
-          const hoursRemaining = Math.ceil(24 - hoursSinceLastCheck);
-          
-          toast({
-            title: "Request limit reached",
-            description: `Please sign in or upgrade to continue searching.`,
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Request limit reached",
+          description: `Please sign in or upgrade to continue searching.`,
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Request limit reached",
           description: `Please upgrade to continue searching.`,
           variant: "destructive",
         });
-        
-        // Show popup and redirect to plans page for users who need to upgrade
-        setShowLimitModal(true);
       }
       return;
     }
@@ -89,8 +78,9 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     // Try to increment search count - if it returns false, we've hit the limit
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
-      // The limit toast is already shown in incrementSearchCount
+      // The increment function already shows the appropriate toast
       setSearchLimitReached(true);
+      setShowLimitModal(true);
       return;
     }
 

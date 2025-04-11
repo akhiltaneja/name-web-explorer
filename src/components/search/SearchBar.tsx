@@ -42,22 +42,26 @@ const SearchBar = ({
   const navigate = useNavigate();
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !searchLimitReached && !isSearching && name.trim() && checksRemaining > 0) {
-      handleSearch();
-    } else if (e.key === "Enter" && (searchLimitReached || checksRemaining <= 0)) {
-      if (!user) {
-        toast({
-          title: "Request limit reached",
-          description: "You've used all your free searches. Sign in or upgrade for more.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Request limit reached",
-          description: "Please upgrade to continue searching.",
-          variant: "destructive",
-        });
+    if (e.key === "Enter" && !isSearching && name.trim()) {
+      if (searchLimitReached || checksRemaining <= 0) {
+        // Show limit modal and toast instead of trying to search
+        if (!user) {
+          toast({
+            title: "Request limit reached",
+            description: "You've used all your free searches. Sign in or upgrade for more.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Request limit reached",
+            description: "Please upgrade to continue searching.",
+            variant: "destructive",
+          });
+        }
         setShowLimitModal(true);
+      } else {
+        // Only proceed with search if we have credits
+        handleSearch();
       }
     }
   };
@@ -101,9 +105,15 @@ const SearchBar = ({
               disabled={searchLimitReached || isSearching || checksRemaining <= 0}
             />
             <Button 
-              onClick={handleSearch}
-              disabled={isSearching || searchLimitReached || !name.trim() || checksRemaining <= 0}
-              className="md:w-auto w-full bg-purple-600 hover:bg-purple-700 rounded-none md:rounded-r-lg py-7 text-base"
+              onClick={() => {
+                if (searchLimitReached || checksRemaining <= 0) {
+                  setShowLimitModal(true);
+                } else {
+                  handleSearch();
+                }
+              }}
+              disabled={isSearching || !name.trim()}
+              className={`md:w-auto w-full ${searchLimitReached ? 'bg-gray-500' : 'bg-purple-600 hover:bg-purple-700'} rounded-none md:rounded-r-lg py-7 text-base`}
               size="lg"
             >
               {isSearching ? (
@@ -142,12 +152,15 @@ const SearchBar = ({
       </Card>
 
       {/* Search Limit Modal - Make this modal persistent when at limit */}
-      <Dialog open={showLimitModal} onOpenChange={(open) => {
-        // Only allow closing if not at search limit
-        if (!searchLimitReached) {
-          setShowLimitModal(open);
-        }
-      }}>
+      <Dialog 
+        open={showLimitModal} 
+        onOpenChange={(open) => {
+          // Only allow closing if not at search limit
+          if (!searchLimitReached && checksRemaining > 0) {
+            setShowLimitModal(open);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center text-xl">Request Limit Reached</DialogTitle>

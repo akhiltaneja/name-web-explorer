@@ -10,7 +10,12 @@ interface GuestLimitWarningProps {
   searchLimitReached: boolean;
 }
 
-const GuestLimitWarning = ({ user, guestCheckAvailable, isSearching, searchLimitReached }: GuestLimitWarningProps) => {
+const GuestLimitWarning = ({ 
+  user, 
+  guestCheckAvailable, 
+  isSearching, 
+  searchLimitReached 
+}: GuestLimitWarningProps) => {
   // Only show for guests who have reached their limit when not actively searching
   if (user || !searchLimitReached || isSearching) return null;
   

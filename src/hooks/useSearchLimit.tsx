@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// Constants for search limit management
 const GUEST_LIMIT_KEY = "people_peeper_guest_last_check";
 const GUEST_COUNT_KEY = "people_peeper_guest_check_count";
 const GUEST_ID_KEY = "people_peeper_guest_id";
@@ -55,7 +56,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   useEffect(() => {
     if (!user) {
       const limitStatus = checkGuestLimits();
-      setSearchLimitReachedWithStorage(!limitStatus.available);
+      setSearchLimitReachedWithStorage(limitStatus.available === false);
       setChecksRemaining(limitStatus.remaining);
     } else if (profile) {
       const limitReached = hasReachedUserSearchLimit();
@@ -143,11 +144,11 @@ export const useSearchLimit = (user: any, profile: any) => {
     if (profile.plan === 'unlimited') return false;
     
     const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
-    const checksUsed = profile.plan === 'free' 
-      ? (profile.checks_used % FREE_PLAN_LIMIT) 
-      : (profile.checks_used % 500);
+    const checksUsed = profile.checks_used || 0;
     
-    return checksUsed >= dailyLimit;
+    return profile.plan === 'free' 
+      ? (checksUsed % FREE_PLAN_LIMIT) >= FREE_PLAN_LIMIT
+      : (checksUsed % 500) >= 500;
   };
   
   // Check if overall search limit has been reached (guest or user)
@@ -208,7 +209,6 @@ export const useSearchLimit = (user: any, profile: any) => {
       if (remaining <= 0) {
         setGuestCheckAvailable(false);
         setSearchLimitReachedWithStorage(true);
-        // Ensure the limit is stored
         localStorage.setItem(GUEST_LIMIT_REACHED_KEY, 'true');
       }
       
@@ -218,11 +218,10 @@ export const useSearchLimit = (user: any, profile: any) => {
       if (profile.plan === 'unlimited') return true;
       
       const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
-      const checksUsed = profile.plan === 'free' 
-        ? (profile.checks_used % FREE_PLAN_LIMIT) 
-        : (profile.checks_used % 500);
+      const checksUsed = profile.checks_used || 0;
       
-      if (checksUsed >= dailyLimit) {
+      if ((profile.plan === 'free' && (checksUsed % FREE_PLAN_LIMIT) >= FREE_PLAN_LIMIT) ||
+          (profile.plan === 'premium' && (checksUsed % 500) >= 500)) {
         setSearchLimitReachedWithStorage(true);
         setChecksRemaining(0);
         
@@ -236,7 +235,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       }
       
       // Update the remaining checks (will be formally updated in saveSearchHistory)
-      const remaining = Math.max(0, dailyLimit - checksUsed - 1);
+      const remaining = Math.max(0, dailyLimit - (checksUsed % dailyLimit) - 1);
       setChecksRemaining(remaining);
       
       // If this search puts us at the limit, set the flag
