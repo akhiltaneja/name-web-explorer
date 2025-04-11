@@ -62,6 +62,11 @@ export const useSearchLimit = (user: any, profile: any) => {
         
         const remaining = Math.max(0, dailyLimit - checksUsed);
         setChecksRemaining(remaining);
+        
+        // If no searches remaining, set the limit reached flag
+        if (remaining <= 0) {
+          setSearchLimitReached(true);
+        }
       }
     }
   }, [user, profile]);
@@ -145,7 +150,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   // Increment search count when a search is performed
   const incrementSearchCount = async () => {
     // Double check if limit is already reached to prevent any bypassing
-    if (hasReachedSearchLimit()) {
+    if (hasReachedSearchLimit() || checksRemaining <= 0) {
       setSearchLimitReached(true);
       
       if (!user) {
@@ -157,7 +162,7 @@ export const useSearchLimit = (user: any, profile: any) => {
           const hoursRemaining = Math.ceil(GUEST_COOLDOWN_HOURS - hoursSinceLastCheck);
           
           toast({
-            title: "Daily search limit reached",
+            title: "Request limit reached",
             description: `Please sign in or upgrade for more searches. Next free search available in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
             variant: "destructive",
           });
@@ -186,7 +191,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       setChecksRemaining(remaining);
       
       // If this search puts us at the limit, set the flag
-      if (newCount >= FREE_PLAN_LIMIT) {
+      if (remaining <= 0) {
         setGuestCheckAvailable(false);
         setSearchLimitReached(true);
       }
@@ -206,7 +211,7 @@ export const useSearchLimit = (user: any, profile: any) => {
         setChecksRemaining(0);
         
         toast({
-          title: "Search limit reached",
+          title: "Request limit reached",
           description: `You've reached your ${profile.plan} plan limit. Please upgrade for more searches.`,
           variant: "destructive",
         });
@@ -219,7 +224,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       setChecksRemaining(remaining);
       
       // If this search puts us at the limit, set the flag
-      if (remaining === 0) {
+      if (remaining <= 0) {
         setSearchLimitReached(true);
       }
       

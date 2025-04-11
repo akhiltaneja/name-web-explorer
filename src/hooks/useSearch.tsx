@@ -22,6 +22,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [availableDomains, setAvailableDomains] = useState([]);
   const [profilesByCategory, setProfilesByCategory] = useState<Record<string, any[]>>({});
   const [categories, setCategories] = useState([]);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -50,8 +51,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // Do a fresh check for search limit before proceeding
-    if (hasReachedSearchLimit()) {
+    // First, check if we have zero credits remaining - prevent any search entirely
+    if (checksRemaining <= 0 || hasReachedSearchLimit()) {
       setSearchLimitReached(true);
       
       if (!user) {
@@ -64,8 +65,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           const hoursRemaining = Math.ceil(24 - hoursSinceLastCheck);
           
           toast({
-            title: "Search limit reached",
-            description: `Please sign in to continue searching or wait ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
+            title: "Request limit reached",
+            description: `Please sign in or upgrade to continue searching.`,
             variant: "destructive",
           });
         }
@@ -76,8 +77,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           variant: "destructive",
         });
         
-        // Redirect to plans page for users who need to upgrade
-        navigate("/profile?tab=plans");
+        // Show popup and redirect to plans page for users who need to upgrade
+        setShowLimitModal(true);
       }
       return;
     }
@@ -86,6 +87,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
       // The limit toast is already shown in incrementSearchCount
+      setSearchLimitReached(true);
       return;
     }
 
@@ -192,6 +194,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     hasReachedSearchLimit,
     handleSearch,
     searchInitiated,
-    resultsRef
+    resultsRef,
+    showLimitModal,
+    setShowLimitModal
   };
 };

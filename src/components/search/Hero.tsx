@@ -1,10 +1,9 @@
 
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import SearchBar from "./SearchBar";
-import SearchProgress from "./SearchProgress";
-import SearchFeatures from "./SearchFeatures";
-import GuestLimitWarning from "./GuestLimitWarning";
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import SearchBar from "@/components/search/SearchBar";
+import SearchProgress from "@/components/search/SearchProgress";
+import GuestLimitWarning from "@/components/search/GuestLimitWarning";
 
 interface HeroProps {
   name: string;
@@ -16,76 +15,70 @@ interface HeroProps {
   user: any;
   guestCheckAvailable: boolean;
   checksRemaining: number;
+  showLimitModal?: boolean;
+  setShowLimitModal?: (show: boolean) => void;
 }
 
-const Hero = ({ 
-  name, 
-  setName, 
-  handleSearch, 
-  isSearching, 
+const Hero = ({
+  name,
+  setName,
+  handleSearch,
+  isSearching,
   searchProgress,
   searchLimitReached,
   user,
   guestCheckAvailable,
-  checksRemaining
+  checksRemaining,
+  showLimitModal,
+  setShowLimitModal
 }: HeroProps) => {
-  const navigate = useNavigate();
-
   return (
-    <div className="bg-gradient-to-b from-blue-50 to-white">
-      <div className="container mx-auto px-4 pt-12 pb-16 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-          Find Anyone <span className="text-purple-600">Online</span>
-        </h1>
-        
-        <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
-          Discover social media profiles and online presence with a simple name search.
-          Fast, comprehensive results from across the web.
-        </p>
-        
-        <div className="max-w-3xl mx-auto">
-          <SearchBar 
-            name={name} 
-            setName={setName} 
-            handleSearch={handleSearch} 
-            isSearching={isSearching}
-            searchLimitReached={searchLimitReached}
-            user={user}
-            checksRemaining={checksRemaining}
-          />
-          
-          {isSearching && (
-            <SearchProgress 
-              isSearching={isSearching} 
-              searchProgress={searchProgress} 
-              name={name}
-            />
-          )}
-          
-          <GuestLimitWarning 
-            user={user} 
-            guestCheckAvailable={guestCheckAvailable} 
-            isSearching={isSearching}
-            searchLimitReached={searchLimitReached}
-          />
-        </div>
-        
-        {!name && !isSearching && (
-          <div className="mt-8">
-            <SearchFeatures />
-            <div className="mt-10">
-              <Button
-                onClick={() => navigate("/pricing")}
-                className="bg-purple-600 hover:bg-purple-700 font-semibold"
-                size="lg"
-              >
-                View Plans & Pricing
-              </Button>
-            </div>
+    <section className="pt-8 pb-6 px-4 bg-gradient-to-b from-white to-gray-50">
+      <div className="container mx-auto max-w-6xl">
+        {!name && (
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Find Anyone's Social Media Profiles
+            </h1>
+            <p className="text-lg text-gray-600 mb-4 max-w-3xl mx-auto">
+              Enter a name to discover social media accounts, personal websites, and more.
+              Our advanced people search engine helps you find the digital footprint of anyone.
+            </p>
           </div>
         )}
+
+        <SearchBar
+          name={name}
+          setName={setName}
+          handleSearch={handleSearch}
+          isSearching={isSearching}
+          searchLimitReached={searchLimitReached}
+          user={user}
+          checksRemaining={checksRemaining}
+          showLimitModal={showLimitModal}
+          setShowLimitModal={setShowLimitModal}
+        />
+
+        {isSearching && (
+          <Card className="mb-8 border-purple-100">
+            <CardContent className="py-6">
+              <SearchProgress 
+                isSearching={isSearching} 
+                searchProgress={searchProgress}
+                name={name}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        <GuestLimitWarning
+          user={user}
+          guestCheckAvailable={guestCheckAvailable}
+          isSearching={isSearching}
+          searchLimitReached={searchLimitReached}
+        />
       </div>
-    </div>
+    </section>
   );
 };
 

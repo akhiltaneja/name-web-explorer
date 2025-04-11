@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -48,7 +47,9 @@ const Index = () => {
     hasReachedSearchLimit,
     handleSearch,
     searchInitiated,
-    resultsRef
+    resultsRef,
+    showLimitModal,
+    setShowLimitModal
   } = useSearch(user, profile, refreshProfile);
 
   useEffect(() => {
@@ -154,6 +155,8 @@ const Index = () => {
           user={user}
           guestCheckAvailable={guestCheckAvailable}
           checksRemaining={checksRemaining}
+          showLimitModal={showLimitModal}
+          setShowLimitModal={setShowLimitModal}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>

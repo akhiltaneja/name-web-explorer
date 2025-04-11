@@ -21,7 +21,7 @@ const GuestLimitWarning = ({ user, guestCheckAvailable, isSearching, searchLimit
           <Lock className="h-6 w-6 text-amber-600" />
         </div>
         <div>
-          <h3 className="font-bold text-amber-800 mb-1">Search Limit Reached</h3>
+          <h3 className="font-bold text-amber-800 mb-1">Request Limit Reached</h3>
           <p className="text-amber-700">
             You've used your 3 daily searches. Sign in or upgrade to continue searching.
           </p>
