@@ -39,9 +39,9 @@ const CountdownTimer = () => {
   }, []);
 
   return (
-    <div className="flex items-center text-amber-600 gap-1.5 animate-pulse font-medium">
-      <ClockIcon size={16} />
-      <span>Resets in {timeRemaining}</span>
+    <div className="flex items-center text-red-600 gap-1.5 font-semibold bg-red-50 px-3 py-1 rounded-full border border-red-200 shadow-sm">
+      <ClockIcon size={16} className="animate-pulse" />
+      <span>Resets in <span className="font-mono">{timeRemaining}</span></span>
     </div>
   );
 };

@@ -108,3 +108,14 @@
 .social-card:hover {
   transform: translateY(-5px);
 }
+
+/* Add shimmer animation */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}

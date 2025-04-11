@@ -36,17 +36,17 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
   };
 
   return (
-    <div className="w-full bg-white border border-gray-100 rounded-md shadow-sm mt-2 p-3">
+    <div className="w-full bg-white border border-purple-200 rounded-md shadow-md mt-4 p-4 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1 text-sm text-gray-500">
-          <Clock size={14} />
+        <div className="flex items-center gap-1.5 text-sm font-medium text-purple-700">
+          <Clock size={16} className="text-purple-500" />
           <span>Recent searches</span>
         </div>
         {onClearAll && (
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-6 text-xs text-gray-500 hover:text-gray-700"
+            className="h-6 text-xs text-purple-600 hover:text-purple-800 hover:bg-purple-50"
             onClick={onClearAll}
           >
             Clear all
@@ -58,18 +58,18 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
         {recentSearches.map((search, index) => (
           <div 
             key={`${search}-${index}`}
-            className="flex items-center bg-gray-50 hover:bg-gray-100 rounded-full px-3 py-1.5 text-sm gap-1 border border-gray-200"
+            className="flex items-center bg-purple-50 hover:bg-purple-100 rounded-full px-3 py-1.5 text-sm gap-1 border border-purple-200 transition-colors duration-200 shadow-sm"
           >
             <button
-              className="text-gray-700 flex items-center gap-1"
+              className="text-purple-800 flex items-center gap-1.5"
               onClick={() => handleSearch(search)}
             >
-              <Search size={12} className="text-gray-500" />
+              <Search size={14} className="text-purple-600" />
               {search}
             </button>
             {onClearSearch && (
               <button 
-                className="ml-1 text-gray-400 hover:text-gray-600 p-0.5"
+                className="ml-1.5 text-purple-400 hover:text-purple-700 p-0.5"
                 onClick={() => onClearSearch(search)}
                 aria-label={`Remove ${search} from recent searches`}
               >

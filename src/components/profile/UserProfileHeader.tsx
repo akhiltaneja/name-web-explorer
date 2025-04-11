@@ -1,6 +1,6 @@
 
 import { User } from "@supabase/supabase-js";
-import { Calendar, CheckCircle, LogOut, Search } from "lucide-react";
+import { Calendar, CheckCircle, LogOut, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -108,10 +108,12 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
           {profile?.plan !== 'unlimited' && (
             <Button 
               onClick={onUpgradeClick}
-              className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
+              className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 hover:from-blue-700 hover:via-purple-700 hover:to-blue-700 w-full md:w-auto relative overflow-hidden group shadow-lg"
               size="lg"
             >
-              Upgrade Plan
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-20 transform -translate-x-full animate-shimmer"></span>
+              <Sparkles className="h-4 w-4 mr-2 animate-pulse text-yellow-200" />
+              <span className="relative z-10">Upgrade Plan</span>
             </Button>
           )}
           
@@ -130,13 +132,22 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
       {profile?.plan !== 'unlimited' && (
         <div className="mt-6">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-600">Usage</span>
-            <span className="text-gray-600">{profile?.plan === 'free' 
-              ? `${3 - remainingSearches}/3 daily searches` 
-              : `${500 - remainingSearches}/500 monthly searches`}
+            <span className="text-gray-600 font-medium">Usage</span>
+            <span className={`font-semibold ${remainingSearches === 0 ? 'text-red-600' : 'text-blue-600'}`}>
+              {profile?.plan === 'free' 
+                ? `${3 - remainingSearches}/3 daily searches` 
+                : `${500 - remainingSearches}/500 monthly searches`
+              }
             </span>
           </div>
-          <Progress value={usagePercentage} className="h-2 bg-gray-200" />
+          <Progress 
+            value={usagePercentage} 
+            className="h-3 bg-gray-200" 
+            indicatorClassName={remainingSearches === 0 
+              ? "bg-gradient-to-r from-red-500 to-red-600" 
+              : "bg-gradient-to-r from-blue-500 to-purple-600"
+            } 
+          />
         </div>
       )}
     </div>

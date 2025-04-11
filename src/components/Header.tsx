@@ -14,25 +14,19 @@ const Header = () => {
   const isAdmin = user?.email === "admin@example.com";
 
   const handleLogoClick = (e: React.MouseEvent) => {
-    // If already on homepage, scroll to top
-    if (location.pathname === "/") {
-      e.preventDefault();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      // Navigate to homepage
-      navigate("/");
-    }
+    e.preventDefault();
+    window.location.href = '/'; // This will cause a full page refresh
   };
 
   return (
     <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-10 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="flex items-center space-x-2" onClick={handleLogoClick}>
+        <a href="/" className="flex items-center space-x-2" onClick={handleLogoClick}>
           <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
             <span className="text-white font-bold text-sm">PP</span>
           </div>
           <span className="font-bold text-2xl text-purple-600">PeoplePeeper</span>
-        </Link>
+        </a>
 
         <div className="flex items-center space-x-3">
           {isAdmin && (
