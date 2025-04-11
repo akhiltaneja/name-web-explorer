@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const GUEST_LIMIT_KEY = "people_peeper_guest_last_check";
 const GUEST_COUNT_KEY = "people_peeper_guest_check_count";
@@ -56,11 +56,11 @@ export const useSearchLimit = (user: any, profile: any) => {
       if (profile.plan === 'unlimited') {
         setChecksRemaining(Infinity);
       } else {
-        const used = profile.plan === 'free' ? 
-          profile.checks_used % FREE_PLAN_LIMIT : 
-          profile.checks_used % 500;
+        const checksUsed = profile.plan === 'free' ? 
+          (profile.checks_used % FREE_PLAN_LIMIT) : 
+          (profile.checks_used % 500);
         
-        const remaining = Math.max(0, dailyLimit - used);
+        const remaining = Math.max(0, dailyLimit - checksUsed);
         setChecksRemaining(remaining);
       }
     }
@@ -125,8 +125,8 @@ export const useSearchLimit = (user: any, profile: any) => {
     
     const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
     const checksUsed = profile.plan === 'free' 
-      ? profile.checks_used % FREE_PLAN_LIMIT 
-      : profile.checks_used % 500;
+      ? (profile.checks_used % FREE_PLAN_LIMIT) 
+      : (profile.checks_used % 500);
     
     return checksUsed >= dailyLimit;
   };
@@ -144,9 +144,32 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   // Increment search count when a search is performed
   const incrementSearchCount = async () => {
-    // First check if limit is already reached
+    // Double check if limit is already reached to prevent any bypassing
     if (hasReachedSearchLimit()) {
       setSearchLimitReached(true);
+      
+      if (!user) {
+        const lastCheckTime = localStorage.getItem(GUEST_LIMIT_KEY);
+        if (lastCheckTime) {
+          const lastCheck = new Date(lastCheckTime);
+          const now = new Date();
+          const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
+          const hoursRemaining = Math.ceil(GUEST_COOLDOWN_HOURS - hoursSinceLastCheck);
+          
+          toast({
+            title: "Daily search limit reached",
+            description: `Please sign in or upgrade for more searches. Next free search available in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Request limit reached",
+          description: "Please upgrade to continue searching.",
+          variant: "destructive",
+        });
+      }
+      
       return false;
     }
     
@@ -158,19 +181,14 @@ export const useSearchLimit = (user: any, profile: any) => {
       localStorage.setItem(GUEST_COUNT_KEY, String(newCount));
       localStorage.setItem(GUEST_LIMIT_KEY, new Date().toISOString());
       
-      setChecksRemaining(Math.max(0, FREE_PLAN_LIMIT - newCount));
+      // Update the remaining checks
+      const remaining = Math.max(0, FREE_PLAN_LIMIT - newCount);
+      setChecksRemaining(remaining);
       
+      // If this search puts us at the limit, set the flag
       if (newCount >= FREE_PLAN_LIMIT) {
         setGuestCheckAvailable(false);
         setSearchLimitReached(true);
-        
-        toast({
-          title: "Daily search limit reached",
-          description: "You've reached your 3 daily free searches. Sign in or upgrade for more.",
-          variant: "destructive",
-        });
-        
-        return false;
       }
       
       return true;
@@ -180,8 +198,8 @@ export const useSearchLimit = (user: any, profile: any) => {
       
       const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
       const checksUsed = profile.plan === 'free' 
-        ? profile.checks_used % FREE_PLAN_LIMIT 
-        : profile.checks_used % 500;
+        ? (profile.checks_used % FREE_PLAN_LIMIT) 
+        : (profile.checks_used % 500);
       
       if (checksUsed >= dailyLimit) {
         setSearchLimitReached(true);
@@ -196,8 +214,15 @@ export const useSearchLimit = (user: any, profile: any) => {
         return false;
       }
       
-      // We'll increment the counter in saveSearchHistory
-      setChecksRemaining(Math.max(0, dailyLimit - checksUsed - 1));
+      // Update the remaining checks (will be formally updated in saveSearchHistory)
+      const remaining = Math.max(0, dailyLimit - checksUsed - 1);
+      setChecksRemaining(remaining);
+      
+      // If this search puts us at the limit, set the flag
+      if (remaining === 0) {
+        setSearchLimitReached(true);
+      }
+      
       return true;
     }
     
@@ -258,9 +283,10 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   return { 
     guestCheckAvailable,
-    searchLimitReached, 
-    hasReachedSearchLimit,
+    searchLimitReached,
+    setSearchLimitReached,
     checksRemaining,
+    hasReachedSearchLimit,
     incrementSearchCount,
     saveSearchHistory,
     clearSearchHistory

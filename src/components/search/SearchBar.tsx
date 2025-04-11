@@ -1,12 +1,10 @@
 
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface SearchBarProps {
@@ -32,7 +30,24 @@ const SearchBar = ({
   const navigate = useNavigate();
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !searchLimitReached && !isSearching) handleSearch();
+    if (e.key === "Enter" && !searchLimitReached && !isSearching && name.trim()) {
+      handleSearch();
+    } else if (e.key === "Enter" && searchLimitReached) {
+      if (!user) {
+        toast({
+          title: "Search limit reached",
+          description: "You've used all your free searches. Sign in or upgrade for more.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Request limit reached",
+          description: "Please upgrade to continue searching.",
+          variant: "destructive",
+        });
+        navigate("/profile?tab=plans");
+      }
+    }
   };
 
   return (

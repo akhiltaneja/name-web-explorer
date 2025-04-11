@@ -39,7 +39,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   } = useSearchLimit(user, profile);
 
   const handleSearch = async (searchQuery = name) => {
-    if (!searchQuery.trim()) {
+    // Validate input
+    if (!searchQuery?.trim()) {
       toast({
         title: "Please enter a name",
         description: "You need to provide at least a first name to search.",
@@ -48,8 +49,10 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // Double check search limit - early exit if limit reached
+    // Do a fresh check for search limit before proceeding
     if (hasReachedSearchLimit()) {
+      setSearchLimitReached(true);
+      
       if (!user) {
         const lastCheckTime = localStorage.getItem("people_peeper_guest_last_check");
         
@@ -67,23 +70,25 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         }
       } else {
         toast({
-          title: "Usage limit reached",
-          description: `You've reached your ${profile?.plan} plan limit. Please upgrade for more searches.`,
+          title: "Request limit reached",
+          description: `Please upgrade to continue searching.`,
           variant: "destructive",
         });
+        
+        // Redirect to plans page for users who need to upgrade
         navigate("/profile?tab=plans");
       }
       return;
     }
 
-    // Increment counter before search starts to ensure limits are enforced
-    // If incrementSearchCount returns false, we've hit the limit
+    // Try to increment search count - if it returns false, we've hit the limit
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
-      // The toast is already shown in incrementSearchCount
+      // The limit toast is already shown in incrementSearchCount
       return;
     }
 
+    // If we get here, we can start the search
     setIsSearching(true);
     setSearchProgress(0);
     const startTime = performance.now();
