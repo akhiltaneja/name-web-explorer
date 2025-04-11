@@ -26,10 +26,10 @@ const RecentSearches = ({ recentSearches, onSearchSelect }: RecentSearchesProps)
             key={index}
             className="bg-purple-100 hover:bg-purple-200 text-purple-800 cursor-pointer transition-colors border-purple-200"
             onClick={() => {
-              // Navigate to the search page with the query in URL
-              navigate(`/search/${encodeURIComponent(query)}`);
-              // Also call the onSearchSelect to set the name in the search box
+              // Update the search name first
               onSearchSelect(query);
+              // Then navigate to the search page with the query in URL
+              navigate(`/search/${encodeURIComponent(query)}`);
             }}
           >
             {query}
