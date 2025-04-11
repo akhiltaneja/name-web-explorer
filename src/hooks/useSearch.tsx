@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -70,7 +69,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
     }
-  }, []);
+  }, [searchParams, location, searchLimitReached, checksRemaining, user]);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
