@@ -10,6 +10,8 @@ interface RecentSearchesProps {
 }
 
 const RecentSearches = ({ recentSearches, onSearchSelect }: RecentSearchesProps) => {
+  const navigate = useNavigate();
+  
   if (!recentSearches || recentSearches.length === 0) return null;
   
   return (
@@ -23,7 +25,12 @@ const RecentSearches = ({ recentSearches, onSearchSelect }: RecentSearchesProps)
           <Badge
             key={index}
             className="bg-purple-100 hover:bg-purple-200 text-purple-800 cursor-pointer transition-colors border-purple-200"
-            onClick={() => onSearchSelect(query)}
+            onClick={() => {
+              // Navigate to the search page with the query in URL
+              navigate(`/search/${encodeURIComponent(query)}`);
+              // Also call the onSearchSelect to set the name in the search box
+              onSearchSelect(query);
+            }}
           >
             {query}
           </Badge>

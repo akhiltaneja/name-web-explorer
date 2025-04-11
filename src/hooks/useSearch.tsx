@@ -54,11 +54,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setSearchTime(null);
     setAvailableDomains([]);
     searchInitiated.current = false;
-    
-    // Clear URL parameters but keep the current route
-    if (location.pathname !== '/') {
-      navigate('/', { replace: true });
-    }
   };
 
   useEffect(() => {
@@ -69,7 +64,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       const searchQuery = decodeURIComponent(pathSegments[2]);
       
       setName(searchQuery);
-      searchInitiated.current = true;
       
       // Auto-search only if we haven't already searched and are allowed to
       if (results.length === 0 && !isSearching && !searchLimitReached && checksRemaining > 0) {
@@ -78,6 +72,9 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         // Just show the modal if we're at limit
         setShowLimitModal(true);
       }
+    } else if (pathSegments[1] === '') {
+      // On homepage, keep the form cleared
+      clearResults();
     }
     
     const state = location.state as { returnTo?: string; action?: string } | null;
@@ -131,6 +128,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setIsSearching(true);
     setSearchProgress(0);
     const startTime = performance.now();
+    searchInitiated.current = true;
     
     const nameParts = queryString.trim().toLowerCase().split(" ");
     const username = nameParts.join("");

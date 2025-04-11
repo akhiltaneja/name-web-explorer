@@ -14,7 +14,6 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import { useEffect } from "react";
 
 interface SearchBarProps {
   name: string;
@@ -46,9 +45,9 @@ const SearchBar = ({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSearching && name.trim()) {
-      // Don't immediately search, navigate to search URL first
+      // Navigate to search URL first
       if (!searchInitiated) {
-        navigate(`/search/${encodeURIComponent(name)}`);
+        navigate(`/search/${encodeURIComponent(name.trim())}`);
       } else {
         if (searchLimitReached || checksRemaining <= 0) {
           // Show limit modal and toast instead of trying to search
@@ -58,14 +57,14 @@ const SearchBar = ({
               title: "Request limit reached",
               description: "You've used all your free searches. Sign in or upgrade for more.",
               variant: "destructive",
-              duration: 5000, // Longer duration
+              duration: 5000,
             });
           } else {
             toast({
               title: "Request limit reached",
               description: "Please upgrade to continue searching.",
               variant: "destructive",
-              duration: 5000, // Longer duration
+              duration: 5000,
             });
           }
         } else {
@@ -95,7 +94,7 @@ const SearchBar = ({
             <Button 
               onClick={() => {
                 if (!searchInitiated) {
-                  navigate(`/search/${encodeURIComponent(name)}`);
+                  navigate(`/search/${encodeURIComponent(name.trim())}`);
                 } else if (isLimitReached) {
                   setShowLimitModal(true);
                   toast({

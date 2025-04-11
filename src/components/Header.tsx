@@ -17,10 +17,7 @@ const Header = () => {
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // First clear URL parameters
-    window.history.replaceState({}, document.title, '/');
-    
-    // Then navigate to home
+    // First clear URL parameters by navigating to root
     navigate('/', { replace: true });
     
     // Show notification
