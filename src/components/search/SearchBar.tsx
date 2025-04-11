@@ -71,6 +71,9 @@ const SearchBar = ({
 
   const isLimitReached = searchLimitReached || checksRemaining <= 0;
 
+  // Disable the button completely if limit is reached
+  const isButtonDisabled = isSearching || !name.trim() || isLimitReached;
+
   return (
     <>
       <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden`}>
@@ -99,8 +102,8 @@ const SearchBar = ({
                   handleSearch();
                 }
               }}
-              disabled={isSearching || !name.trim()}
-              className={`md:w-auto w-full ${isLimitReached ? 'bg-gray-500' : 'bg-purple-600 hover:bg-purple-700'} rounded-none md:rounded-r-lg py-7 text-base`}
+              disabled={isButtonDisabled}
+              className={`md:w-auto w-full ${isLimitReached ? 'bg-gray-500 hover:bg-gray-500 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'} rounded-none md:rounded-r-lg py-7 text-base`}
               size="lg"
             >
               {isSearching ? (
@@ -110,6 +113,7 @@ const SearchBar = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
+                  {isLimitReached && <Lock size={18} />}
                   <Search size={20} />
                   <span>Search Profiles</span>
                 </div>
@@ -155,8 +159,19 @@ const SearchBar = ({
               </div>
               <p className="mb-4">
                 You've used all your available searches. 
-                Please {!user ? "sign in or " : ""}upgrade your plan to continue searching.
+                {!user ? " Please sign in or upgrade your plan to continue searching." :
+                         " You've reached your daily limit of 3 searches. Please upgrade your plan to continue searching."}
               </p>
+              {!user && (
+                <p className="text-sm text-gray-500">
+                  Free users are limited to 3 searches per day.
+                </p>
+              )}
+              {user && profile?.plan === 'free' && (
+                <p className="text-sm text-gray-500">
+                  Your free plan allows 3 searches per day. Upgrade for more searches.
+                </p>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center gap-2">

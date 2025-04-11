@@ -39,6 +39,14 @@ const Hero = ({
   onClearSearch,
   onClearAllSearches
 }: HeroProps) => {
+  // Function to handle when user clicks on a recent search
+  const handleRecentSearch = (searchTerm: string) => {
+    setName(searchTerm);
+    if (!searchLimitReached && checksRemaining > 0) {
+      handleSearch();
+    }
+  };
+
   return (
     <section className="pt-8 pb-6 px-4 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto max-w-6xl">
@@ -71,6 +79,7 @@ const Hero = ({
             recentSearches={recentSearches} 
             onClearSearch={onClearSearch}
             onClearAll={onClearAllSearches}
+            onSearch={handleRecentSearch}
           />
         )}
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -55,11 +56,13 @@ export const useSearchLimit = (user: any, profile: any) => {
   useEffect(() => {
     const checkAndSetLimits = () => {
       if (!user) {
+        // Guest user logic
         const limitStatus = checkGuestLimits();
         setSearchLimitReachedWithStorage(limitStatus.available === false);
         setChecksRemaining(limitStatus.remaining);
         setGuestCheckAvailable(limitStatus.available);
       } else if (profile) {
+        // Logged in user logic
         const limitReached = hasReachedUserSearchLimit();
         setSearchLimitReachedWithStorage(limitReached);
         
@@ -71,26 +74,46 @@ export const useSearchLimit = (user: any, profile: any) => {
           setChecksRemaining(Infinity);
         } else {
           const checksUsed = profile.checks_used || 0;
-          const usedInCurrentPeriod = profile.plan === 'free' ? 
-            (checksUsed % FREE_PLAN_LIMIT) : 
-            (checksUsed % 500);
           
-          const remaining = Math.max(0, dailyLimit - usedInCurrentPeriod);
-          setChecksRemaining(remaining);
-          
-          // If no searches remaining, set the limit reached flag
-          if (remaining <= 0) {
-            setSearchLimitReachedWithStorage(true);
+          // For free plan, check daily usage
+          if (profile.plan === 'free') {
+            // Get today's date in UTC
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayUTC = today.toISOString().split('T')[0];
+            
+            // Count searches made today
+            supabase
+              .from('searches')
+              .select('count', { count: 'exact' })
+              .eq('user_id', user.id)
+              .gte('created_at', todayUTC)
+              .then(({ count, error }) => {
+                if (!error && count !== null) {
+                  const searchesToday = count;
+                  const remaining = Math.max(0, FREE_PLAN_LIMIT - searchesToday);
+                  setChecksRemaining(remaining);
+                  
+                  if (remaining <= 0) {
+                    setSearchLimitReachedWithStorage(true);
+                  }
+                }
+              });
+          } else {
+            // For premium plan, check monthly usage
+            const usedInCurrentPeriod = checksUsed % 500;
+            const remaining = Math.max(0, dailyLimit - usedInCurrentPeriod);
+            setChecksRemaining(remaining);
+            
+            if (remaining <= 0) {
+              setSearchLimitReachedWithStorage(true);
+            }
           }
         }
       }
     };
 
     checkAndSetLimits();
-    
-    // Also set up an interval to check periodically (to prevent bypasses)
-    const intervalCheck = setInterval(checkAndSetLimits, 2000);
-    return () => clearInterval(intervalCheck);
   }, [user, profile]);
 
   // Check guest limits and return status with remaining searches
@@ -149,15 +172,18 @@ export const useSearchLimit = (user: any, profile: any) => {
     
     if (profile.plan === 'unlimited') return false;
     
-    const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
-    const checksUsed = profile.checks_used || 0;
+    if (profile.plan === 'free') {
+      // For free plan, get today's searches from Supabase
+      // This function is async, so we'll rely on the useEffect to set the state
+      return checksRemaining <= 0;
+    } else if (profile.plan === 'premium') {
+      const dailyLimit = 500;
+      const checksUsed = profile.checks_used || 0;
+      const usedInCurrentPeriod = checksUsed % 500;
+      return usedInCurrentPeriod >= dailyLimit;
+    }
     
-    // For free plan, check per-day usage; for premium, check monthly usage
-    const usedInCurrentPeriod = profile.plan === 'free' ? 
-      (checksUsed % FREE_PLAN_LIMIT) : 
-      (checksUsed % 500);
-    
-    return usedInCurrentPeriod >= dailyLimit;
+    return false;
   };
   
   // Check if overall search limit has been reached (guest or user)
@@ -174,7 +200,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   // Increment search count when a search is performed
   const incrementSearchCount = async () => {
     // Double check if limit is already reached to prevent any bypassing
-    if (hasReachedSearchLimit()) {
+    if (hasReachedSearchLimit() || searchLimitReached || checksRemaining <= 0) {
       setSearchLimitReachedWithStorage(true);
       
       if (!user) {
@@ -238,38 +264,75 @@ export const useSearchLimit = (user: any, profile: any) => {
       // For logged-in users
       if (profile.plan === 'unlimited') return true;
       
-      const dailyLimit = profile.plan === 'free' ? FREE_PLAN_LIMIT : 500;
-      const checksUsed = profile.checks_used || 0;
-      
-      // Calculate usage in current period
-      const usedInCurrentPeriod = profile.plan === 'free' ? 
-        (checksUsed % FREE_PLAN_LIMIT) : 
-        (checksUsed % 500);
-      
-      if (usedInCurrentPeriod >= dailyLimit) {
-        setSearchLimitReachedWithStorage(true);
-        setChecksRemaining(0);
+      // Update checks_used in profile
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ checks_used: (profile.checks_used || 0) + 1 })
+          .eq('id', user.id);
         
-        toast({
-          title: "Request limit reached",
-          description: `You've reached your ${profile.plan} plan limit. Please upgrade for more searches.`,
-          variant: "destructive",
-          duration: 5000,
-        });
+        if (profileError) throw profileError;
         
+        // For free plan users, check if they've reached their daily limit
+        if (profile.plan === 'free') {
+          // Get today's date in UTC
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const todayUTC = today.toISOString().split('T')[0];
+          
+          // Count searches made today (including this one)
+          const { count, error } = await supabase
+            .from('searches')
+            .select('count', { count: 'exact' })
+            .eq('user_id', user.id)
+            .gte('created_at', todayUTC);
+          
+          if (!error && count !== null) {
+            const searchesToday = count + 1; // +1 for the current search
+            const remaining = Math.max(0, FREE_PLAN_LIMIT - searchesToday);
+            setChecksRemaining(remaining);
+            
+            if (remaining <= 0) {
+              setSearchLimitReachedWithStorage(true);
+              
+              toast({
+                title: "Request limit reached",
+                description: `You've reached your daily limit of ${FREE_PLAN_LIMIT} searches. Please upgrade for more searches or try again tomorrow.`,
+                variant: "destructive",
+                duration: 5000,
+              });
+              
+              return false;
+            }
+          }
+        } else if (profile.plan === 'premium') {
+          // For premium users
+          const dailyLimit = 500;
+          const checksUsed = (profile.checks_used || 0) + 1; // +1 for this search
+          const usedInCurrentPeriod = checksUsed % 500;
+          const remaining = Math.max(0, dailyLimit - usedInCurrentPeriod);
+          
+          setChecksRemaining(remaining);
+          
+          if (remaining <= 0) {
+            setSearchLimitReachedWithStorage(true);
+            
+            toast({
+              title: "Request limit reached",
+              description: `You've reached your monthly limit of ${dailyLimit} searches. Please upgrade for unlimited searches.`,
+              variant: "destructive",
+              duration: 5000,
+            });
+            
+            return false;
+          }
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("Error updating profile check count:", error);
         return false;
       }
-      
-      // Update the remaining checks (will be formally updated in saveSearchHistory)
-      const remaining = Math.max(0, dailyLimit - usedInCurrentPeriod - 1);
-      setChecksRemaining(remaining);
-      
-      // If this search puts us at the limit, set the flag
-      if (remaining <= 0) {
-        setSearchLimitReachedWithStorage(true);
-      }
-      
-      return true;
     }
     
     return false;
@@ -280,16 +343,6 @@ export const useSearchLimit = (user: any, profile: any) => {
     if (!user) return true;
     
     try {
-      // Update the user's check count
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          checks_used: (profile?.checks_used || 0) + 1 
-        })
-        .eq('id', user.id);
-      
-      if (profileError) throw profileError;
-      
       // Save the search to history
       const { error: searchError } = await supabase
         .from('searches')

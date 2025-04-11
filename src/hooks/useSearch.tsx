@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +57,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       if (searchQuery) {
         setName(searchQuery);
         // Don't auto-search if limit reached
-        if (!searchLimitReached && checksRemaining > 0) {
+        if (!hasReachedSearchLimit() && checksRemaining > 0) {
           handleSearch(searchQuery);
         } else {
           // Just show the modal if we're at limit
@@ -69,7 +70,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     if (state?.action === "emailReport" && user) {
       setEmailModalOpen(true);
     }
-  }, [searchParams, location, searchLimitReached, checksRemaining, user]);
+  }, [searchParams, location, checksRemaining, user]);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
@@ -85,8 +86,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // First, verify if search limit is reached - regardless of counter
-    if (searchLimitReached || checksRemaining <= 0 || hasReachedSearchLimit()) {
+    // Check if search limit is reached - strict enforcement
+    if (hasReachedSearchLimit() || searchLimitReached || checksRemaining <= 0) {
       setShowLimitModal(true);
       setSearchLimitReached(true);
       
@@ -107,8 +108,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
       // The increment function already shows the appropriate toast
-      setSearchLimitReached(true);
-      setShowLimitModal(true);
       return;
     }
 
@@ -130,7 +129,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setTimeout(async () => {
       try {
         // Double check limits before processing results
-        if (searchLimitReached || hasReachedSearchLimit()) {
+        if (hasReachedSearchLimit() || searchLimitReached) {
           clearInterval(progressInterval);
           setIsSearching(false);
           setShowLimitModal(true);
@@ -163,7 +162,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         setSearchTime(timeElapsed);
         
         // Final check to make sure user hasn't bypassed limit
-        if (searchLimitReached || hasReachedSearchLimit()) {
+        if (hasReachedSearchLimit() || searchLimitReached) {
           setIsSearching(false);
           setShowLimitModal(true);
           return;
