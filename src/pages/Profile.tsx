@@ -124,6 +124,7 @@ const Profile = () => {
     if (user) {
       try {
         setLoading(true);
+        // Delete all search history records for this user
         const { error } = await supabase
           .from('searches')
           .delete()
@@ -137,11 +138,18 @@ const Profile = () => {
             variant: "destructive",
           });
         } else {
+          // Clear the local search history state
           setSearchHistory([]);
+          // Also reset any cached history in localStorage
+          localStorage.removeItem('user_search_history');
+          
           toast({
             title: "Search history cleared",
             description: "Your search history has been successfully cleared.",
           });
+          
+          // Force refresh profile data
+          await refreshProfile();
         }
       } catch (error) {
         console.error("Error clearing search history:", error);

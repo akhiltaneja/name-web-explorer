@@ -16,10 +16,10 @@ const Header = () => {
     <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-10 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">CC</span>
+          <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-sm">PP</span>
           </div>
-          <span className="font-bold text-2xl text-blue-600">CandidateChecker</span>
+          <span className="font-bold text-2xl text-purple-600">PeoplePeeper</span>
         </Link>
 
         <div className="flex items-center space-x-3">
@@ -46,7 +46,7 @@ const Header = () => {
               </Button>
               <Button 
                 onClick={() => navigate('/pricing')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 Upgrade

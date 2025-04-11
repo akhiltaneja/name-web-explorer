@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
-const GUEST_LIMIT_KEY = "candidate_checker_guest_last_check";
-const GUEST_COUNT_KEY = "candidate_checker_guest_check_count";
-const GUEST_ID_KEY = "candidate_checker_guest_id";
+const GUEST_LIMIT_KEY = "people_peeper_guest_last_check";
+const GUEST_COUNT_KEY = "people_peeper_guest_check_count";
+const GUEST_ID_KEY = "people_peeper_guest_id";
 const GUEST_COOLDOWN_HOURS = 24;
 const FREE_PLAN_LIMIT = 3;
 
@@ -42,7 +42,8 @@ export const useSearchLimit = (user: any, profile: any) => {
     if (!user) {
       checkAndUpdateGuestLimits();
     } else if (profile) {
-      setSearchLimitReached(hasReachedSearchLimit());
+      const limitReached = hasReachedSearchLimit();
+      setSearchLimitReached(limitReached);
     }
   }, [user, profile]);
 
@@ -100,6 +101,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   const incrementSearchCount = async () => {
     // First check if limit is reached before incrementing
     if (hasReachedSearchLimit()) {
+      setSearchLimitReached(true);
       return false;
     }
     

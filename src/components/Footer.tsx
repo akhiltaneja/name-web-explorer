@@ -12,29 +12,29 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-full"></div>
-              <span className="font-bold text-xl text-blue-400">CandidateChecker</span>
+              <div className="w-8 h-8 bg-purple-600 rounded-full"></div>
+              <span className="font-bold text-xl text-purple-400">PeoplePeeper</span>
             </div>
             <p className="text-gray-400 mb-4 max-w-md">
               Powerful social media profiling tool to help you find and verify online
               presence across multiple platforms quickly and efficiently.
             </p>
             <div className="flex space-x-4 mt-6">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Facebook size={20} />
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Twitter size={20} />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Instagram size={20} />
               </a>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Github size={20} />
               </a>
             </div>
             <p className="text-gray-500 text-sm mt-6">
-              © {currentYear} CandidateChecker. All rights reserved.
+              © {currentYear} PeoplePeeper.com. All rights reserved.
             </p>
           </div>
           
@@ -42,20 +42,17 @@ const Footer: React.FC = () => {
             <div>
               <h3 className="font-semibold text-gray-300 mb-4">Product</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/" className="hover:text-blue-400 transition-colors">Home</Link></li>
-                <li><Link to="/profile" className="hover:text-blue-400 transition-colors">My Account</Link></li>
-                <li><Link to="/profile?tab=plans" className="hover:text-blue-400 transition-colors">Pricing</Link></li>
-                <li><Link to="/knowledge-base" className="hover:text-blue-400 transition-colors">Knowledge Base</Link></li>
+                <li><Link to="/" className="hover:text-purple-400 transition-colors">Home</Link></li>
+                <li><Link to="/profile" className="hover:text-purple-400 transition-colors">My Account</Link></li>
+                <li><Link to="/pricing" className="hover:text-purple-400 transition-colors">Pricing</Link></li>
+                <li><Link to="/knowledge-base" className="hover:text-purple-400 transition-colors">Knowledge Base</Link></li>
               </ul>
             </div>
             
             <div>
               <h3 className="font-semibold text-gray-300 mb-4">Resources</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/profile?tab=plans" className="hover:text-blue-400 transition-colors">Plans</Link></li>
-                <li><Link to="/cart" className="hover:text-blue-400 transition-colors">Checkout</Link></li>
-                <li><Link to="/" className="hover:text-blue-400 transition-colors">API</Link></li>
-                <li><Link to="/" className="hover:text-blue-400 transition-colors">Developers</Link></li>
+                <li><Link to="/contact" className="hover:text-purple-400 transition-colors">Contact Sales</Link></li>
               </ul>
             </div>
           </div>

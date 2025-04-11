@@ -30,11 +30,11 @@ const SearchBar = ({
   const navigate = useNavigate();
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !searchLimitReached) handleSearch();
+    if (e.key === "Enter" && !searchLimitReached && !isSearching) handleSearch();
   };
 
   return (
-    <Card className={`mb-8 shadow-md border-blue-100 overflow-hidden ${searchLimitReached ? 'opacity-75' : ''}`}>
+    <Card className={`mb-8 shadow-md border-purple-100 overflow-hidden ${searchLimitReached ? 'opacity-75' : ''}`}>
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row relative">
           {searchLimitReached && (
@@ -48,10 +48,13 @@ const SearchBar = ({
                 </p>
                 {!user ? (
                   <Link to="/auth">
-                    <Button className="mr-2">Sign In</Button>
+                    <Button className="mr-2 bg-purple-600 hover:bg-purple-700">Sign In</Button>
                   </Link>
                 ) : (
-                  <Button onClick={() => navigate("/profile?tab=plans")}>
+                  <Button 
+                    onClick={() => navigate("/profile?tab=plans")}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
                     Upgrade Plan
                   </Button>
                 )}
@@ -63,14 +66,14 @@ const SearchBar = ({
             placeholder="Enter first and last name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-blue-500"
+            className="flex-1 border-0 rounded-none text-lg py-7 px-6 md:rounded-l-lg text-gray-900 placeholder:text-gray-500 focus-visible:ring-purple-500"
             onKeyDown={handleKeyDown}
-            disabled={searchLimitReached}
+            disabled={searchLimitReached || isSearching}
           />
           <Button 
             onClick={handleSearch}
             disabled={isSearching || searchLimitReached}
-            className="md:w-auto w-full bg-blue-600 hover:bg-blue-700 rounded-none md:rounded-r-lg py-7 text-base"
+            className="md:w-auto w-full bg-purple-600 hover:bg-purple-700 rounded-none md:rounded-r-lg py-7 text-base"
             size="lg"
           >
             {isSearching ? (

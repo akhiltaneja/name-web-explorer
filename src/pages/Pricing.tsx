@@ -73,16 +73,16 @@ const Pricing = () => {
           
           <div className="grid md:grid-cols-3 gap-8">
             {plans.map((plan) => (
-              <Card key={plan.id} className={`relative border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md ${
+              <Card key={plan.id} className={`relative border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md flex flex-col ${
                 plan.id === 'premium' 
-                  ? 'border-blue-200 shadow-blue-100' 
+                  ? 'border-purple-200 shadow-purple-100' 
                   : plan.id === 'unlimited' 
                     ? 'border-purple-200 shadow-purple-100'
                     : ''
               }`}>
                 {plan.id === 'premium' && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
                       Popular Choice
                     </span>
                   </div>
@@ -90,7 +90,7 @@ const Pricing = () => {
                 <CardHeader>
                   <CardTitle className={`text-xl ${
                     plan.id === 'premium' 
-                      ? 'text-blue-600' 
+                      ? 'text-purple-600' 
                       : plan.id === 'unlimited' 
                         ? 'text-purple-600'
                         : 'text-gray-900'
@@ -99,7 +99,7 @@ const Pricing = () => {
                   </CardTitle>
                   <p className="text-sm text-gray-500">{plan.description}</p>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 flex-grow">
                   <div className="space-y-1">
                     <p className="text-3xl font-bold text-gray-900">${plan.price}<span className="text-sm font-normal text-gray-500">{plan.id !== 'free' ? '/month' : ''}</span></p>
                     <p className="text-sm text-gray-500">{plan.limit}</p>
@@ -119,7 +119,7 @@ const Pricing = () => {
                     </ul>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="mt-auto">
                   {profile?.plan === plan.id ? (
                     <Button 
                       className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 cursor-not-allowed" 
@@ -136,15 +136,11 @@ const Pricing = () => {
                     </Button>
                   ) : (
                     <Button 
-                      className={`w-full ${
-                        plan.id === 'premium' 
-                          ? 'bg-blue-600 hover:bg-blue-700' 
-                          : 'bg-purple-600 hover:bg-purple-700'
-                      }`}
+                      className={`w-full bg-purple-600 hover:bg-purple-700 text-white`}
                       onClick={() => handleSelectPlan(plan)}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
-                      Add to Cart
+                      Confirm & Pay
                     </Button>
                   )}
                 </CardFooter>
@@ -161,12 +157,7 @@ const Pricing = () => {
               variant="outline" 
               size="lg"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => {
-                toast({
-                  title: "Coming Soon",
-                  description: "Our sales team contact form is under development.",
-                });
-              }}
+              onClick={() => navigate('/contact')}
             >
               Contact Sales
             </Button>
