@@ -20,7 +20,7 @@ const GuestLimitWarning = ({
   if (user || !searchLimitReached || isSearching) return null;
   
   return (
-    <div className="mt-4 p-6 bg-amber-50 rounded-lg border border-amber-200 animate-fade-in flex flex-col sm:flex-row items-center justify-between">
+    <div className="mt-4 p-6 bg-amber-50 rounded-lg border border-amber-200 animate-fade-in flex flex-col sm:flex-row items-center justify-between shadow-md">
       <div className="flex items-center mb-4 sm:mb-0">
         <div className="mr-4 bg-amber-100 p-2 rounded-full">
           <Lock className="h-6 w-6 text-amber-600" />

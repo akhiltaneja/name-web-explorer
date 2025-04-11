@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -29,7 +29,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const location = useLocation();
   const searchInitiated = useRef(false);
   const resultsRef = useRef<HTMLDivElement>(null);
-
+  
   const { 
     guestCheckAvailable, 
     searchLimitReached,
@@ -39,6 +39,13 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     incrementSearchCount,
     saveSearchHistory
   } = useSearchLimit(user, profile);
+
+  // Force show modal when limit is reached on component mount
+  useEffect(() => {
+    if (searchLimitReached || checksRemaining <= 0) {
+      setShowLimitModal(true);
+    }
+  }, [searchLimitReached, checksRemaining]);
 
   const handleSearch = async (searchQuery = name) => {
     // Convert to string in case a different type is passed
@@ -54,24 +61,21 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // First, check if we have zero credits remaining or if the search limit is reached
-    if (checksRemaining <= 0 || searchLimitReached || hasReachedSearchLimit()) {
+    // First, verify if search limit is reached - regardless of counter
+    if (searchLimitReached || checksRemaining <= 0 || hasReachedSearchLimit()) {
       setShowLimitModal(true);
       setSearchLimitReached(true);
       
-      if (!user) {
-        toast({
-          title: "Request limit reached",
-          description: `Please sign in or upgrade to continue searching.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Request limit reached",
-          description: `Please upgrade to continue searching.`,
-          variant: "destructive",
-        });
-      }
+      const message = !user 
+        ? "Please sign in or upgrade to continue searching."
+        : "Please upgrade to continue searching.";
+      
+      toast({
+        title: "Request limit reached",
+        description: message,
+        variant: "destructive",
+        duration: 5000,
+      });
       return;
     }
 
@@ -101,6 +105,14 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     
     setTimeout(async () => {
       try {
+        // Double check limits before processing results
+        if (searchLimitReached || hasReachedSearchLimit()) {
+          clearInterval(progressInterval);
+          setIsSearching(false);
+          setShowLimitModal(true);
+          return;
+        }
+        
         let profiles = getSocialMediaProfiles(username, queryString);
         const additionalProfiles = getAdditionalResults(username, queryString);
         
