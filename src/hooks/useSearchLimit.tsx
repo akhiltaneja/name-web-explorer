@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +9,7 @@ const GUEST_ID_KEY = "people_peeper_guest_id";
 const GUEST_COOLDOWN_HOURS = 24;
 const FREE_PLAN_LIMIT = 3;
 const GUEST_LIMIT_REACHED_KEY = "people_peeper_guest_limit_reached";
+const RECENT_SEARCHES_KEY = "people_peeper_recent_searches";
 
 // Generate a unique ID for the device/browser
 const generateUniqueId = () => {
@@ -41,6 +41,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   const [guestCheckAvailable, setGuestCheckAvailable] = useState(true);
   const [searchLimitReached, setSearchLimitReached] = useState(initialLimitReached);
   const [checksRemaining, setChecksRemaining] = useState(0); // Start with 0 until we determine the actual count
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const { toast } = useToast();
   const guestId = generateUniqueId();
 
@@ -54,6 +55,12 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   // Initialize and check limits on component mount and when user/profile changes
   useEffect(() => {
+    // Load recent searches from localStorage
+    const storedSearches = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (storedSearches) {
+      setRecentSearches(JSON.parse(storedSearches));
+    }
+    
     const checkAndSetLimits = () => {
       if (!user) {
         const limitStatus = checkGuestLimits();
@@ -172,6 +179,18 @@ export const useSearchLimit = (user: any, profile: any) => {
     return false;
   };
 
+  // Save a search query to recent searches
+  const addToRecentSearches = (query: string) => {
+    if (!query) return;
+    
+    // Add to front of array, remove duplicates, limit to 3
+    const updatedSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 3);
+    setRecentSearches(updatedSearches);
+    
+    // Store in localStorage
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updatedSearches));
+  };
+
   // Increment search count when a search is performed
   const incrementSearchCount = async () => {
     // Double check if limit is already reached to prevent any bypassing
@@ -278,6 +297,9 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   // Save search history and update profile check count
   const saveSearchHistory = async (searchQuery: string, resultsCount: number) => {
+    // Add to recent searches
+    addToRecentSearches(searchQuery);
+    
     if (!user) return true;
     
     try {
@@ -336,6 +358,8 @@ export const useSearchLimit = (user: any, profile: any) => {
     hasReachedSearchLimit,
     incrementSearchCount,
     saveSearchHistory,
-    clearSearchHistory
+    clearSearchHistory,
+    recentSearches,
+    addToRecentSearches
   };
 };

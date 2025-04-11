@@ -51,32 +51,10 @@ const Index = () => {
     showLimitModal,
     setShowLimitModal,
     emailModalOpen,
-    setEmailModalOpen
+    setEmailModalOpen,
+    clearResults,
+    recentSearches
   } = useSearch(user, profile, refreshProfile);
-
-  useEffect(() => {
-    const query = searchParams.get('query');
-    const pathSegments = location.pathname.split('/');
-    
-    if ((query || (pathSegments[1] === 'search' && pathSegments[2])) && !searchInitiated.current) {
-      searchInitiated.current = true;
-      
-      let searchQuery = query;
-      if (!searchQuery && pathSegments[1] === 'search' && pathSegments[2]) {
-        searchQuery = decodeURIComponent(pathSegments[2]);
-      }
-      
-      if (searchQuery) {
-        setName(searchQuery);
-        handleSearch(searchQuery);
-      }
-    }
-    
-    const state = location.state as { returnTo?: string; action?: string } | null;
-    if (state?.action === "emailReport" && user) {
-      setEmailModalOpen(true);
-    }
-  }, []);
 
   const handleCopyAll = () => {
     const text = filteredResults
@@ -159,6 +137,7 @@ const Index = () => {
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
+          recentSearches={recentSearches}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>
@@ -209,7 +188,7 @@ const Index = () => {
           name={name}
           isSearching={isSearching}
           results={results}
-          onReset={() => setName("")}
+          onReset={clearResults}
         />
 
         {!name && !isSearching && results.length === 0 && (

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -38,8 +39,23 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     checksRemaining,
     hasReachedSearchLimit, 
     incrementSearchCount,
-    saveSearchHistory
+    saveSearchHistory,
+    recentSearches,
+    addToRecentSearches
   } = useSearchLimit(user, profile);
+
+  // Clear results function
+  const clearResults = () => {
+    setName("");
+    setResults([]);
+    setAdditionalResults([]);
+    setProfilesByCategory({});
+    setCategories([]);
+    setSearchProgress(0);
+    setSearchTime(null);
+    setAvailableDomains([]);
+    searchInitiated.current = false;
+  };
 
   useEffect(() => {
     const query = searchParams.get('query');
@@ -191,12 +207,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           
-          if (user) {
-            saveSearchHistory(queryString, profiles.length)
-              .then(success => {
-                if (success) refreshProfile();
-              });
-          }
+          // Save search to history
+          saveSearchHistory(queryString, profiles.length)
+            .then(success => {
+              if (user && success) refreshProfile();
+            });
         }, 500);
       } catch (error) {
         console.error("Search error:", error);
@@ -234,6 +249,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     showLimitModal,
     setShowLimitModal,
     emailModalOpen,
-    setEmailModalOpen
+    setEmailModalOpen,
+    clearResults,
+    recentSearches
   };
 };
