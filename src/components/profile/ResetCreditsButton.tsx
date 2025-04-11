@@ -8,14 +8,18 @@ import { useAuth } from "@/context/AuthContext";
 
 interface ResetCreditsButtonProps {
   onReset: () => void;
+  userId?: string; // Optional userId for admin reset functionality
 }
 
-const ResetCreditsButton = ({ onReset }: ResetCreditsButtonProps) => {
+const ResetCreditsButton = ({ onReset, userId }: ResetCreditsButtonProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handleResetCredits = async () => {
-    if (!user) return;
+    // Determine which user ID to use (admin can reset for specific user)
+    const targetUserId = userId || (user ? user.id : null);
+    
+    if (!targetUserId) return;
 
     try {
       // Get today's date in UTC
@@ -27,14 +31,26 @@ const ResetCreditsButton = ({ onReset }: ResetCreditsButtonProps) => {
       const { error } = await supabase
         .from('searches')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .gte('created_at', todayUTC);
       
       if (error) throw error;
       
+      // Log this action
+      if (user && user.id) {
+        await supabase
+          .from('admin_logs')
+          .insert({
+            action: userId ? 'admin_reset_user_credits' : 'user_reset_credits',
+            user_id: user.id,
+            target_user_id: targetUserId,
+            details: `Reset daily searches for user ${targetUserId}`
+          });
+      }
+      
       toast({
         title: "Success!",
-        description: "Your daily searches have been reset successfully.",
+        description: "Daily searches have been reset successfully.",
       });
       
       // Call the callback to refresh data
@@ -55,7 +71,7 @@ const ResetCreditsButton = ({ onReset }: ResetCreditsButtonProps) => {
       className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
     >
       <RefreshCw className="h-4 w-4" />
-      Reset My Daily Credits
+      {userId ? "Reset Daily Credits" : "Reset My Daily Credits"}
     </Button>
   );
 };

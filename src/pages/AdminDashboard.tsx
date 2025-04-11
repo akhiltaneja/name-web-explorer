@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -23,11 +24,15 @@ import {
   Clock,
   UserPlus,
   FileText,
-  RefreshCw,
+  ListFilter,
+  PieChart,
+  AreaChart,
+  LayoutList
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DefaultAvatar from "@/components/DefaultAvatar";
 import CountdownTimer from "@/components/search/CountdownTimer";
+import ResetCreditsButton from "@/components/profile/ResetCreditsButton";
 
 interface UserData {
   id: string;
@@ -54,6 +59,16 @@ interface AffiliateLink {
   description: string;
 }
 
+interface LogData {
+  id: string;
+  action: string;
+  user_id: string;
+  target_user_id?: string;
+  details: string;
+  created_at: string;
+  user_email?: string;
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -61,12 +76,16 @@ const AdminDashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserData[]>([]);
   const [searches, setSearches] = useState<SearchData[]>([]);
+  const [logs, setLogs] = useState<LogData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [filteredSearches, setFilteredSearches] = useState<SearchData[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<LogData[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [querySearch, setQuerySearch] = useState("");
+  const [logSearch, setLogSearch] = useState("");
   const [totalSearches, setTotalSearches] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
   const [avgResultsPerSearch, setAvgResultsPerSearch] = useState(0);
   const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([
     { id: "1", name: "Namecheap", url: "https://www.namecheap.com/affiliates/?aff=YOUR_ID", description: "Domain registration" },
@@ -106,17 +125,36 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Fetch users data
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*');
       
       if (usersError) throw usersError;
       
+      // Fetch searches data
       const { data: searchesData, error: searchesError } = await supabase
         .from('searches')
         .select('*, profiles!inner(email)');
       
       if (searchesError) throw searchesError;
+      
+      // Create admin_logs table if it doesn't exist
+      const { error: logTableError } = await supabase.rpc('create_logs_table_if_not_exists');
+      
+      // Fetch logs data
+      let { data: logsData, error: logsError } = await supabase
+        .from('admin_logs')
+        .select('*, profiles!inner(email)')
+        .order('created_at', { ascending: false });
+      
+      if (logsError && logsError.code !== 'PGRST116') {
+        // If it's not just a missing table error
+        console.error("Error fetching logs:", logsError);
+        logsData = [];
+      } else if (!logsData) {
+        logsData = [];
+      }
       
       const formattedUsers = usersData as UserData[];
       
@@ -147,12 +185,30 @@ const AdminDashboard = () => {
         user_email: search.profiles.email
       })) as SearchData[];
       
+      const formattedLogs = logsData.map((log: any) => ({
+        id: log.id,
+        action: log.action,
+        user_id: log.user_id,
+        target_user_id: log.target_user_id,
+        details: log.details,
+        created_at: log.created_at,
+        user_email: log.profiles?.email || 'Unknown'
+      })) as LogData[];
+      
+      // Mock revenue calculation - in a real app, this would come from payment records
+      const premiumUsers = formattedUsers.filter(u => u.plan === 'premium').length;
+      const unlimitedUsers = formattedUsers.filter(u => u.plan === 'unlimited').length;
+      const revenue = (premiumUsers * 9.99) + (unlimitedUsers * 29.99);
+      
       setUsers(usersWithDailySearches);
       setFilteredUsers(usersWithDailySearches);
       setSearches(formattedSearches);
       setFilteredSearches(formattedSearches);
+      setLogs(formattedLogs);
+      setFilteredLogs(formattedLogs);
       setTotalUsers(formattedUsers.length);
       setTotalSearches(formattedSearches.length);
+      setTotalRevenue(revenue);
       
       const totalResults = formattedSearches.reduce((acc, search) => acc + search.result_count, 0);
       setAvgResultsPerSearch(formattedSearches.length ? totalResults / formattedSearches.length : 0);
@@ -231,6 +287,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleLogSearch = () => {
+    if (logSearch.trim() === "") {
+      setFilteredLogs(logs);
+    } else {
+      setFilteredLogs(
+        logs.filter((log) =>
+          log.details.toLowerCase().includes(logSearch.toLowerCase()) ||
+          log.action.toLowerCase().includes(logSearch.toLowerCase()) ||
+          (log.user_email && log.user_email.toLowerCase().includes(logSearch.toLowerCase()))
+        )
+      );
+    }
+  };
+
   const handleAddAffiliateLink = () => {
     if (!newLink.name || !newLink.url) {
       toast({
@@ -273,6 +343,18 @@ const AdminDashboard = () => {
         .gte('created_at', todayUTC);
       
       if (error) throw error;
+      
+      // Log this action
+      if (user && user.id) {
+        await supabase
+          .from('admin_logs')
+          .insert({
+            action: 'admin_reset_user_credits',
+            user_id: user.id,
+            target_user_id: userId,
+            details: `Admin reset daily searches for user ${userId}`
+          });
+      }
       
       await fetchData();
       
@@ -356,349 +438,436 @@ const AdminDashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Platform Activity</p>
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      {searches.length > 0 
-                        ? (searches.filter(s => new Date(s.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length)
-                        : 0}
-                    </h3>
-                    <p className="text-xs text-gray-500">searches in last 24h</p>
+                    <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+                    <h3 className="text-2xl font-bold text-gray-900">${totalRevenue.toFixed(2)}</h3>
+                    <p className="text-xs text-gray-500">from premium plans</p>
                   </div>
-                  <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center">
-                    <Activity className="h-6 w-6 text-amber-600" />
+                  <div className="h-12 w-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-emerald-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
           
-          <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="mb-8 bg-white border border-gray-200">
-              <TabsTrigger value="stats" className="data-[state=active]:bg-blue-50">
-                Statistics
-              </TabsTrigger>
-              <TabsTrigger value="users" className="data-[state=active]:bg-blue-50">
-                Users
-              </TabsTrigger>
-              <TabsTrigger value="searches" className="data-[state=active]:bg-blue-50">
-                Searches
-              </TabsTrigger>
-              <TabsTrigger value="affiliates" className="data-[state=active]:bg-blue-50">
-                Affiliate Links
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex flex-col md:flex-row gap-6 mt-8">
+            <div className="w-full md:w-1/4 lg:w-1/5 space-y-2">
+              <Tabs defaultValue="stats" orientation="vertical" className="w-full">
+                <TabsList className="flex flex-col h-auto w-full bg-white border border-gray-200 p-1 rounded-md space-y-1">
+                  <TabsTrigger value="stats" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                    <PieChart className="h-4 w-4 mr-2" />
+                    Statistics
+                  </TabsTrigger>
+                  <TabsTrigger value="users" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                    <Users className="h-4 w-4 mr-2" />
+                    Users
+                  </TabsTrigger>
+                  <TabsTrigger value="searches" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                    <Search className="h-4 w-4 mr-2" />
+                    Searches
+                  </TabsTrigger>
+                  <TabsTrigger value="logs" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                    <LayoutList className="h-4 w-4 mr-2" />
+                    Activity Logs
+                  </TabsTrigger>
+                  <TabsTrigger value="affiliates" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Affiliate Links
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
             
-            <TabsContent value="stats" className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Search Activity</CardTitle>
-                    <CardDescription>
-                      Number of searches per day
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={searchStats}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="searches" fill="#4F46E5" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="w-full md:w-3/4 lg:w-4/5">
+              <Tabs defaultValue="stats" className="w-full">
+                <TabsContent value="stats" className="space-y-8 mt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Search Activity</CardTitle>
+                        <CardDescription>
+                          Number of searches per day
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={searchStats}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <Tooltip />
+                              <Bar dataKey="searches" fill="#4F46E5" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>User Growth</CardTitle>
+                        <CardDescription>
+                          Cumulative user registrations
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={userStats}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip />
+                              <Line 
+                                type="monotone" 
+                                dataKey="count" 
+                                stroke="#4F46E5" 
+                                activeDot={{ r: 8 }}
+                                strokeWidth={2} 
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
                 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>User Growth</CardTitle>
-                    <CardDescription>
-                      Cumulative user registrations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={userStats}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Line 
-                            type="monotone" 
-                            dataKey="count" 
-                            stroke="#4F46E5" 
-                            activeDot={{ r: 8 }}
-                            strokeWidth={2} 
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="users">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Users</span>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        placeholder="Search users by email..."
-                        value={userSearch}
-                        onChange={(e) => setUserSearch(e.target.value)}
-                        className="w-64"
-                      />
-                      <Button onClick={handleUserSearch}>
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filter
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Plan</TableHead>
-                        <TableHead>Total Searches</TableHead>
-                        <TableHead>Daily Searches</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-3">
-                              {user.avatar_url ? (
-                                <img 
-                                  src={user.avatar_url} 
-                                  alt="Avatar" 
-                                  className="h-8 w-8 rounded-full"
-                                />
-                              ) : (
-                                <DefaultAvatar name={user.email} size="sm" />
-                              )}
-                              <span>{user.email}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              user.plan === 'premium' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : user.plan === 'unlimited' 
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {user.plan || 'free'}
-                            </span>
-                          </TableCell>
-                          <TableCell>{user.checks_used || 0}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-indigo-600">{user.daily_searches_used || 0}/3</span>
-                              {user.plan === 'free' && user.daily_searches_used === 0 && (
-                                <div className="mt-1">
-                                  <CountdownTimer />
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleResetDailySearches(user.id)}
-                              className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                              Reset Daily
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <p className="text-sm text-gray-500">
-                    Showing {filteredUsers.length} of {users.length} users
-                  </p>
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Users
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="searches">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Search Queries</span>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        placeholder="Search by query..."
-                        value={querySearch}
-                        onChange={(e) => setQuerySearch(e.target.value)}
-                        className="w-64"
-                      />
-                      <Button onClick={handleQuerySearch}>
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filter
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Query</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Results</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSearches.map((search) => (
-                        <TableRow key={search.id}>
-                          <TableCell>{search.query}</TableCell>
-                          <TableCell>{search.user_email}</TableCell>
-                          <TableCell>{search.result_count}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                              {new Date(search.created_at).toLocaleDateString()}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <p className="text-sm text-gray-500">
-                    Showing {filteredSearches.length} of {searches.length} searches
-                  </p>
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Searches
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="affiliates">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
+                <TabsContent value="users" className="mt-0">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Affiliate Links</CardTitle>
-                      <CardDescription>
-                        Manage affiliate links that appear across the platform
-                      </CardDescription>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Users</span>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Search users by email..."
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                            className="w-64"
+                          />
+                          <Button onClick={handleUserSearch}>
+                            <Filter className="h-4 w-4 mr-2" />
+                            Filter
+                          </Button>
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>URL</TableHead>
-                            <TableHead>Description</TableHead>
+                            <TableHead>User</TableHead>
+                            <TableHead>Plan</TableHead>
+                            <TableHead>Total Searches</TableHead>
+                            <TableHead>Daily Searches</TableHead>
+                            <TableHead>Joined</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {affiliateLinks.map((link) => (
-                            <TableRow key={link.id}>
-                              <TableCell>{link.name}</TableCell>
+                          {filteredUsers.map((user) => (
+                            <TableRow key={user.id}>
                               <TableCell>
-                                <div className="max-w-xs truncate">
-                                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                    {link.url}
-                                  </a>
+                                <div className="flex items-center space-x-3">
+                                  {user.avatar_url ? (
+                                    <img 
+                                      src={user.avatar_url} 
+                                      alt="Avatar" 
+                                      className="h-8 w-8 rounded-full"
+                                    />
+                                  ) : (
+                                    <DefaultAvatar name={user.email} size="sm" />
+                                  )}
+                                  <span>{user.email}</span>
                                 </div>
                               </TableCell>
-                              <TableCell>{link.description}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  user.plan === 'premium' 
+                                    ? 'bg-blue-100 text-blue-800' 
+                                    : user.plan === 'unlimited' 
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {user.plan || 'free'}
+                                </span>
+                              </TableCell>
+                              <TableCell>{user.checks_used || 0}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-indigo-600">{user.daily_searches_used || 0}/3</span>
+                                  {user.plan === 'free' && user.daily_searches_used === 0 && (
+                                    <div className="mt-1">
+                                      <CountdownTimer />
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                               <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteAffiliateLink(link.id)}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  Delete
-                                </Button>
+                                <ResetCreditsButton 
+                                  onReset={() => fetchData()} 
+                                  userId={user.id}
+                                />
                               </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <p className="text-sm text-gray-500">
+                        Showing {filteredUsers.length} of {users.length} users
+                      </p>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Users
+                      </Button>
+                    </CardFooter>
                   </Card>
-                </div>
+                </TabsContent>
                 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Add New Affiliate Link</CardTitle>
-                    <CardDescription>
-                      Create a new affiliate link to display on the platform
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                          id="name"
-                          placeholder="e.g., Namecheap"
-                          value={newLink.name}
-                          onChange={(e) => setNewLink({ ...newLink, name: e.target.value })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="url">Affiliate URL</Label>
-                        <Input
-                          id="url"
-                          placeholder="https://..."
-                          value={newLink.url}
-                          onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Input
-                          id="description"
-                          placeholder="e.g., Domain registration"
-                          value={newLink.description}
-                          onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
-                        />
-                      </div>
+                <TabsContent value="searches" className="mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Search Queries</span>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Search by query..."
+                            value={querySearch}
+                            onChange={(e) => setQuerySearch(e.target.value)}
+                            className="w-64"
+                          />
+                          <Button onClick={handleQuerySearch}>
+                            <Filter className="h-4 w-4 mr-2" />
+                            Filter
+                          </Button>
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Query</TableHead>
+                            <TableHead>User</TableHead>
+                            <TableHead>Results</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSearches.map((search) => (
+                            <TableRow key={search.id}>
+                              <TableCell>{search.query}</TableCell>
+                              <TableCell>{search.user_email}</TableCell>
+                              <TableCell>{search.result_count}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                                  {new Date(search.created_at).toLocaleDateString()} {new Date(search.created_at).toLocaleTimeString()}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <p className="text-sm text-gray-500">
+                        Showing {filteredSearches.length} of {searches.length} searches
+                      </p>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Searches
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="logs" className="mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Activity Logs</span>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Search logs..."
+                            value={logSearch}
+                            onChange={(e) => setLogSearch(e.target.value)}
+                            className="w-64"
+                          />
+                          <Button onClick={handleLogSearch}>
+                            <Filter className="h-4 w-4 mr-2" />
+                            Filter
+                          </Button>
+                        </div>
+                      </CardTitle>
+                      <CardDescription>
+                        Track user activities and system events
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Action</TableHead>
+                            <TableHead>User</TableHead>
+                            <TableHead>Details</TableHead>
+                            <TableHead>Date & Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredLogs.map((log) => (
+                            <TableRow key={log.id}>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  log.action.includes('reset') 
+                                    ? 'bg-amber-100 text-amber-800' 
+                                    : log.action.includes('search') 
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : log.action.includes('error')
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {log.action.replace(/_/g, ' ')}
+                                </span>
+                              </TableCell>
+                              <TableCell>{log.user_email || 'System'}</TableCell>
+                              <TableCell className="max-w-md truncate">{log.details}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                                  {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {filteredLogs.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                                No logs found. System activities will appear here.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <p className="text-sm text-gray-500">
+                        Showing {filteredLogs.length} of {logs.length} logs
+                      </p>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Logs
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="affiliates" className="mt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Affiliate Links</CardTitle>
+                          <CardDescription>
+                            Manage affiliate links that appear across the platform
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>URL</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {affiliateLinks.map((link) => (
+                                <TableRow key={link.id}>
+                                  <TableCell>{link.name}</TableCell>
+                                  <TableCell>
+                                    <div className="max-w-xs truncate">
+                                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                        {link.url}
+                                      </a>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{link.description}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteAffiliateLink(link.id)}
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      Delete
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button onClick={handleAddAffiliateLink} className="w-full">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Affiliate Link
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Add New Affiliate Link</CardTitle>
+                        <CardDescription>
+                          Create a new affiliate link to display on the platform
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                              id="name"
+                              placeholder="e.g., Namecheap"
+                              value={newLink.name}
+                              onChange={(e) => setNewLink({ ...newLink, name: e.target.value })}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="url">Affiliate URL</Label>
+                            <Input
+                              id="url"
+                              placeholder="https://..."
+                              value={newLink.url}
+                              onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Input
+                              id="description"
+                              placeholder="e.g., Domain registration"
+                              value={newLink.description}
+                              onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button onClick={handleAddAffiliateLink} className="w-full">
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Add Affiliate Link
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
       </main>
       
