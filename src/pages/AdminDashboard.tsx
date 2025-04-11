@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -864,4 +865,15 @@ const AdminDashboard = () => {
                     </Card>
                   </div>
                 </TabsContent>
-              </
+              </Tabs>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default AdminDashboard;
