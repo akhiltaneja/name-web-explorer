@@ -39,7 +39,7 @@ const Hero = ({
 }: HeroProps) => {
   const handleSearchSelect = (query: string) => {
     setName(query);
-    handleSearch(query);
+    // No need to call handleSearch here as the navigation happens in RecentSearches component
   };
 
   return (
