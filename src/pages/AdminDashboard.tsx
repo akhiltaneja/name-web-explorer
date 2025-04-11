@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -87,10 +86,11 @@ const AdminDashboard = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [avgResultsPerSearch, setAvgResultsPerSearch] = useState(0);
+  const [activeTab, setActiveTab] = useState("stats");
   const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([
     { id: "1", name: "Namecheap", url: "https://www.namecheap.com/affiliates/?aff=YOUR_ID", description: "Domain registration" },
     { id: "2", name: "GoDaddy", url: "https://www.godaddy.com/affiliate-programs?isc=cjc999off&utm_source=affiliate&utm_medium=text&utm_campaign=2&utm_content=YOUR_ID", description: "Domain and hosting" },
-    { id: "3", name: "Bluehost", url: "https://www.bluehost.com/affiliates?id=YOUR_ID", description: "Web hosting" }
+    { id: "3", name: "Bluehost", url: "https://www.bluehost.com/affiliates/?id=YOUR_ID", description: "Web hosting" }
   ]);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const [loading, setLoading] = useState(true);
@@ -135,14 +135,32 @@ const AdminDashboard = () => {
       // Fetch searches data
       const { data: searchesData, error: searchesError } = await supabase
         .from('searches')
-        .select('*, profiles!inner(email)');
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (searchesError) throw searchesError;
+      
+      // Fetch user emails for searches
+      const searchesWithEmails = await Promise.all(
+        searchesData.map(async (search) => {
+          const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', search.user_id)
+            .single();
+          
+          return {
+            ...search,
+            user_email: userError ? 'Unknown' : userData.email
+          };
+        })
+      );
       
       // Try to fetch logs data
       let { data: logsData, error: logsError } = await supabase
         .from('admin_logs')
-        .select('*, profiles!inner(email)');
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (logsError) {
         console.error("Error fetching logs:", logsError);
@@ -150,6 +168,22 @@ const AdminDashboard = () => {
       } else if (!logsData) {
         logsData = [];
       }
+      
+      // Add user emails to logs
+      const logsWithEmails = await Promise.all(
+        (logsData || []).map(async (log) => {
+          const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', log.user_id)
+            .single();
+          
+          return {
+            ...log,
+            user_email: userError ? 'Unknown' : userData.email
+          };
+        })
+      );
       
       const formattedUsers = usersData as UserData[];
       
@@ -172,23 +206,9 @@ const AdminDashboard = () => {
         })
       );
       
-      const formattedSearches = searchesData.map((search: any) => ({
-        id: search.id,
-        query: search.query,
-        created_at: search.created_at,
-        result_count: search.result_count,
-        user_email: search.profiles.email
-      })) as SearchData[];
+      const formattedSearches = searchesWithEmails as SearchData[];
       
-      const formattedLogs = logsData.map((log: any) => ({
-        id: log.id,
-        action: log.action,
-        user_id: log.user_id,
-        target_user_id: log.target_user_id,
-        details: log.details,
-        created_at: log.created_at,
-        user_email: log.profiles?.email || 'Unknown'
-      })) as LogData[];
+      const formattedLogs = logsWithEmails as LogData[];
       
       // Mock revenue calculation - in a real app, this would come from payment records
       const premiumUsers = formattedUsers.filter(u => u.plan === 'premium').length;
@@ -288,7 +308,7 @@ const AdminDashboard = () => {
     } else {
       setFilteredLogs(
         logs.filter((log) =>
-          log.details.toLowerCase().includes(logSearch.toLowerCase()) ||
+          log.details?.toLowerCase().includes(logSearch.toLowerCase()) ||
           log.action.toLowerCase().includes(logSearch.toLowerCase()) ||
           (log.user_email && log.user_email.toLowerCase().includes(logSearch.toLowerCase()))
         )
@@ -372,6 +392,11 @@ const AdminDashboard = () => {
     }
   };
 
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -452,35 +477,54 @@ const AdminDashboard = () => {
           
           <div className="flex flex-col md:flex-row gap-6 mt-8">
             <div className="w-full md:w-1/4 lg:w-1/5 space-y-2">
-              <Tabs defaultValue="stats" orientation="vertical" className="w-full">
-                <TabsList className="flex flex-col h-auto w-full bg-white border border-gray-200 p-1 rounded-md space-y-1">
-                  <TabsTrigger value="stats" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+              <div className="bg-white border border-gray-200 p-1 rounded-md">
+                <div className="flex flex-col space-y-1">
+                  <button 
+                    onClick={() => handleTabChange("stats")}
+                    className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "stats" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
                     <PieChart className="h-4 w-4 mr-2" />
                     Statistics
-                  </TabsTrigger>
-                  <TabsTrigger value="users" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleTabChange("users")}
+                    className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "users" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
                     <Users className="h-4 w-4 mr-2" />
                     Users
-                  </TabsTrigger>
-                  <TabsTrigger value="searches" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleTabChange("searches")}
+                    className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "searches" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
                     <Search className="h-4 w-4 mr-2" />
                     Searches
-                  </TabsTrigger>
-                  <TabsTrigger value="logs" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleTabChange("logs")}
+                    className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "logs" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
                     <LayoutList className="h-4 w-4 mr-2" />
                     Activity Logs
-                  </TabsTrigger>
-                  <TabsTrigger value="affiliates" className="w-full justify-start py-3 px-4 data-[state=active]:bg-blue-50">
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleTabChange("affiliates")}
+                    className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "affiliates" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
                     <Link2 className="h-4 w-4 mr-2" />
                     Affiliate Links
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+                  </button>
+                </div>
+              </div>
             </div>
             
             <div className="w-full md:w-3/4 lg:w-4/5">
-              <Tabs defaultValue="stats" className="w-full">
-                <TabsContent value="stats" className="space-y-8 mt-0">
+              {activeTab === "stats" && (
+                <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Card>
                       <CardHeader>
@@ -532,348 +576,302 @@ const AdminDashboard = () => {
                       </CardContent>
                     </Card>
                   </div>
-                </TabsContent>
-                
-                <TabsContent value="users" className="mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>Users</span>
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            placeholder="Search users by email..."
-                            value={userSearch}
-                            onChange={(e) => setUserSearch(e.target.value)}
-                            className="w-64"
-                          />
-                          <Button onClick={handleUserSearch}>
-                            <Filter className="h-4 w-4 mr-2" />
-                            Filter
-                          </Button>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Plan</TableHead>
-                            <TableHead>Total Searches</TableHead>
-                            <TableHead>Daily Searches</TableHead>
-                            <TableHead>Joined</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredUsers.map((user) => (
-                            <TableRow key={user.id}>
-                              <TableCell>
-                                <div className="flex items-center space-x-3">
-                                  {user.avatar_url ? (
-                                    <img 
-                                      src={user.avatar_url} 
-                                      alt="Avatar" 
-                                      className="h-8 w-8 rounded-full"
-                                    />
-                                  ) : (
-                                    <DefaultAvatar name={user.email} size="sm" />
-                                  )}
-                                  <span>{user.email}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  user.plan === 'premium' 
-                                    ? 'bg-blue-100 text-blue-800' 
-                                    : user.plan === 'unlimited' 
-                                      ? 'bg-purple-100 text-purple-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {user.plan || 'free'}
+                </div>
+              )}
+              
+              {activeTab === "users" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Users</span>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          placeholder="Search users by email..."
+                          value={userSearch}
+                          onChange={(e) => setUserSearch(e.target.value)}
+                          className="w-64"
+                        />
+                        <Button onClick={() => {
+                          if (userSearch.trim() === "") {
+                            setFilteredUsers(users);
+                          } else {
+                            setFilteredUsers(
+                              users.filter((user) =>
+                                user.email.toLowerCase().includes(userSearch.toLowerCase())
+                              )
+                            );
+                          }
+                        }}>
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filter
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Plan</TableHead>
+                          <TableHead>Total Searches</TableHead>
+                          <TableHead>Daily Searches</TableHead>
+                          <TableHead>Joined</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center space-x-3">
+                                {user.avatar_url ? (
+                                  <img 
+                                    src={user.avatar_url} 
+                                    alt="Avatar" 
+                                    className="h-8 w-8 rounded-full"
+                                  />
+                                ) : (
+                                  <DefaultAvatar name={user.email} size="sm" />
+                                )}
+                                <span>{user.email}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                user.plan === 'premium' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : user.plan === 'unlimited' 
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {user.plan || 'free'}
+                              </span>
+                            </TableCell>
+                            <TableCell>{user.checks_used || 0}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-indigo-600">
+                                  {user.plan === 'unlimited' 
+                                    ? '∞' 
+                                    : `${user.daily_searches_used || 0}/${user.plan === 'premium' ? '500' : '3'}`
+                                  }
                                 </span>
-                              </TableCell>
-                              <TableCell>{user.checks_used || 0}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="font-semibold text-indigo-600">{user.daily_searches_used || 0}/3</span>
-                                  {user.plan === 'free' && user.daily_searches_used === 0 && (
-                                    <div className="mt-1">
-                                      <CountdownTimer />
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                              <TableCell className="text-right">
-                                <ResetCreditsButton 
-                                  onReset={() => fetchData()} 
-                                  userId={user.id}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                      <p className="text-sm text-gray-500">
-                        Showing {filteredUsers.length} of {users.length} users
-                      </p>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Users
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="searches" className="mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>Search Queries</span>
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            placeholder="Search by query..."
-                            value={querySearch}
-                            onChange={(e) => setQuerySearch(e.target.value)}
-                            className="w-64"
-                          />
-                          <Button onClick={handleQuerySearch}>
-                            <Filter className="h-4 w-4 mr-2" />
-                            Filter
-                          </Button>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Query</TableHead>
-                            <TableHead>User</TableHead>
-                            <TableHead>Results</TableHead>
-                            <TableHead>Date</TableHead>
+                                {user.plan === 'free' && user.daily_searches_used === 0 && (
+                                  <div className="mt-1">
+                                    <CountdownTimer />
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <ResetCreditsButton 
+                                onReset={() => fetchData()} 
+                                userId={user.id}
+                              />
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredSearches.map((search) => (
-                            <TableRow key={search.id}>
-                              <TableCell>{search.query}</TableCell>
-                              <TableCell>{search.user_email}</TableCell>
-                              <TableCell>{search.result_count}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                                  {new Date(search.created_at).toLocaleDateString()} {new Date(search.created_at).toLocaleTimeString()}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                      <p className="text-sm text-gray-500">
-                        Showing {filteredSearches.length} of {searches.length} searches
-                      </p>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Searches
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {filteredUsers.length} of {users.length} users
+                    </p>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Users
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
+              
+              {activeTab === "searches" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Search Queries</span>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          placeholder="Search by query..."
+                          value={querySearch}
+                          onChange={(e) => setQuerySearch(e.target.value)}
+                          className="w-64"
+                        />
+                        <Button onClick={() => {
+                          if (querySearch.trim() === "") {
+                            setFilteredSearches(searches);
+                          } else {
+                            setFilteredSearches(
+                              searches.filter((search) =>
+                                search.query.toLowerCase().includes(querySearch.toLowerCase())
+                              )
+                            );
+                          }
+                        }}>
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filter
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Query</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Results</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSearches.map((search) => (
+                          <TableRow key={search.id}>
+                            <TableCell>{search.query}</TableCell>
+                            <TableCell>{search.user_email}</TableCell>
+                            <TableCell>{search.result_count}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                                {new Date(search.created_at).toLocaleDateString()} {new Date(search.created_at).toLocaleTimeString()}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {filteredSearches.length} of {searches.length} searches
+                    </p>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Searches
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
 
-                <TabsContent value="logs" className="mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>Activity Logs</span>
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            placeholder="Search logs..."
-                            value={logSearch}
-                            onChange={(e) => setLogSearch(e.target.value)}
-                            className="w-64"
-                          />
-                          <Button onClick={handleLogSearch}>
-                            <Filter className="h-4 w-4 mr-2" />
-                            Filter
-                          </Button>
-                        </div>
-                      </CardTitle>
-                      <CardDescription>
-                        Track user activities and system events
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Action</TableHead>
-                            <TableHead>User</TableHead>
-                            <TableHead>Details</TableHead>
-                            <TableHead>Date & Time</TableHead>
+              {activeTab === "logs" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Activity Logs</span>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          placeholder="Search logs..."
+                          value={logSearch}
+                          onChange={(e) => setLogSearch(e.target.value)}
+                          className="w-64"
+                        />
+                        <Button onClick={() => {
+                          if (logSearch.trim() === "") {
+                            setFilteredLogs(logs);
+                          } else {
+                            setFilteredLogs(
+                              logs.filter((log) =>
+                                log.details?.toLowerCase().includes(logSearch.toLowerCase()) ||
+                                log.action.toLowerCase().includes(logSearch.toLowerCase()) ||
+                                (log.user_email && log.user_email.toLowerCase().includes(logSearch.toLowerCase()))
+                              )
+                            );
+                          }
+                        }}>
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filter
+                        </Button>
+                      </div>
+                    </CardTitle>
+                    <CardDescription>
+                      Track user activities and system events
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Action</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead>Date & Time</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                log.action.includes('reset') 
+                                  ? 'bg-amber-100 text-amber-800' 
+                                  : log.action.includes('search') 
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : log.action.includes('error')
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {log.action.replace(/_/g, ' ')}
+                              </span>
+                            </TableCell>
+                            <TableCell>{log.user_email || 'System'}</TableCell>
+                            <TableCell className="max-w-md truncate">{log.details}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                                {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}
+                              </div>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredLogs.map((log) => (
-                            <TableRow key={log.id}>
-                              <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  log.action.includes('reset') 
-                                    ? 'bg-amber-100 text-amber-800' 
-                                    : log.action.includes('search') 
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : log.action.includes('error')
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {log.action.replace(/_/g, ' ')}
-                                </span>
-                              </TableCell>
-                              <TableCell>{log.user_email || 'System'}</TableCell>
-                              <TableCell className="max-w-md truncate">{log.details}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                                  {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {filteredLogs.length === 0 && (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                                No logs found. System activities will appear here.
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                      <p className="text-sm text-gray-500">
-                        Showing {filteredLogs.length} of {logs.length} logs
-                      </p>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Logs
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="affiliates" className="mt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-2">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Affiliate Links</CardTitle>
-                          <CardDescription>
-                            Manage affiliate links that appear across the platform
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>URL</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {affiliateLinks.map((link) => (
-                                <TableRow key={link.id}>
-                                  <TableCell>{link.name}</TableCell>
-                                  <TableCell>
-                                    <div className="max-w-xs truncate">
-                                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                        {link.url}
-                                      </a>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>{link.description}</TableCell>
-                                  <TableCell className="text-right">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteAffiliateLink(link.id)}
-                                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    >
-                                      Delete
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
-                    </div>
-                    
+                        ))}
+                        {filteredLogs.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                              No logs found. System activities will appear here.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {filteredLogs.length} of {logs.length} logs
+                    </p>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Logs
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
+              
+              {activeTab === "affiliates" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Add New Affiliate Link</CardTitle>
+                        <CardTitle>Affiliate Links</CardTitle>
                         <CardDescription>
-                          Create a new affiliate link to display on the platform
+                          Manage affiliate links that appear across the platform
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                              id="name"
-                              placeholder="e.g., Namecheap"
-                              value={newLink.name}
-                              onChange={(e) => setNewLink({ ...newLink, name: e.target.value })}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="url">Affiliate URL</Label>
-                            <Input
-                              id="url"
-                              placeholder="https://..."
-                              value={newLink.url}
-                              onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
-                            <Input
-                              id="description"
-                              placeholder="e.g., Domain registration"
-                              value={newLink.description}
-                              onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button onClick={handleAddAffiliateLink} className="w-full">
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Add Affiliate Link
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default AdminDashboard;
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>URL</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {affiliateLinks.map((link) => (
+                              <TableRow key={link.id}>
+                                <TableCell>{link.name}</TableCell>
+                                <TableCell>
+                                  <div className="max-w-xs truncate">
+                                    <a href={link.url} target="_blank" rel

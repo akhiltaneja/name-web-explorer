@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +71,13 @@ export const useSearchLimit = (user: any, profile: any) => {
           localStorage.removeItem('has_shown_grade_dialog_today');
         }, msTillMidnight);
       } else if (profile) {
+        // Special handling for admin user - unlimited searches
+        if (profile.email === "akhiltaneja92@gmail.com") {
+          setChecksRemaining(Infinity);
+          setSearchLimitReachedWithStorage(false);
+          return;
+        }
+        
         // Logged in user logic
         const limitReached = hasReachedUserSearchLimit();
         setSearchLimitReachedWithStorage(limitReached);
@@ -180,6 +186,11 @@ export const useSearchLimit = (user: any, profile: any) => {
   const hasReachedUserSearchLimit = () => {
     if (!profile) return false;
     
+    // Special handling for admin user - unlimited searches
+    if (profile.email === "akhiltaneja92@gmail.com") {
+      return false;
+    }
+    
     if (profile.plan === 'unlimited') return false;
     
     if (profile.plan === 'free') {
@@ -202,6 +213,11 @@ export const useSearchLimit = (user: any, profile: any) => {
       const guestStatus = checkGuestLimits();
       return !guestStatus.available;
     } else if (profile) {
+      // Special handling for admin user - unlimited searches
+      if (profile.email === "akhiltaneja92@gmail.com") {
+        return false;
+      }
+      
       return hasReachedUserSearchLimit();
     }
     return false;
@@ -209,6 +225,11 @@ export const useSearchLimit = (user: any, profile: any) => {
 
   // Increment search count when a search is performed
   const incrementSearchCount = async () => {
+    // Special handling for admin user - always allow searches
+    if (profile && profile.email === "akhiltaneja92@gmail.com") {
+      return true;
+    }
+    
     // Double check if limit is already reached to prevent any bypassing
     if (hasReachedSearchLimit() || searchLimitReached || checksRemaining <= 0) {
       setSearchLimitReachedWithStorage(true);
