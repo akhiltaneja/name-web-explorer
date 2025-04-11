@@ -21,9 +21,14 @@ import Features from "@/components/search/Features";
 import FAQ from "@/components/search/FAQ";
 import { useSearch } from "@/hooks/useSearch";
 
+// Constants
+const RECENT_SEARCHES_KEY = "people_peeper_recent_searches";
+const MAX_RECENT_SEARCHES = 6;
+
 const Index = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const { toast } = useToast();
   const { user, profile, refreshProfile } = useAuth();
@@ -54,6 +59,64 @@ const Index = () => {
     setEmailModalOpen
   } = useSearch(user, profile, refreshProfile);
 
+  // Load recent searches from localStorage on initial render
+  useEffect(() => {
+    const storedSearches = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (storedSearches) {
+      try {
+        const parsedSearches = JSON.parse(storedSearches);
+        if (Array.isArray(parsedSearches)) {
+          setRecentSearches(parsedSearches);
+        }
+      } catch (e) {
+        console.error("Error parsing recent searches:", e);
+      }
+    }
+  }, []);
+
+  // Add search to recent searches when a search is completed
+  useEffect(() => {
+    if (name && results.length > 0 && !isSearching) {
+      addToRecentSearches(name);
+    }
+  }, [name, results, isSearching]);
+
+  // Add a search to recent searches
+  const addToRecentSearches = (searchTerm: string) => {
+    setRecentSearches(prevSearches => {
+      // Filter out the search term if it already exists to avoid duplicates
+      const filteredSearches = prevSearches.filter(s => s !== searchTerm);
+      
+      // Add the new search term to the beginning
+      const newSearches = [searchTerm, ...filteredSearches].slice(0, MAX_RECENT_SEARCHES);
+      
+      // Save to localStorage
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(newSearches));
+      
+      return newSearches;
+    });
+  };
+
+  // Clear a specific search from recent searches
+  const clearRecentSearch = (searchTerm: string) => {
+    setRecentSearches(prevSearches => {
+      const newSearches = prevSearches.filter(s => s !== searchTerm);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(newSearches));
+      return newSearches;
+    });
+  };
+
+  // Clear all recent searches
+  const clearAllRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+    toast({
+      title: "Recent searches cleared",
+      description: "Your search history has been cleared."
+    });
+  };
+
+  // Handle search navigation and URL updates
   useEffect(() => {
     const query = searchParams.get('query');
     const pathSegments = location.pathname.split('/');
@@ -159,6 +222,9 @@ const Index = () => {
           checksRemaining={checksRemaining}
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
+          recentSearches={recentSearches}
+          onClearSearch={clearRecentSearch}
+          onClearAllSearches={clearAllRecentSearches}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -175,7 +174,7 @@ export const useSearchLimit = (user: any, profile: any) => {
   // Increment search count when a search is performed
   const incrementSearchCount = async () => {
     // Double check if limit is already reached to prevent any bypassing
-    if (hasReachedSearchLimit() || checksRemaining <= 0) {
+    if (hasReachedSearchLimit()) {
       setSearchLimitReachedWithStorage(true);
       
       if (!user) {
@@ -229,7 +228,7 @@ export const useSearchLimit = (user: any, profile: any) => {
       setChecksRemaining(remaining);
       
       // If this search puts us at the limit, set the flag
-      if (remaining <= 0) {
+      if (newCount >= FREE_PLAN_LIMIT) {
         setGuestCheckAvailable(false);
         setSearchLimitReachedWithStorage(true);
       }

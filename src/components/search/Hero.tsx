@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import SearchBar from "@/components/search/SearchBar";
 import SearchProgress from "@/components/search/SearchProgress";
 import GuestLimitWarning from "@/components/search/GuestLimitWarning";
+import RecentSearches from "@/components/search/RecentSearches";
 
 interface HeroProps {
   name: string;
@@ -17,6 +18,9 @@ interface HeroProps {
   checksRemaining: number;
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
+  recentSearches?: string[];
+  onClearSearch?: (search: string) => void;
+  onClearAllSearches?: () => void;
 }
 
 const Hero = ({
@@ -30,7 +34,10 @@ const Hero = ({
   guestCheckAvailable,
   checksRemaining,
   showLimitModal,
-  setShowLimitModal
+  setShowLimitModal,
+  recentSearches = [],
+  onClearSearch,
+  onClearAllSearches
 }: HeroProps) => {
   return (
     <section className="pt-8 pb-6 px-4 bg-gradient-to-b from-white to-gray-50">
@@ -58,6 +65,14 @@ const Hero = ({
           showLimitModal={showLimitModal}
           setShowLimitModal={setShowLimitModal}
         />
+
+        {!name && !isSearching && recentSearches.length > 0 && (
+          <RecentSearches 
+            recentSearches={recentSearches} 
+            onClearSearch={onClearSearch}
+            onClearAll={onClearAllSearches}
+          />
+        )}
 
         {isSearching && (
           <Card className="mb-8 border-purple-100">
