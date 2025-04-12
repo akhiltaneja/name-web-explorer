@@ -14,6 +14,7 @@ const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const Cart = lazy(() => import("@/pages/Cart"));
 const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
 const Contact = lazy(() => import("@/pages/Contact"));
+const Settings = lazy(() => import("@/pages/Settings"));
 
 function App() {
   return (
@@ -22,7 +23,7 @@ function App() {
         <Suspense
           fallback={
             <div className="flex items-center justify-center h-screen">
-              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full"></div>
+              <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
             </div>
           }
         >
@@ -37,6 +38,7 @@ function App() {
             <Route path="/search/:query" element={<Index />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

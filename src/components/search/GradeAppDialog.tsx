@@ -44,10 +44,10 @@ const GradeAppDialog = ({ open, setOpen }: GradeAppDialogProps) => {
               </div>
             </div>
             <p className="mb-4">
-              You've used all your daily searches. How was your experience with our app?
+              How was your experience with our app?
             </p>
             <p className="text-sm text-gray-500">
-              Rate us to help us improve, and consider upgrading for unlimited searches.
+              Your feedback helps us improve our service.
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -59,7 +59,7 @@ const GradeAppDialog = ({ open, setOpen }: GradeAppDialogProps) => {
             Maybe Later
           </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
             onClick={() => {
               navigate("/pricing");
               setOpen(false);

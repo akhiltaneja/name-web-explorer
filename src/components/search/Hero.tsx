@@ -5,7 +5,6 @@ import SearchProgress from "./SearchProgress";
 import GuestLimitWarning from "./GuestLimitWarning";
 import RecentSearches from "./RecentSearches";
 import SearchFeatures from "./SearchFeatures";
-import GradeAppDialog from "./GradeAppDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -51,41 +50,9 @@ const Hero = ({
   isDeepVerifying = false,
   verificationProgress = 0
 }: HeroProps) => {
-  const [showRating, setShowRating] = useState(false);
-  const { user: authUser } = useAuth();
   const navigate = useNavigate();
   
-  // Updated to use user prop instead of isAuthenticated
-  const isAuthenticated = !!user;
-
-  // Show rating dialog after a successful search for logged in users
-  useEffect(() => {
-    if (
-      isAuthenticated &&
-      name && 
-      !isSearching && 
-      searchProgress === 100 && 
-      !showRating &&
-      localStorage.getItem("lastRatingPrompt")
-    ) {
-      const lastPrompt = parseInt(localStorage.getItem("lastRatingPrompt") || "0");
-      const now = Date.now();
-      
-      // Show the prompt if we haven't shown it in over 7 days
-      if (now - lastPrompt > 7 * 24 * 60 * 60 * 1000) {
-        const searchesSinceLastPrompt = parseInt(localStorage.getItem("searchesSinceLastPrompt") || "0");
-        
-        // Only show after at least 3 searches since last prompt
-        if (searchesSinceLastPrompt >= 3) {
-          setShowRating(true);
-          localStorage.setItem("lastRatingPrompt", now.toString());
-          localStorage.setItem("searchesSinceLastPrompt", "0");
-        } else {
-          localStorage.setItem("searchesSinceLastPrompt", (searchesSinceLastPrompt + 1).toString());
-        }
-      }
-    }
-  }, [isSearching, searchProgress, name, isAuthenticated, showRating]);
+  // Removed showRating state and useEffect that was showing the rating dialog
 
   return (
     <section className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-16">
@@ -192,7 +159,7 @@ const Hero = ({
               </Button>
             )}
             <Button
-              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
               onClick={() => {
                 navigate(user ? "/profile?tab=plans" : "/pricing");
                 setShowLimitModal(false);
@@ -203,11 +170,6 @@ const Hero = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <GradeAppDialog 
-        open={showRating} 
-        setOpen={setShowRating} 
-      />
     </section>
   );
 };

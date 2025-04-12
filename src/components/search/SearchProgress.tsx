@@ -1,6 +1,7 @@
 
 import { Progress } from "@/components/ui/progress";
 import { Search, CheckCircle, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface SearchProgressProps {
   isSearching: boolean;
@@ -17,7 +18,21 @@ const SearchProgress = ({
   isDeepVerifying = false,
   verificationProgress = 0
 }: SearchProgressProps) => {
-  if (!isSearching && !isDeepVerifying) return null;
+  const [showVerification, setShowVerification] = useState(false);
+  
+  // Effect to auto-hide the verification notification after 2 seconds when completed
+  useEffect(() => {
+    if (isDeepVerifying && verificationProgress === 100) {
+      const timer = setTimeout(() => {
+        setShowVerification(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (isDeepVerifying) {
+      setShowVerification(true);
+    }
+  }, [isDeepVerifying, verificationProgress]);
+  
+  if (!isSearching && (!isDeepVerifying || !showVerification)) return null;
   
   return (
     <div className="mt-4 p-6 bg-blue-50 rounded-lg border border-blue-200 shadow-sm animate-fade-in flex items-start">
@@ -43,7 +58,7 @@ const SearchProgress = ({
           </>
         )}
         
-        {isDeepVerifying && (
+        {isDeepVerifying && showVerification && (
           <>
             <h3 className="font-bold text-amber-800 mb-1">
               {verificationProgress < 100 ? "Verifying profiles..." : "Verification complete!"}

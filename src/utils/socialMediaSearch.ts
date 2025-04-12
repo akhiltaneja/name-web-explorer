@@ -1,9 +1,5 @@
-
 import { SocialMediaProfile } from "@/types/socialMedia";
 
-/**
- * Generates a list of potential social media profiles for a given username
- */
 export const getSocialMediaProfiles = (username: string, fullName: string): SocialMediaProfile[] => {
   const platforms: SocialMediaProfile[] = [
     {
@@ -128,276 +124,17 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
     },
     {
       platform: "Threads",
-      url: `https://www.threads.net/@${username}`,
-      username: `@${username}`,
+      url: `https://www.threads.net/search?q=${encodeURIComponent(fullName)}`,
+      username: `Search: ${fullName}`,
       icon: "T",
       color: "#000000",
       category: "Social network"
     },
-    {
-      platform: "Telegram",
-      url: `https://t.me/${username}`,
-      username: username,
-      icon: "T",
-      color: "#0088cc",
-      category: "Messaging"
-    },
-    {
-      platform: "WeChat",
-      url: `https://weixin.qq.com/${username}`,
-      username: username,
-      icon: "W",
-      color: "#7BB32E",
-      category: "Messaging"
-    },
-    {
-      platform: "GitHub",
-      url: `https://github.com/${username}`,
-      username: username,
-      icon: "🐙",
-      color: "#333333",
-      category: "Professional"
-    },
-    {
-      platform: "Spotify",
-      url: `https://open.spotify.com/user/${username}`,
-      username: username,
-      icon: "🎵",
-      color: "#1DB954",
-      category: "Music"
-    },
-    {
-      platform: "SoundCloud",
-      url: `https://soundcloud.com/${username}`,
-      username: username,
-      icon: "SC",
-      color: "#FF5500",
-      category: "Music"
-    },
-    {
-      platform: "Vimeo",
-      url: `https://vimeo.com/${username}`,
-      username: username,
-      icon: "V",
-      color: "#1AB7EA",
-      category: "Video"
-    },
-    {
-      platform: "Flickr",
-      url: `https://www.flickr.com/photos/${username}`,
-      username: username,
-      icon: "F",
-      color: "#0063DC",
-      category: "Creativity"
-    },
-    {
-      platform: "Behance",
-      url: `https://behance.net/${username}`,
-      username: username,
-      icon: "Be",
-      color: "#053eff",
-      category: "Creativity"
-    },
-    {
-      platform: "Dribbble",
-      url: `https://dribbble.com/${username}`,
-      username: username,
-      icon: "D",
-      color: "#EA4C89",
-      category: "Creativity"
-    },
-    {
-      platform: "Line",
-      url: `https://line.me/ti/p/${username}`,
-      username: username,
-      icon: "L",
-      color: "#00C300",
-      category: "Messaging"
-    },
-    {
-      platform: "Patreon",
-      url: `https://www.patreon.com/${username}`,
-      username: username,
-      icon: "P",
-      color: "#F96854",
-      category: "Crowdfunding"
-    },
-    {
-      platform: "Mastodon",
-      url: `https://mastodon.social/@${username}`,
-      username: username,
-      icon: "M",
-      color: "#6364FF",
-      category: "Social network"
-    },
-    {
-      platform: "Meetup",
-      url: `https://www.meetup.com/members/${username}`,
-      username: username,
-      icon: "M",
-      color: "#ED1C40",
-      category: "Events"
-    },
-    {
-      platform: "Stack Overflow",
-      url: `https://stackoverflow.com/users/${Math.floor(Math.random() * 9000000) + 1000000}/${username}`,
-      username: username,
-      icon: "S",
-      color: "#F48024",
-      category: "Professional"
-    },
-    {
-      platform: "Slack",
-      url: `https://app.slack.com/client/${username}`,
-      username: username,
-      icon: "S",
-      color: "#4A154B",
-      category: "Messaging"
-    },
-    {
-      platform: "Clubhouse",
-      url: `https://www.clubhouse.com/@${username}`,
-      username: username,
-      icon: "C",
-      color: "#F1EFE3",
-      category: "Audio"
-    },
-    {
-      platform: "Etsy",
-      url: `https://www.etsy.com/shop/${username}`,
-      username: username,
-      icon: "E",
-      color: "#F1641E",
-      category: "Marketplace"
-    },
-    {
-      platform: "Fiverr",
-      url: `https://fiverr.com/${username}`,
-      username: username,
-      icon: "Fi",
-      color: "#1DBF73",
-      category: "Marketplace"
-    },
-    {
-      platform: "About.me",
-      url: `https://about.me/${username}`,
-      username: username,
-      icon: "A",
-      color: "#00A98F",
-      category: "Professional"
-    },
-    {
-      platform: "ProductHunt",
-      url: `https://www.producthunt.com/@${username}`,
-      username: username,
-      icon: "P",
-      color: "#DA552F",
-      category: "Technology"
-    },
-    {
-      platform: "VSCO",
-      url: `https://vsco.co/${username}`,
-      username: username,
-      icon: "V",
-      color: "#000000",
-      category: "Creativity"
-    },
-    {
-      platform: "Goodreads",
-      url: `https://www.goodreads.com/${username}`,
-      username: username,
-      icon: "g",
-      color: "#553B08",
-      category: "Reading"
-    },
-    {
-      platform: "Substack",
-      url: `https://${username}.substack.com`,
-      username: username,
-      icon: "S",
-      color: "#FF6719",
-      category: "Writing"
-    },
-    {
-      platform: "Trello",
-      url: `https://trello.com/${username}`,
-      username: username,
-      icon: "T",
-      color: "#0079BF",
-      category: "Professional"
-    },
-    {
-      platform: "Strava",
-      url: `https://www.strava.com/athletes/${username}`,
-      username: username,
-      icon: "S",
-      color: "#FC4C02",
-      category: "Fitness"
-    },
-    {
-      platform: "Academia.edu",
-      url: `https://independent.academia.edu/${username}`,
-      username: username,
-      icon: "A",
-      color: "#41454A",
-      category: "Education"
-    },
-    {
-      platform: "SlideShare",
-      url: `https://slideshare.net/${username}`,
-      username: username,
-      icon: "S",
-      color: "#0077B5",
-      category: "Professional"
-    },
-    {
-      platform: "Yelp",
-      url: `https://www.yelp.com/user_details?userid=${username}`,
-      username: username,
-      icon: "Y",
-      color: "#D32323",
-      category: "Reviews"
-    },
-    {
-      platform: "Roblox",
-      url: `https://www.roblox.com/users/${username}/profile`,
-      username: username,
-      icon: "R",
-      color: "#CF0723",
-      category: "Gaming"
-    },
-    {
-      platform: "DeviantArt",
-      url: `https://${username}.deviantart.com`,
-      username: username,
-      icon: "D",
-      color: "#05CC47",
-      category: "Creativity"
-    },
-    {
-      platform: "Steam",
-      url: `https://steamcommunity.com/id/${username}`,
-      username: username,
-      icon: "S",
-      color: "#1B2838",
-      category: "Gaming"
-    },
-    {
-      platform: "500px",
-      url: `https://500px.com/${username}`,
-      username: username,
-      icon: "5",
-      color: "#0099E5",
-      category: "Photography"
-    }
   ];
 
   return platforms;
 };
 
-/**
- * Common error patterns across platforms that indicate a profile doesn't exist
- */
 const ERROR_PATTERNS = [
   "user not found",
   "page isn't available",
@@ -410,6 +147,8 @@ const ERROR_PATTERNS = [
   "profile does not exist",
   "this profile isn't available",
   "404 not found",
+  "404",
+  "error 404",
   "profile unavailable",
   "user has been suspended",
   "account suspended",
@@ -424,42 +163,30 @@ const ERROR_PATTERNS = [
   "oops! we couldn't find that user",
   "this account has been deleted",
   "no matching results",
-  "this username is not registered"
+  "this username is not registered",
+  "can't be found",
+  "couldn't be found",
+  "we can't find that user",
+  "no user found",
+  "that page doesn't exist",
+  "nothing to see here"
 ];
 
-/**
- * A more robust URL status checker that also checks page content for error messages
- * In a real implementation, this would make actual HTTP requests and analyze content
- */
 export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, errorReason?: string}> => {
   const lowerUrl = url.toLowerCase();
   
   if (lowerUrl.includes('threads.net')) {
-    const threadsResult = await checkThreadsProfile(url);
-    if (threadsResult.success) {
-      return { isActive: true };
-    } else {
-      return { isActive: false, errorReason: threadsResult.error || "Threads profile not found" };
-    }
+    return { isActive: true };
   }
   
   if (
-    lowerUrl.includes('dailymotion.com/akhiltaneja') ||
-    lowerUrl.includes('medium.com/@akhiltaneja') ||
-    lowerUrl.includes('vimeo.com/akhiltaneja') ||
-    lowerUrl.includes('arduino.cc/projecthub/akhiltaneja')
+    lowerUrl.includes('dailymotion.com/') ||
+    lowerUrl.includes('medium.com/@') ||
+    lowerUrl.includes('vimeo.com/') ||
+    lowerUrl.includes('arduino.cc/projecthub/')
   ) {
-    console.log(`Filtering known error URL: ${url}`);
-    return { isActive: false, errorReason: "Profile not found" };
-  }
-  
-  if (
-    lowerUrl.includes('arduino.cc/projecthub') ||
-    lowerUrl.includes('dailymotion.com') ||
-    lowerUrl.includes('medium.com') ||
-    lowerUrl.includes('vimeo.com')
-  ) {
-    if (Math.random() > 0.6) {
+    const randomSuccess = Math.random() > 0.7;
+    if (randomSuccess) {
       return { isActive: true }; 
     } else {
       let errorReason = "Profile not found";
@@ -471,7 +198,7 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
   }
   
   if (lowerUrl.includes('flickr') || lowerUrl.includes('soundcloud')) {
-    if (Math.random() > 0.5) {
+    if (Math.random() > 0.6) {
       return { isActive: true };
     } else {
       const randomIndex = Math.floor(Math.random() * ERROR_PATTERNS.length);
@@ -484,7 +211,7 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
   
   return new Promise(resolve => {
     setTimeout(() => {
-      if (Math.random() > 0.2) {
+      if (Math.random() > 0.3) {
         resolve({ isActive: true });
       } else {
         const randomIndex = Math.floor(Math.random() * ERROR_PATTERNS.length);
@@ -497,10 +224,6 @@ export const checkUrlStatus = async (url: string): Promise<{isActive: boolean, e
   });
 };
 
-/**
- * Special handler for Threads profiles that may show "Sorry, this page isn't available"
- * This will attempt to find an alternative valid profile by searching on threads.net
- */
 const checkThreadsProfile = async (originalUrl: string): Promise<{success: boolean, error?: string, alternativeUrl?: string}> => {
   const usernameMatch = originalUrl.match(/threads\.net\/@([a-zA-Z0-9._]+)/);
   if (!usernameMatch || !usernameMatch[1]) {
@@ -530,9 +253,6 @@ const checkThreadsProfile = async (originalUrl: string): Promise<{success: boole
   return { success: true };
 };
 
-/**
- * Check if domains are available for the username
- */
 export const checkDomainAvailability = async (username: string): Promise<{tld: string, available: boolean, price: number}[]> => {
   const tlds = ['.com', '.net', '.org', '.io', '.co', '.me', '.xyz', '.dev', '.in'];
   
@@ -546,9 +266,6 @@ export const checkDomainAvailability = async (username: string): Promise<{tld: s
   }));
 };
 
-/**
- * Generates additional "scraped" results to simulate web search findings
- */
 export const getAdditionalResults = (username: string, fullName: string): SocialMediaProfile[] => {
   const additionalPlatforms: SocialMediaProfile[] = [
     {
@@ -628,9 +345,6 @@ export const getAdditionalResults = (username: string, fullName: string): Social
   return additionalPlatforms.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 5) + 2);
 };
 
-/**
- * Group social media profiles by category
- */
 export const groupProfilesByCategory = (profiles: SocialMediaProfile[]) => {
   const categories: Record<string, SocialMediaProfile[]> = {};
   
@@ -645,9 +359,6 @@ export const groupProfilesByCategory = (profiles: SocialMediaProfile[]) => {
   return categories;
 };
 
-/**
- * Get unique categories with counts
- */
 export const getCategories = (profiles: SocialMediaProfile[]) => {
   const categoryCounts: Record<string, number> = {};
   
@@ -659,10 +370,6 @@ export const getCategories = (profiles: SocialMediaProfile[]) => {
   return Object.entries(categoryCounts).map(([name, count]) => ({ name, count }));
 };
 
-/**
- * Performs deep content verification of profiles to filter out "User Not Found" errors
- * For demo purposes, we'll simulate this process
- */
 export const deepVerifyProfiles = async (profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> => {
   console.log(`Starting deep verification of ${profiles.length} profiles...`);
   
@@ -673,7 +380,7 @@ export const deepVerifyProfiles = async (profiles: SocialMediaProfile[]): Promis
     
     console.log(`Deep verifying ${profile.platform} profile: ${profile.url}`);
     
-    const verificationSuccess = Math.random() > 0.15;
+    const verificationSuccess = Math.random() > 0.10;
     
     if (verificationSuccess) {
       return {
