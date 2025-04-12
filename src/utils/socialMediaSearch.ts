@@ -124,7 +124,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
     },
     {
       platform: "Threads",
-      url: `https://www.threads.net/search?q=${encodeURIComponent(fullName)}`,
+      url: `https://www.threads.net/search?q=${encodeURIComponent(fullName)}&serp_type=default`,
       username: `Search: ${fullName}`,
       icon: "T",
       color: "#000000",
@@ -397,5 +397,5 @@ export const deepVerifyProfiles = async (profiles: SocialMediaProfile[]): Promis
     }
   }));
   
-  return verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
+  return verifiedProfiles;
 };

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -11,11 +12,13 @@ import {
   deepVerifyProfiles
 } from "@/utils/socialMediaSearch";
 import { useSearchLimit } from "./useSearchLimit";
+import { SocialMediaProfile } from "@/types/socialMedia";
 
 export const useSearch = (user: any, profile: any, refreshProfile: () => void) => {
   const [name, setName] = useState("");
-  const [results, setResults] = useState([]);
-  const [additionalResults, setAdditionalResults] = useState([]);
+  const [results, setResults] = useState<SocialMediaProfile[]>([]);
+  const [additionalResults, setAdditionalResults] = useState<SocialMediaProfile[]>([]);
+  const [unverifiedResults, setUnverifiedResults] = useState<SocialMediaProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
   const [searchTime, setSearchTime] = useState<number | null>(null);
@@ -227,28 +230,33 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             setVerificationProgress(100);
             
             setTimeout(() => {
-              setResults(verifiedProfiles);
-              const updatedCategorizedProfiles = groupProfilesByCategory(verifiedProfiles);
+              // Separate verified and unverified profiles
+              const verified = verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
+              const unverified = verifiedProfiles.filter(profile => profile.verificationStatus === 'error');
+              
+              setResults(verified);
+              setUnverifiedResults(unverified);
+              const updatedCategorizedProfiles = groupProfilesByCategory(verified);
               setProfilesByCategory(updatedCategorizedProfiles);
-              setCategories(getCategories(verifiedProfiles));
+              setCategories(getCategories(verified));
               setIsDeepVerifying(false);
               
               // Show toast with final verification results
-              const filteredCount = preliminaryResults.length - verifiedProfiles.length;
-              if (filteredCount > 0) {
+              const unverifiedCount = unverified.length;
+              if (unverifiedCount > 0) {
                 toast({
                   title: "Content verification complete",
-                  description: `Removed ${filteredCount} false positive results that contained "User Not Found" or similar errors.`,
+                  description: `Found ${verified.length} verified profiles and ${unverifiedCount} unverified results.`,
                 });
               } else {
                 toast({
                   title: "Content verification complete",
-                  description: `All ${verifiedProfiles.length} profiles have been verified.`,
+                  description: `All ${verified.length} profiles have been verified.`,
                 });
               }
               
               if (user) {
-                saveSearchHistory(queryString, verifiedProfiles.length)
+                saveSearchHistory(queryString, verified.length)
                   .then(success => {
                     if (success) refreshProfile();
                   });
@@ -288,6 +296,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setName,
     results,
     additionalResults,
+    unverifiedResults,
     isSearching,
     searchProgress,
     searchTime,

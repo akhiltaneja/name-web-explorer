@@ -36,6 +36,7 @@ const Index = () => {
     setName,
     results,
     additionalResults,
+    unverifiedResults,
     isSearching,
     searchProgress,
     searchTime,
@@ -167,6 +168,10 @@ const Index = () => {
     ? additionalResults.filter(profile => profile.category === selectedCategory)
     : additionalResults;
 
+  const filteredUnverifiedResults = selectedCategory
+    ? unverifiedResults?.filter(profile => profile.category === selectedCategory) || []
+    : unverifiedResults || [];
+
   const showResults = 
     (name && (results.length > 0 || isSearching)) && 
     !(isSearching || isDeepVerifying);
@@ -232,11 +237,12 @@ const Index = () => {
               />
             )}
 
-            {showResults && additionalResults.length > 0 && (
+            {showResults && (additionalResults.length > 0 || filteredUnverifiedResults.length > 0) && (
               <AdditionalResults 
                 additionalResults={additionalResults}
                 filteredAdditionalResults={filteredAdditionalResults}
                 viewMode={viewMode}
+                unverifiedResults={filteredUnverifiedResults}
               />
             )}
 
