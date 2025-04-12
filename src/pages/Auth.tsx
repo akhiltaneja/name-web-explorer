@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -38,6 +37,7 @@ const Auth = () => {
 
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationError, setVerificationError] = useState<"sending_failed" | "rate_limit" | null>(null);
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -86,17 +86,22 @@ const Auth = () => {
       });
       
       if (error) {
-        // Handle specific error cases
         if (error.message.includes("rate limit")) {
-          throw new Error("Too many signup attempts. Please try again in a few minutes.");
-        } else if (error.message.includes("sending email")) {
-          throw new Error("Error sending verification email. Please contact support.");
+          setVerificationError("rate_limit");
+          setVerificationEmail(values.email);
+          setShowEmailVerification(true);
+          return;
+        } else if (error.message.includes("sending email") || error.message.includes("UNDEFINED_VALUE")) {
+          setVerificationError("sending_failed");
+          setVerificationEmail(values.email);
+          setShowEmailVerification(true);
+          return;
         } else {
           throw error;
         }
       }
       
-      // Update this section to show the dialog instead of just a toast
+      setVerificationError(null);
       setVerificationEmail(values.email);
       setShowEmailVerification(true);
       
@@ -240,6 +245,7 @@ const Auth = () => {
         isOpen={showEmailVerification}
         onClose={() => setShowEmailVerification(false)}
         email={verificationEmail}
+        errorType={verificationError}
       />
     </>
   );

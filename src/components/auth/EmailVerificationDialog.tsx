@@ -1,17 +1,36 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Mail, ExternalLink, RefreshCw } from "lucide-react";
+import { Mail, ExternalLink, RefreshCw, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmailVerificationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   email: string;
+  errorType?: "sending_failed" | "rate_limit" | null;
 }
 
-const EmailVerificationDialog = ({ isOpen, onClose, email }: EmailVerificationDialogProps) => {
+const EmailVerificationDialog = ({ 
+  isOpen, 
+  onClose, 
+  email, 
+  errorType 
+}: EmailVerificationDialogProps) => {
   const [isResending, setIsResending] = useState(false);
+  const { supabase } = useAuth();
+  const { toast } = useToast();
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && errorType) {
+      setShowTroubleshooting(true);
+    } else {
+      setShowTroubleshooting(false);
+    }
+  }, [isOpen, errorType]);
 
   const handleOpenEmail = () => {
     // Common email providers
@@ -29,27 +48,98 @@ const EmailVerificationDialog = ({ isOpen, onClose, email }: EmailVerificationDi
     }
   };
 
-  const handleResendVerification = () => {
+  const handleResendVerification = async () => {
     setIsResending(true);
-    // Simulate resending verification email
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email
+      });
+      
+      if (error) {
+        if (error.message.includes("rate limit")) {
+          toast({
+            title: "Too many attempts",
+            description: "Please wait a few minutes before trying again",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error resending verification",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Verification email sent",
+          description: "Please check your inbox"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend verification email",
+        variant: "destructive"
+      });
+    } finally {
       setIsResending(false);
-    }, 2000);
+    }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="mx-auto bg-blue-100 p-3 rounded-full mb-4">
-            <Mail className="h-8 w-8 text-blue-600" />
+  const getDialogContent = () => {
+    if (errorType) {
+      return (
+        <>
+          <div className="mx-auto bg-amber-100 p-3 rounded-full mb-4">
+            <AlertTriangle className="h-8 w-8 text-amber-600" />
           </div>
-          <DialogTitle className="text-center text-2xl">Check your email</DialogTitle>
+          <DialogTitle className="text-center text-2xl">Verification Issue</DialogTitle>
           <DialogDescription className="text-center">
-            We sent a verification link to<br />
+            We encountered a problem while trying to send a verification email to
+            <br />
             <span className="font-medium text-black">{email}</span>
           </DialogDescription>
-        </DialogHeader>
+          
+          <div className="bg-amber-50 p-4 rounded-lg mt-4 border border-amber-100">
+            <p className="text-sm text-amber-800 font-medium mb-2">
+              {errorType === "sending_failed" 
+                ? "We're having trouble sending verification emails at the moment." 
+                : "Too many verification attempts. Please try again later."}
+            </p>
+            <p className="text-sm text-amber-800">
+              You can try the following:
+            </p>
+            <ul className="text-sm text-amber-800 list-disc pl-5 mt-2">
+              <li>Try again in a few minutes</li>
+              <li>Check that your email address is correct</li>
+              <li>Contact support if the issue persists</li>
+            </ul>
+          </div>
+          
+          <div className="flex flex-col gap-3 mt-5">
+            <Button
+              variant="outline"
+              className="w-full" 
+              onClick={() => onClose()}
+            >
+              Back to Sign In
+            </Button>
+          </div>
+        </>
+      );
+    }
+    
+    return (
+      <>
+        <div className="mx-auto bg-blue-100 p-3 rounded-full mb-4">
+          <Mail className="h-8 w-8 text-blue-600" />
+        </div>
+        <DialogTitle className="text-center text-2xl">Check your email</DialogTitle>
+        <DialogDescription className="text-center">
+          We sent a verification link to<br />
+          <span className="font-medium text-black">{email}</span>
+        </DialogDescription>
 
         <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
           <p className="text-sm text-blue-800">
@@ -86,6 +176,16 @@ const EmailVerificationDialog = ({ isOpen, onClose, email }: EmailVerificationDi
         <div className="text-center mt-4 text-sm text-gray-500">
           <p>Did not receive an email? Check your spam folder or try another email address.</p>
         </div>
+      </>
+    );
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          {getDialogContent()}
+        </DialogHeader>
       </DialogContent>
     </Dialog>
   );
