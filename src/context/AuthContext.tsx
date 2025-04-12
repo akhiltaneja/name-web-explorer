@@ -1,8 +1,9 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "@/types/socialMedia";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextProps {
   session: Session | null;
@@ -15,6 +16,7 @@ interface AuthContextProps {
   loading: boolean;
   loadingProfile: boolean;
   refreshProfile: () => Promise<void>;
+  supabase: typeof supabase; // Add supabase property
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -190,6 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     loadingProfile,
     refreshProfile,
+    supabase, // Add supabase to the context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

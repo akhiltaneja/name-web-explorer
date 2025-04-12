@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Github, Google } from "lucide-react";
+import { Github } from "lucide-react";
 import EmailVerificationDialog from "@/components/auth/EmailVerificationDialog";
 
 const signUpSchema = z.object({
@@ -143,7 +143,7 @@ const Auth = () => {
             ) : null}
             {!isSignUp ? (
               <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn("google")} disabled={isLoading}>
-                {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : <Google className="mr-2 h-4 w-4" />}
+                {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : <span className="mr-2">G</span>}
                 Google
               </Button>
             ) : null}
