@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Github } from "lucide-react";
 import EmailVerificationDialog from "@/components/auth/EmailVerificationDialog";
 
 const signUpSchema = z.object({
@@ -55,7 +55,7 @@ const Auth = () => {
     },
   });
 
-  const handleOAuthSignIn = async (provider: "github" | "google") => {
+  const handleOAuthSignIn = async (provider: "google") => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -85,7 +85,16 @@ const Auth = () => {
         password: values.password,
       });
       
-      if (error) throw error;
+      if (error) {
+        // Handle specific error cases
+        if (error.message.includes("rate limit")) {
+          throw new Error("Too many signup attempts. Please try again in a few minutes.");
+        } else if (error.message.includes("sending email")) {
+          throw new Error("Error sending verification email. Please contact support.");
+        } else {
+          throw error;
+        }
+      }
       
       // Update this section to show the dialog instead of just a toast
       setVerificationEmail(values.email);
@@ -136,12 +145,6 @@ const Auth = () => {
           </CardHeader>
           <CardContent className="grid gap-4">
             {!isSignUp ? (
-              <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn("github")} disabled={isLoading}>
-                {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : <Github className="mr-2 h-4 w-4" />}
-                Github
-              </Button>
-            ) : null}
-            {!isSignUp ? (
               <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn("google")} disabled={isLoading}>
                 {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : <span className="mr-2">G</span>}
                 Google
@@ -177,7 +180,7 @@ const Auth = () => {
                     <p className="text-sm text-red-500">{signUpForm.formState.errors.password.message}</p>
                   )}
                 </div>
-                <Button type="submit" disabled={isLoading}>
+                <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
                   {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : "Create Account"}
                 </Button>
               </form>
@@ -209,7 +212,7 @@ const Auth = () => {
               </form>
             )}
           </CardContent>
-          <CardFooter className="text-sm text-muted-foreground">
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-center text-sm text-muted-foreground">
             {isSignUp ? (
               <>
                 Already have an account?{" "}
@@ -220,7 +223,11 @@ const Auth = () => {
             ) : (
               <>
                 Don't have an account?{" "}
-                <Button variant="link" onClick={() => setIsSignUp(true)}>
+                <Button 
+                  variant="link" 
+                  onClick={() => setIsSignUp(true)}
+                  className="font-bold text-blue-600 hover:text-blue-800"
+                >
                   Create one
                 </Button>
               </>
