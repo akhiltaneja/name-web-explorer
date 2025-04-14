@@ -90,3 +90,8 @@
   width: fit-content !important;
   max-width: 90vw !important;
 }
+
+/* Tooltip styling */
+.radix-tooltip-content {
+  @apply bg-white text-gray-800 border border-gray-200 shadow-sm;
+}

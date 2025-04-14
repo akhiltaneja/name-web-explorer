@@ -28,11 +28,11 @@ const ResultsList = ({
             <div key={category}>
               <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center">
                 {category}
-                <span className="ml-2 text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+                <span className="ml-2 text-sm font-normal bg-blue-50 text-blue-700 py-0.5 px-2 rounded-full border border-blue-100">
                   {profiles.length}
                 </span>
               </h3>
-              <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+              <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
                 {profiles.map((profile, index) => (
                   <SocialResultCard key={`${category}-${index}`} profile={profile} />
                 ))}
@@ -41,7 +41,7 @@ const ResultsList = ({
           ))}
         </div>
       ) : (
-        <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+        <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
           {filteredResults.map((profile, index) => (
             <SocialResultCard key={index} profile={profile} />
           ))}

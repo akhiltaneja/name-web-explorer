@@ -74,26 +74,26 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
   };
 
   return (
-    <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow dark:bg-gray-800">
-      <CardContent className="p-2">
+    <Card className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow bg-white">
+      <CardContent className="p-3">
         <div className="flex justify-between items-start">
-          <div className="flex items-center space-x-2">
-            <Avatar className="h-10 w-10">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10 border border-gray-100">
               <AvatarImage src={getLogoUrl(profile.platform)} alt={profile.platform} />
-              <AvatarFallback>{profile.platform.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-blue-50 text-blue-700">{profile.platform.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{profile.platform}</h3>
+                <h3 className="font-semibold text-gray-800 text-sm">{profile.platform}</h3>
                 {profile.status && (
                   <Badge 
                     variant="outline" 
                     className={`ml-2 text-xs ${
                       profile.status === 'active' 
-                        ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200 dark:bg-green-900 dark:text-green-100 dark:border-green-800 dark:hover:bg-green-800' 
+                        ? 'bg-green-50 text-green-700 hover:bg-green-100 border-green-100' 
                         : profile.status === 'inactive' 
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'
-                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:border-yellow-800 dark:hover:bg-yellow-800'
+                          ? 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-100'
+                          : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border-yellow-100'
                     }`}
                   >
                     {profile.status}
@@ -102,7 +102,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                 {profile.verificationStatus === 'verified' && (
                   <Badge 
                     variant="outline" 
-                    className="ml-2 text-xs bg-green-100 text-green-800 hover:bg-green-200 border-green-200 dark:bg-green-900 dark:text-green-100 dark:border-green-800 dark:hover:bg-green-800"
+                    className="ml-2 text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-100"
                   >
                     verified
                   </Badge>
@@ -110,7 +110,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                 {profile.note && (
                   <Badge 
                     variant="outline" 
-                    className="ml-2 text-xs bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-200 dark:bg-purple-900 dark:text-purple-100 dark:border-purple-800 dark:hover:bg-purple-800"
+                    className="ml-2 text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-100"
                   >
                     {profile.note}
                   </Badge>
@@ -123,7 +123,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                           <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent>
+                      <TooltipContent className="bg-white text-gray-800 border border-gray-200">
                         <p className="text-xs max-w-xs">{profile.errorReason}</p>
                       </TooltipContent>
                     </Tooltip>
@@ -131,8 +131,8 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                 )}
               </div>
               {profile.category && (
-                <div className="flex items-center space-x-1">
-                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                <div className="flex items-center space-x-1 mt-0.5">
+                  <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-100">
                     {profile.category}
                   </Badge>
                 </div>
@@ -141,7 +141,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
                 href={profile.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all"
+                className="text-xs text-blue-600 hover:underline break-all mt-0.5 inline-block"
               >
                 {profile.url}
               </a>
@@ -151,7 +151,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
             <Button 
               size="sm" 
               variant="ghost" 
-              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700" 
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50" 
               onClick={handleCopy}
             >
               {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -159,7 +159,7 @@ const SocialResultCard = ({ profile }: SocialResultCardProps) => {
             <Button 
               size="sm" 
               variant="ghost"  
-              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700" 
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50" 
               asChild
             >
               <a href={profile.url} target="_blank" rel="noopener noreferrer">

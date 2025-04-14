@@ -19,10 +19,10 @@ const CategoryFilter = ({ categories, selectedCategory, setSelectedCategory }: C
           variant={selectedCategory === category.name ? "default" : "outline"}
           size="sm"
           onClick={() => setSelectedCategory(selectedCategory === category.name ? null : category.name)}
-          className={selectedCategory === category.name ? "bg-blue-600 hover:bg-blue-700" : "border-gray-300 hover:bg-gray-100 text-gray-700"}
+          className={selectedCategory === category.name ? "bg-blue-600 hover:bg-blue-700" : "border-gray-200 hover:bg-gray-50 text-gray-700"}
         >
           {category.name}
-          <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+          <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-blue-50 text-gray-700">
             {category.count}
           </span>
         </Button>

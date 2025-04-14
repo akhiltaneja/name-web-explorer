@@ -26,16 +26,16 @@ const AdditionalResults = ({
             <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
               <Globe className="h-5 w-5 text-blue-500" />
               Additional Web Results
-              <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
+              <span className="text-sm font-normal bg-blue-50 text-blue-700 py-0.5 px-2 rounded-full border border-blue-100">
                 {filteredAdditionalResults.length} found
               </span>
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-600 mt-1">
               Additional profiles found from across the web
             </p>
           </div>
 
-          <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+          <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
             {filteredAdditionalResults.map((profile, index) => (
               <SocialResultCard key={`additional-${index}`} profile={profile} />
             ))}
@@ -49,13 +49,13 @@ const AdditionalResults = ({
             <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
               <AlertCircle className="h-5 w-5 text-amber-500" />
               Unverified Results
-              <span className="text-sm font-normal bg-amber-100 text-amber-800 py-0.5 px-2 rounded-full border border-amber-200">
+              <span className="text-sm font-normal bg-amber-50 text-amber-700 py-0.5 px-2 rounded-full border border-amber-100">
                 {unverifiedResults.length} found
               </span>
             </h2>
           </div>
 
-          <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+          <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
             {unverifiedResults.map((profile, index) => (
               <SocialResultCard key={`unverified-${index}`} profile={profile} />
             ))}
