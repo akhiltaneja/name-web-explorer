@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { ShoppingCart, CreditCard, Check } from "lucide-react";
+import { ShoppingCart, CreditCard, Check, Zap } from "lucide-react";
 
 const plans: PlanOption[] = [
   {
@@ -26,19 +27,22 @@ const plans: PlanOption[] = [
     id: 'premium',
     name: 'Premium',
     description: 'For regular users needing more searches.',
-    price: 19,
-    limit: '500 monthly searches',
+    price: 9,
+    limit: '1000 credits (1 credit = 1 search)',
     features: [
-      'Unlimited social media search',
+      'Full social media search',
       'Enhanced profile details',
       'Priority support',
     ],
+    creditsAmount: 1000,
+    popular: true,
   },
   {
     id: 'unlimited',
     name: 'Unlimited',
     description: 'For power users with high search needs.',
-    price: 49,
+    price: 20,
+    originalPrice: 30,
     limit: 'Unlimited searches',
     features: [
       'Unlimited social media search',
@@ -74,25 +78,32 @@ const Pricing = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {plans.map((plan) => (
               <Card key={plan.id} className={`relative border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md flex flex-col ${
-                plan.id === 'premium' 
+                plan.popular 
                   ? 'border-purple-200 shadow-purple-100' 
                   : plan.id === 'unlimited' 
-                    ? 'border-purple-200 shadow-purple-100'
+                    ? 'border-blue-200 shadow-blue-100'
                     : ''
               }`}>
-                {plan.id === 'premium' && (
+                {plan.popular && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                     <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                      Popular Choice
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+                {plan.originalPrice && (
+                  <div className="absolute top-4 right-4">
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                      Save {Math.round((1 - plan.price/plan.originalPrice) * 100)}%
                     </span>
                   </div>
                 )}
                 <CardHeader>
                   <CardTitle className={`text-xl ${
-                    plan.id === 'premium' 
+                    plan.popular 
                       ? 'text-purple-600' 
                       : plan.id === 'unlimited' 
-                        ? 'text-purple-600'
+                        ? 'text-blue-600'
                         : 'text-gray-900'
                   }`}>
                     {plan.name}
@@ -101,7 +112,13 @@ const Pricing = () => {
                 </CardHeader>
                 <CardContent className="space-y-4 flex-grow">
                   <div className="space-y-1">
-                    <p className="text-3xl font-bold text-gray-900">${plan.price}<span className="text-sm font-normal text-gray-500">{plan.id !== 'free' ? '/month' : ''}</span></p>
+                    <div className="flex items-baseline">
+                      <p className="text-3xl font-bold text-gray-900">${plan.price}</p>
+                      {plan.originalPrice && (
+                        <p className="text-lg font-normal text-gray-500 line-through ml-2">${plan.originalPrice}</p>
+                      )}
+                      <span className="text-sm font-normal text-gray-500 ml-1">{plan.id !== 'free' ? '/month' : ''}</span>
+                    </div>
                     <p className="text-sm text-gray-500">{plan.limit}</p>
                   </div>
                   
@@ -112,7 +129,7 @@ const Pricing = () => {
                     <ul className="space-y-3">
                       {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-start">
-                          <div className="h-5 w-5 mr-2 text-green-500 shrink-0 mt-0.5">✓</div>
+                          <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
                           <span className="text-gray-700">{feature}</span>
                         </li>
                       ))}
@@ -136,11 +153,15 @@ const Pricing = () => {
                     </Button>
                   ) : (
                     <Button 
-                      className={`w-full bg-purple-600 hover:bg-purple-700 text-white`}
+                      className={`w-full ${
+                        plan.popular
+                          ? 'bg-purple-600 hover:bg-purple-700' 
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white`}
                       onClick={() => handleSelectPlan(plan)}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
-                      Confirm & Pay
+                      Select Plan
                     </Button>
                   )}
                 </CardFooter>

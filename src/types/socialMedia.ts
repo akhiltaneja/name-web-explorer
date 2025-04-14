@@ -1,4 +1,3 @@
-
 export type SocialMediaProfile = {
   platform: string;
   url: string;
@@ -9,7 +8,7 @@ export type SocialMediaProfile = {
   status?: 'active' | 'inactive';
   errorReason?: string;
   verificationStatus?: 'verified' | 'error';
-  note?: string;  // Adding the missing note property
+  note?: string;
 };
 
 export type SocialMediaCategory = {
@@ -22,8 +21,11 @@ export type PlanOption = {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   limit: string;
   features: string[];
+  creditsAmount?: number;
+  popular?: boolean;
 };
 
 export type SearchHistory = {

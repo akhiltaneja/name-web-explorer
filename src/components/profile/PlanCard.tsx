@@ -3,6 +3,7 @@ import { PlanOption } from "@/types/socialMedia";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Check } from "lucide-react";
 
 interface PlanCardProps {
   plan: PlanOption;
@@ -13,25 +14,32 @@ interface PlanCardProps {
 const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
   return (
     <Card className={`relative border-gray-200 shadow-sm ${
-      plan.id === 'premium' 
-        ? 'border-blue-200 shadow-blue-100' 
+      plan.popular 
+        ? 'border-purple-200 shadow-purple-100' 
         : plan.id === 'unlimited' 
-          ? 'border-purple-200 shadow-purple-100'
+          ? 'border-blue-200 shadow-blue-100'
           : ''
     }`}>
-      {plan.id === 'premium' && (
+      {plan.popular && (
         <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-            Popular Choice
+          <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+            Most Popular
+          </span>
+        </div>
+      )}
+      {plan.originalPrice && (
+        <div className="absolute top-4 right-4">
+          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+            Save {Math.round((1 - plan.price/plan.originalPrice) * 100)}%
           </span>
         </div>
       )}
       <CardHeader>
         <CardTitle className={`text-xl ${
-          plan.id === 'premium' 
-            ? 'text-blue-600' 
+          plan.popular 
+            ? 'text-purple-600' 
             : plan.id === 'unlimited' 
-              ? 'text-purple-600'
+              ? 'text-blue-600'
               : 'text-gray-900'
         }`}>
           {plan.name}
@@ -40,7 +48,13 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1">
-          <p className="text-3xl font-bold text-gray-900">${plan.price}<span className="text-sm font-normal text-gray-500">{plan.id !== 'free' ? '/month' : ''}</span></p>
+          <div className="flex items-baseline">
+            <p className="text-3xl font-bold text-gray-900">${plan.price}</p>
+            {plan.originalPrice && (
+              <p className="text-lg font-normal text-gray-500 line-through ml-2">${plan.originalPrice}</p>
+            )}
+            <span className="text-sm font-normal text-gray-500 ml-1">{plan.id !== 'free' ? '/month' : ''}</span>
+          </div>
           <p className="text-sm text-gray-500">{plan.limit}</p>
         </div>
         
@@ -51,7 +65,7 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
           <ul className="space-y-3">
             {plan.features.map((feature, i) => (
               <li key={i} className="flex items-start">
-                <div className="h-5 w-5 mr-2 text-green-500 shrink-0 mt-0.5">✓</div>
+                <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
                 <span className="text-gray-700">{feature}</span>
               </li>
             ))}
@@ -76,9 +90,9 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
         ) : (
           <Button 
             className={`w-full ${
-              plan.id === 'premium' 
-                ? 'bg-blue-600 hover:bg-blue-700' 
-                : 'bg-purple-600 hover:bg-purple-700'
+              plan.popular 
+                ? 'bg-purple-600 hover:bg-purple-700' 
+                : 'bg-blue-600 hover:bg-blue-700'
             }`}
             onClick={() => onSelectPlan(plan.id)}
           >
