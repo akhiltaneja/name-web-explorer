@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Tag, Zap } from "lucide-react";
+import { Tag, Zap } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { PlanOption } from "@/types/socialMedia";
@@ -10,6 +10,8 @@ import PaymentMethods from "@/components/checkout/PaymentMethods";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import { CartProvider, useCart } from "@/context/CartContext";
 import FlashDealTimer from "@/components/checkout/FlashDealTimer";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 declare global {
   interface Window {
@@ -72,7 +74,7 @@ const CartContent = () => {
     }
 
     setSelectedPlan(plan);
-  }, [planId]);
+  }, [planId, navigate, setSelectedPlan]);
 
   const handlePlanSwitch = (planId: string) => {
     const plan = plans.find(p => p.id === planId);
@@ -88,79 +90,92 @@ const CartContent = () => {
 
   if (!selectedPlan) {
     return (
-      <div className="text-center">
-        <h1 className="text-2xl font-bold">Loading...</h1>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-4xl">
-      <div className="text-center mb-3">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Checkout</h1>
-        <p className="text-sm text-gray-600">Complete your purchase to unlock more searches</p>
+    <div className="container mx-auto max-w-5xl">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Complete Your Purchase</h1>
+        <p className="text-sm text-gray-600 mt-1">Select your plan and payment method</p>
       </div>
       
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <Card className="mb-5">
-            <CardHeader className="pb-2">
+      <div className="grid md:grid-cols-12 gap-8">
+        <div className="md:col-span-7">
+          <Card className="mb-6 shadow-sm">
+            <CardHeader className="border-b pb-3">
               <CardTitle className="text-lg">Select Plan</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="pt-4">
+              <RadioGroup 
+                value={selectedPlan.id} 
+                onValueChange={handlePlanSwitch}
+                className="space-y-4"
+              >
                 {plans.filter(p => p.id !== 'free').map((plan) => (
                   <div 
                     key={plan.id} 
-                    className={`relative border rounded-lg p-3 cursor-pointer transition-all ${
+                    className={`relative border rounded-lg p-4 transition-all ${
                       selectedPlan.id === plan.id 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-200 hover:border-blue-300'
                     }`}
-                    onClick={() => handlePlanSwitch(plan.id)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{plan.name}</h3>
-                        <p className="text-sm text-gray-500">{plan.limit}</p>
-                      </div>
-                      <div className="flex items-baseline">
-                        <span className="text-xl font-bold">${plan.price}</span>
-                        {plan.originalPrice && (
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            ${plan.originalPrice}
-                          </span>
+                    <div className="flex items-start">
+                      <RadioGroupItem 
+                        value={plan.id} 
+                        id={`plan-${plan.id}`} 
+                        className="mt-1 mr-3"
+                      />
+                      <div className="flex-grow">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <Label 
+                              htmlFor={`plan-${plan.id}`} 
+                              className="font-medium text-gray-900 text-base cursor-pointer"
+                            >
+                              {plan.name}
+                            </Label>
+                            <p className="text-sm text-gray-500 mt-1">{plan.limit}</p>
+                          </div>
+                          <div className="flex items-baseline">
+                            <span className="text-xl font-bold">${plan.price}</span>
+                            {plan.originalPrice && (
+                              <span className="text-sm text-gray-500 line-through ml-2">
+                                ${plan.originalPrice}
+                              </span>
+                            )}
+                            <span className="text-sm text-gray-500 ml-1">/month</span>
+                          </div>
+                        </div>
+                        
+                        {plan.id === 'unlimited' && (
+                          <div className="mt-2">
+                            <FlashDealTimer initialMinutes={10} />
+                          </div>
                         )}
-                        <span className="text-sm text-gray-500 ml-1">/month</span>
                       </div>
                     </div>
-                    {selectedPlan.id === plan.id && (
-                      <div className="absolute top-3 right-3">
-                        <Check className="h-5 w-5 text-blue-500" />
-                      </div>
-                    )}
-                    {plan.id === 'unlimited' && (
-                      <div className="mt-2">
-                        <FlashDealTimer initialMinutes={10} />
-                      </div>
-                    )}
                   </div>
                 ))}
-              </div>
+              </RadioGroup>
             </CardContent>
           </Card>
 
-          <Card className="mb-5">
-            <CardHeader className="pb-2">
+          <Card className="shadow-sm">
+            <CardHeader className="border-b pb-3">
               <CardTitle className="text-lg">Payment Method</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               <PaymentMethods loading={loading} setLoading={setLoading} />
             </CardContent>
           </Card>
         </div>
         
-        <div className="md:col-span-1">
+        <div className="md:col-span-5">
           <OrderSummary />
         </div>
       </div>
@@ -172,7 +187,7 @@ const Cart = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      <main className="flex-grow py-3 px-4">
+      <main className="flex-grow py-8 px-4">
         <CartProvider>
           <CartContent />
         </CartProvider>
