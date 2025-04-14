@@ -288,7 +288,6 @@ const Cart = () => {
             color: "black",
             label: "pay"
           },
-          // Note: We're not using FUNDING property anymore since it's not needed
           createOrder: createOrderHandler,
           onApprove: onApproveHandler,
           onCancel: () => {
@@ -351,11 +350,11 @@ const Cart = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       
-      <main className="flex-grow py-16 px-4">
+      <main className="flex-grow py-6 px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Checkout</h1>
-            <p className="text-lg text-gray-600">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
+            <p className="text-base text-gray-600">
               Complete your purchase to unlock more searches
             </p>
           </div>
@@ -416,10 +415,10 @@ const Cart = () => {
                 <CardContent>
                   <Tabs defaultValue="paypal" onValueChange={(value) => setPaymentMethod(value as "paypal" | "card")}>
                     <TabsList className="grid w-full grid-cols-2 mb-6">
-                      <TabsTrigger value="paypal" className="h-14">
+                      <TabsTrigger value="paypal" className="flex items-center justify-center h-14">
                         <PaypalLogo />
                       </TabsTrigger>
-                      <TabsTrigger value="card" className="h-14">
+                      <TabsTrigger value="card" className="flex items-center justify-center h-14">
                         <CreditCard className="h-5 w-5 mr-2" />
                         <span>Credit/Debit Card</span>
                       </TabsTrigger>
@@ -532,4 +531,3 @@ const Cart = () => {
 };
 
 export default Cart;
-

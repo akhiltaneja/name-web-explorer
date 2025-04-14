@@ -17,6 +17,7 @@ const Cart = lazy(() => import("@/pages/Cart"));
 const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const Blog = lazy(() => import("@/pages/Blog"));
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +76,8 @@ function App() {
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/blog" element={<Blog.Index />} />
+            <Route path="/blog/:slug" element={<Blog.Post />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

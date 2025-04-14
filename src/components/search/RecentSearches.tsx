@@ -22,6 +22,9 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
 
   if (!recentSearches?.length) return null;
 
+  // Limit to only 4 recent searches
+  const limitedSearches = recentSearches.slice(0, 4);
+
   const handleSearch = (search: string) => {
     if (onSearch) {
       onSearch(search);
@@ -55,7 +58,7 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
       </div>
       
       <div className="flex flex-wrap gap-2">
-        {recentSearches.map((search, index) => (
+        {limitedSearches.map((search, index) => (
           <div 
             key={`${search}-${index}`}
             className="flex items-center bg-purple-50 hover:bg-purple-100 rounded-full px-3 py-1.5 text-sm gap-1 border border-purple-200 transition-colors duration-200 shadow-sm"
