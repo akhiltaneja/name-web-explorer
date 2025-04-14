@@ -1,181 +1,28 @@
 
-import { useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import EmailVerificationDialog from "@/components/auth/EmailVerificationDialog";
 import Confetti from '@/components/auth/Confetti';
-
-const signUpSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-});
-
-const signInSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-});
+import SignInForm from "@/components/auth/SignInForm";
+import SignUpForm from "@/components/auth/SignUpForm";
+import { useAuthForms } from "@/hooks/useAuthForms";
 
 const Auth = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const { supabase } = useAuth();
-  const navigate = useNavigate();
-
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
-  const [verificationError, setVerificationError] = useState<"sending_failed" | "rate_limit" | "user_exists" | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
-
-  const signUpForm = useForm<z.infer<typeof signUpSchema>>({
-    resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  const signInForm = useForm<z.infer<typeof signInSchema>>({
-    resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  const handleOAuthSignIn = async (provider: "google") => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: `${window.location.origin}/profile`,
-        },
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      toast({
-        title: "Error signing in",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
-    setIsLoading(true);
-    
-    try {
-      // Get the site URL (handles both localhost and deployed URLs)
-      const siteUrl = window.location.origin;
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          // Use site URL to ensure proper redirection after email confirmation
-          emailRedirectTo: `${siteUrl}/auth`,
-        }
-      });
-      
-      if (error) {
-        if (error.message.includes("rate limit")) {
-          setVerificationError("rate_limit");
-          setVerificationEmail(values.email);
-          setShowEmailVerification(true);
-          return;
-        } else if (error.message.includes("sending email") || error.message.includes("UNDEFINED_VALUE")) {
-          setVerificationError("sending_failed");
-          setVerificationEmail(values.email);
-          setShowEmailVerification(true);
-          return;
-        } else if (error.message.includes("User already registered")) {
-          // Handle existing user better
-          setVerificationError("user_exists");
-          setVerificationEmail(values.email);
-          setShowEmailVerification(true);
-          
-          // Pre-fill the sign in form
-          setIsSignUp(false);
-          signInForm.setValue("email", values.email);
-          return;
-        } else {
-          throw error;
-        }
-      }
-      
-      setVerificationError(null);
-      setVerificationEmail(values.email);
-      setShowEmailVerification(true);
-      setShowConfetti(true);
-      
-      signUpForm.reset();
-    } catch (error: any) {
-      toast({
-        title: "Error signing up",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignIn = async (values: z.infer<typeof signInSchema>) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-      
-      if (error) {
-        if (error.message.includes("Invalid login credentials") || 
-            error.message.includes("Email not confirmed") ||
-            error.message.includes("user not found")) {
-          // If user doesn't exist, switch to signup form with email prefilled
-          setIsSignUp(true);
-          signUpForm.setValue("email", values.email);
-          signUpForm.setValue("password", values.password);
-          
-          toast({
-            title: "Account not found",
-            description: "We've switched to signup mode for you",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        signInForm.reset();
-        navigate("/profile");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Sign in failed",
-        description: error.message || "Failed to sign in",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    isSignUp,
+    setIsSignUp,
+    isLoading,
+    showEmailVerification,
+    setShowEmailVerification,
+    verificationEmail,
+    verificationError,
+    showConfetti,
+    signUpForm,
+    signInForm,
+    handleOAuthSignIn,
+    handleSignUp,
+    handleSignIn,
+  } = useAuthForms();
 
   return (
     <>
@@ -184,78 +31,30 @@ const Auth = () => {
         
         <Card className="w-full max-w-md p-4">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">{isSignUp ? "Create an account" : "Sign in"}</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {isSignUp ? "Create an account" : "Sign in"}
+            </CardTitle>
             <CardDescription className="text-center">
-              {isSignUp ? "Enter your email and password to create an account" : "Enter your email and password to sign in"}
+              {isSignUp 
+                ? "Enter your email and password to create an account" 
+                : "Enter your email and password to sign in"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {!isSignUp ? (
-              <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn("google")} disabled={isLoading}>
-                {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : <span className="mr-2">G</span>}
-                Google
-              </Button>
-            ) : null}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-              </div>
-            </div>
             {isSignUp ? (
-              <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Enter your email" {...signUpForm.register("email")} disabled={isLoading} />
-                  {signUpForm.formState.errors.email && (
-                    <p className="text-sm text-red-500">{signUpForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    {...signUpForm.register("password")}
-                    disabled={isLoading}
-                  />
-                  {signUpForm.formState.errors.password && (
-                    <p className="text-sm text-red-500">{signUpForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-                <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-                  {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : "Create Account"}
-                </Button>
-              </form>
+              <SignUpForm 
+                form={signUpForm}
+                onSubmit={handleSignUp}
+                isLoading={isLoading}
+              />
             ) : (
-              <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Enter your email" {...signInForm.register("email")} disabled={isLoading} />
-                  {signInForm.formState.errors.email && (
-                    <p className="text-sm text-red-500">{signInForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    {...signInForm.register("password")}
-                    disabled={isLoading}
-                  />
-                  {signInForm.formState.errors.password && (
-                    <p className="text-sm text-red-500">{signInForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> : "Sign In"}
-                </Button>
-              </form>
+              <SignInForm
+                form={signInForm}
+                onSubmit={handleSignIn}
+                isLoading={isLoading}
+                onOAuthSignIn={handleOAuthSignIn}
+              />
             )}
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row items-center justify-center text-sm text-muted-foreground">
