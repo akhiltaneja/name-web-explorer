@@ -6,13 +6,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, CreditCard, Check, PaypalIcon, Lock, Tag, Zap } from "lucide-react";
+import { ArrowLeft, CreditCard, Check, Lock, Tag, Zap } from "lucide-react";
 import { PlanOption } from "@/types/socialMedia";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FlashDealTimer from "@/components/checkout/FlashDealTimer";
 import DiscountCode from "@/components/checkout/DiscountCode";
+import { Separator } from "@/components/ui/separator";
 
 // Add PayPal types to avoid TypeScript errors
 declare global {
@@ -287,7 +288,7 @@ const Cart = () => {
             color: "black",
             label: "pay"
           },
-          fundingSource: window.paypal.FUNDING.CARD,
+          // Note: We're not using FUNDING property anymore since it's not needed
           createOrder: createOrderHandler,
           onApprove: onApproveHandler,
           onCancel: () => {
@@ -531,3 +532,4 @@ const Cart = () => {
 };
 
 export default Cart;
+
