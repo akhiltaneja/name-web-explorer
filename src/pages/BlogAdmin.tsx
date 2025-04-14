@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -30,7 +29,6 @@ import {
   Layers
 } from "lucide-react";
 
-// Fake blog data - would be fetched from API in real app
 const mockBlogPosts = [
   {
     id: 1,
@@ -82,7 +80,6 @@ const mockBlogPosts = [
   },
 ];
 
-// Mock categories and tags for the editor
 const categories = ["OSINT", "HR", "Tools", "Privacy", "Marketing", "Security", "Education"];
 const popularTags = ["Digital Footprint", "Privacy", "Social Media", "OSINT", "Hiring", "Recruitment", "Online Security", "Digital Identity"];
 
@@ -96,7 +93,6 @@ const BlogAdmin = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<any>(null);
   
-  // Filter posts based on search term
   const filteredPosts = blogPosts.filter(post => 
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,7 +107,7 @@ const BlogAdmin = () => {
       excerpt: "Enter a brief summary of your post here.",
       content: "<p>Start writing your blog post content here...</p>",
       status: "draft",
-      author: profile?.full_name || user?.email || "Anonymous",
+      author: profile?.email || user?.email || "Anonymous",
       date: new Date().toLocaleDateString('en-US', {
         year: 'numeric', 
         month: 'long', 
@@ -161,7 +157,6 @@ const BlogAdmin = () => {
   const handleSavePost = () => {
     if (!currentPost) return;
     
-    // Update the posts list with the edited post
     setBlogPosts(blogPosts.map(post => 
       post.id === currentPost.id ? currentPost : post
     ));
@@ -205,7 +200,6 @@ const BlogAdmin = () => {
     );
   }
   
-  // Check if user has admin privileges
   const isAdmin = profile?.role === "admin";
   
   if (!isAdmin) {

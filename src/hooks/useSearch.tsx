@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -61,11 +60,9 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       
       if (searchQuery) {
         setName(searchQuery);
-        // Don't auto-search if limit reached
         if (!hasReachedSearchLimit() && checksRemaining > 0) {
           handleSearch(searchQuery);
         } else {
-          // Just show the modal if we're at limit
           setShowLimitModal(true);
         }
       }
@@ -78,10 +75,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   }, [searchParams, location, checksRemaining, user]);
 
   const handleSearch = async (searchQuery = name) => {
-    // Convert to string in case a different type is passed
     const queryString = String(searchQuery);
     
-    // Validate input
     if (!queryString?.trim()) {
       toast({
         title: "Please enter a name",
@@ -91,7 +86,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // Check if search limit is reached - strict enforcement
     if (hasReachedSearchLimit() || searchLimitReached || checksRemaining <= 0) {
       setShowLimitModal(true);
       setSearchLimitReached(true);
@@ -109,14 +103,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
-    // Try to increment search count - if it returns false, we've hit the limit
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
-      // The increment function already shows the appropriate toast
       return;
     }
 
-    // If we get here, we can start the search
     setIsSearching(true);
     setSearchProgress(0);
     const startTime = performance.now();
@@ -124,10 +115,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     const nameParts = queryString.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
     
-    // Slower progress animation that completes only once
     const progressInterval = setInterval(() => {
       setSearchProgress(prev => {
-        // Slower increment with easing
         const increment = Math.max(5 - Math.floor(prev / 10), 1) * 0.5;
         const newProgress = prev + increment;
         return newProgress < 95 ? newProgress : prev;
@@ -136,7 +125,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     
     setTimeout(async () => {
       try {
-        // Double check limits before processing results
         if (hasReachedSearchLimit() || searchLimitReached) {
           clearInterval(progressInterval);
           setIsSearching(false);
@@ -147,67 +135,90 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         let profiles = getSocialMediaProfiles(username, queryString);
         let additionalProfiles = getAdditionalResults(username, queryString);
         
-        // Add the new links requested by the user
-        const newProfiles = [
+        const newProfiles: SocialMediaProfile[] = [
           {
             platform: "Twitch",
             url: `https://www.twitch.tv/${username}`,
+            username: username,
+            icon: "twitch",
+            color: "#9146FF",
             category: "Gaming",
             status: "active"
           },
           {
             platform: "SoundCloud",
             url: `https://soundcloud.com/${username}`,
+            username: username,
+            icon: "soundcloud",
+            color: "#FF5500",
             category: "Music",
             status: "active"
           },
           {
             platform: "GitHub",
             url: `https://github.com/${username}`,
+            username: username,
+            icon: "github",
+            color: "#181717",
             category: "Professional",
             status: "active"
           },
           {
             platform: "VSCO",
             url: `https://vsco.co/${username}`,
+            username: username,
+            icon: "vsco",
+            color: "#000000",
             category: "Art",
             status: "active"
           },
           {
             platform: "GitHub Community",
             url: `https://github.community/u/${username}/summary`,
+            username: username,
+            icon: "github",
+            color: "#181717",
             category: "Online Community",
             status: "active"
           },
           {
             platform: "Spotify",
             url: `https://open.spotify.com/user/${username}`,
+            username: username,
+            icon: "spotify",
+            color: "#1DB954",
             category: "Music",
             status: "active"
           },
           {
             platform: "Patreon",
             url: `https://www.patreon.com/${username}`,
+            username: username,
+            icon: "patreon",
+            color: "#F96854",
             category: "Online Community",
             status: "active"
           },
-          // Additional links from the user's CSV data
           {
             platform: "Gravatar",
             url: `https://www.gravatar.com/avatar/undefined?s=1024`,
+            username: username,
+            icon: "gravatar",
+            color: "#1E8CBE",
             category: "Online Community",
             status: "active"
           },
           {
             platform: "Viddler",
             url: `https://www.viddler.com/channel/${username}/`,
+            username: username,
+            icon: "viddler",
+            color: "#2C2C2C",
             category: "Video",
             status: "active"
-          },
-          // ... adding more profiles would be done here
+          }
         ];
         
-        // Function to check for duplicate domains to avoid duplicates
         const isDuplicateDomain = (url: string, profiles: SocialMediaProfile[]): boolean => {
           const domain = new URL(url).hostname;
           return profiles.some(profile => {
@@ -220,20 +231,16 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           });
         };
         
-        // Filter out duplicates from newProfiles
         const filteredNewProfiles = newProfiles.filter(
           profile => !isDuplicateDomain(profile.url, [...profiles, ...additionalProfiles])
         );
         
-        // Add the filtered new profiles to the existing ones
         profiles = [...profiles, ...filteredNewProfiles];
         
-        // Check each profile URL and filter inactive ones
         const activeProfiles = await Promise.all(
           profiles.map(async profile => {
             const statusCheck = await checkUrlStatus(profile.url);
             
-            // For Threads profiles specifically, we need to handle potential URL updates
             if (statusCheck.isActive && profile.platform === "Threads" && profile.url.includes("threads.net")) {
               return {
                 ...profile,
@@ -254,7 +261,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         const domainResults = await checkDomainAvailability(username);
         setAvailableDomains(domainResults);
         
-        // Simulate the completion of the search
         clearInterval(progressInterval);
         setSearchProgress(100);
         
@@ -262,19 +268,15 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         const timeElapsed = Math.round(endTime - startTime);
         setSearchTime(timeElapsed);
         
-        // Final check to make sure user hasn't bypassed limit
         if (hasReachedSearchLimit() || searchLimitReached) {
           setIsSearching(false);
           setShowLimitModal(true);
           return;
         }
         
-        // Skip the separate verification step and do everything in one go
         try {
-          // Use a single step for verification instead of showing multiple progress bars
           const verifiedProfiles = await deepVerifyProfiles(profiles);
           
-          // Separate verified and unverified profiles
           const verified = verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
           const unverified = verifiedProfiles.filter(profile => profile.verificationStatus === 'error');
           
@@ -285,7 +287,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           setProfilesByCategory(updatedCategorizedProfiles);
           setCategories(getCategories(verified));
           
-          // Update URL with the search query
           if (!location.pathname.includes('/search/')) {
             navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
           }
@@ -294,7 +295,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           
-          // Save search history for logged in users
           if (user) {
             saveSearchHistory(queryString, verified.length)
               .then(success => {
@@ -303,15 +303,10 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           }
           
           setIsSearching(false);
-          
-          // Don't show any toast notifications for search completion
         } catch (error) {
           console.error("Verification error:", error);
           setIsSearching(false);
-          
-          // No toast notification for errors
         }
-        
       } catch (error) {
         console.error("Search error:", error);
         clearInterval(progressInterval);
@@ -324,7 +319,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           variant: "destructive",
         });
       }
-    }, 2500); // Slightly longer delay for a smoother experience
+    }, 2500);
   };
 
   return {
