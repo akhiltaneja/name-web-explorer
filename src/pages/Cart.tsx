@@ -67,10 +67,9 @@ const Cart = () => {
   const [selectedPlan, setSelectedPlan] = useState<PlanOption | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"paypal" | "card">("paypal");
   const [loading, setLoading] = useState(false);
-  const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   useEffect(() => {
     if (!planId) {
@@ -87,24 +86,43 @@ const Cart = () => {
     setSelectedPlan(plan);
 
     // Load PayPal SDK script
-    if (!document.querySelector('script[src*="paypal"]')) {
-      const script = document.createElement('script');
-      script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD";
-      script.addEventListener('load', () => {
+    const loadPayPalScript = () => {
+      if (document.getElementById('paypal-script')) {
         renderPayPalButtons();
-      });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'paypal-script';
+      script.src = `https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&buyer-country=US&currency=USD&components=buttons&enable-funding=card&disable-funding=venmo,paylater`;
+      script.setAttribute('data-sdk-integration-source', 'developer-studio');
+      
+      script.onload = () => {
+        console.log("PayPal script loaded successfully");
+        renderPayPalButtons();
+      };
+
+      script.onerror = (error) => {
+        console.error("Failed to load PayPal script:", error);
+        toast({
+          title: "Payment Error",
+          description: "Failed to load payment provider. Please try again later.",
+          variant: "destructive",
+        });
+      };
+
       document.body.appendChild(script);
-    } else if (window.paypal && !paypalButtonsRendered) {
-      renderPayPalButtons();
+    };
+
+    if (selectedPlan) {
+      loadPayPalScript();
     }
-  }, [planId, paypalButtonsRendered]);
+  }, [planId, selectedPlan]);
 
   const renderPayPalButtons = () => {
-    if (!selectedPlan || !window.paypal || !document.getElementById('paypal-button-container') || paypalButtonsRendered) {
+    if (!selectedPlan || !window.paypal || !document.getElementById('paypal-button-container')) {
       return;
     }
-
-    setPaypalButtonsRendered(true);
     
     // Clear previous buttons if any
     const container = document.getElementById('paypal-button-container');
@@ -112,110 +130,126 @@ const Cart = () => {
       container.innerHTML = '';
     }
 
-    window.paypal.Buttons({
-      style: {
-        shape: "pill",
-        layout: "vertical",
-        color: "blue",
-        label: "checkout",
-      },
-      
-      createOrder: async () => {
-        try {
-          setLoading(true);
-          
-          if (!user) {
+    try {
+      window.paypal.Buttons({
+        style: {
+          shape: "pill",
+          layout: "vertical",
+          color: "blue",
+          label: "checkout",
+        },
+        
+        createOrder: async () => {
+          try {
+            setLoading(true);
+            
+            if (!user) {
+              toast({
+                title: "Authentication required",
+                description: "You need to be logged in to make a purchase.",
+                variant: "destructive",
+              });
+              navigate('/auth');
+              return "";
+            }
+            
+            // Call our Supabase Edge Function to create the order
+            const response = await supabase.functions.invoke('create-paypal-order', {
+              body: {
+                planId: selectedPlan.id,
+                planName: selectedPlan.name,
+                amount: selectedPlan.price
+              }
+            });
+            
+            console.log("Create order response:", response);
+            
+            if (!response.data || !response.data.id) {
+              throw new Error('Failed to create PayPal order');
+            }
+            
+            return response.data.id;
+          } catch (error) {
+            console.error('Error creating PayPal order:', error);
             toast({
-              title: "Authentication required",
-              description: "You need to be logged in to make a purchase.",
+              title: "Payment initialization failed",
+              description: "Could not start the payment process. Please try again.",
               variant: "destructive",
             });
-            navigate('/auth');
             return "";
+          } finally {
+            setLoading(false);
           }
-          
-          // For testing purposes, we're using a mock API response
-          // In production, this would call your actual backend
-          const response = await supabase.functions.invoke('create-paypal-order', {
-            body: {
-              planId: selectedPlan.id,
-              planName: selectedPlan.name,
-              amount: selectedPlan.price
+        },
+        
+        onApprove: async (data: any) => {
+          try {
+            setLoading(true);
+            
+            const { orderID } = data;
+            console.log("Order approved:", orderID);
+            
+            // Call our Supabase Edge Function to capture the payment
+            const response = await supabase.functions.invoke('capture-paypal-order', {
+              body: {
+                orderId: orderID,
+                userId: user?.id,
+                planId: selectedPlan.id
+              }
+            });
+            
+            console.log("Capture response:", response);
+            
+            if (!response.data || !response.data.success) {
+              throw new Error('Failed to capture PayPal payment');
             }
-          });
-          
-          if (!response.data || !response.data.id) {
-            throw new Error('Failed to create PayPal order');
+            
+            // Payment successful
+            toast({
+              title: "Payment successful!",
+              description: `Your ${selectedPlan.name} plan is now active.`,
+            });
+            
+            await refreshProfile();
+            navigate('/profile');
+          } catch (error) {
+            console.error('Error capturing PayPal payment:', error);
+            toast({
+              title: "Payment failed",
+              description: "There was an issue processing your payment. Please try again.",
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
           }
-          
-          return response.data.id;
-        } catch (error) {
-          console.error('Error creating PayPal order:', error);
+        },
+        
+        onCancel: () => {
           toast({
-            title: "Payment initialization failed",
-            description: "Could not start the payment process. Please try again.",
+            title: "Payment cancelled",
+            description: "You've cancelled the payment process. No payment was made.",
+          });
+        },
+        
+        onError: (err: any) => {
+          console.error('PayPal error:', err);
+          toast({
+            title: "Payment error",
+            description: "An error occurred during the payment process. Please try again.",
             variant: "destructive",
           });
-          return "";
-        } finally {
-          setLoading(false);
         }
-      },
+      }).render('#paypal-button-container');
       
-      onApprove: async (data: any) => {
-        try {
-          setLoading(true);
-          
-          const { orderID } = data;
-          
-          const response = await supabase.functions.invoke('capture-paypal-order', {
-            body: {
-              orderId: orderID,
-              userId: user?.id,
-              planId: selectedPlan.id
-            }
-          });
-          
-          if (!response.data || !response.data.success) {
-            throw new Error('Failed to capture PayPal payment');
-          }
-          
-          // Payment successful
-          toast({
-            title: "Payment successful!",
-            description: `Your ${selectedPlan.name} plan is now active.`,
-          });
-          
-          await refreshProfile();
-          navigate('/profile');
-        } catch (error) {
-          console.error('Error capturing PayPal payment:', error);
-          toast({
-            title: "Payment failed",
-            description: "There was an issue processing your payment. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setLoading(false);
-        }
-      },
-      
-      onCancel: () => {
-        toast({
-          title: "Payment cancelled",
-          description: "You've cancelled the payment process. No payment was made.",
-        });
-      },
-      
-      onError: (err: any) => {
-        console.error('PayPal error:', err);
-        toast({
-          title: "Payment error",
-          description: "An error occurred during the payment process. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }).render('#paypal-button-container');
+      console.log("PayPal buttons rendered");
+    } catch (error) {
+      console.error("Error rendering PayPal buttons:", error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to initialize payment options. Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!selectedPlan) {
@@ -279,10 +313,10 @@ const Cart = () => {
                   {paymentMethod === "paypal" && (
                     <div className="mb-4">
                       <div id="paypal-button-container" className="w-full"></div>
-                      {!paypalButtonsRendered && (
+                      {loading && (
                         <div className="text-center py-4">
                           <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-                          <p className="mt-2 text-gray-600">Loading payment options...</p>
+                          <p className="mt-2 text-gray-600">Processing payment...</p>
                         </div>
                       )}
                     </div>
