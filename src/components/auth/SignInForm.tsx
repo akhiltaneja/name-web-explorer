@@ -3,13 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UseFormReturn } from "react-hook-form";
+import { SignInFormValues } from "@/hooks/useAuthForms";
 
 interface SignInFormProps {
-  form: UseFormReturn<{
-    email: string;
-    password: string;
-  }>;
-  onSubmit: (values: { email: string; password: string; }) => void;
+  form: UseFormReturn<SignInFormValues>;
+  onSubmit: (values: SignInFormValues) => void;
   isLoading: boolean;
   onOAuthSignIn: (provider: "google") => void;
 }
