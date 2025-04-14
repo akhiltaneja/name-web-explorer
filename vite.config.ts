@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Add this to help with directory imports
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
   },
   build: {
     // Improve chunking strategy
@@ -27,7 +29,7 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: [
-            '@/components/ui',
+            '@/components/ui/index'
           ]
         }
       }
