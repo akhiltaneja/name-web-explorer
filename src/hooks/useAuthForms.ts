@@ -17,6 +17,9 @@ const signInSchema = z.object({
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
 });
 
+export type SignUpFormValues = z.infer<typeof signUpSchema>;
+export type SignInFormValues = z.infer<typeof signInSchema>;
+
 export const useAuthForms = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +32,7 @@ export const useAuthForms = () => {
   const [verificationError, setVerificationError] = useState<"sending_failed" | "rate_limit" | "user_exists" | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const signUpForm = useForm<z.infer<typeof signUpSchema>>({
+  const signUpForm = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       email: "",
@@ -37,7 +40,7 @@ export const useAuthForms = () => {
     },
   });
 
-  const signInForm = useForm<z.infer<typeof signInSchema>>({
+  const signInForm = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
       email: "",
@@ -66,7 +69,7 @@ export const useAuthForms = () => {
     }
   };
 
-  const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
+  const handleSignUp = async (values: SignUpFormValues) => {
     setIsLoading(true);
     try {
       const siteUrl = window.location.origin;
@@ -117,7 +120,7 @@ export const useAuthForms = () => {
     }
   };
 
-  const handleSignIn = async (values: z.infer<typeof signInSchema>) => {
+  const handleSignIn = async (values: SignInFormValues) => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({

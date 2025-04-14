@@ -6,6 +6,7 @@ import Confetti from '@/components/auth/Confetti';
 import SignInForm from "@/components/auth/SignInForm";
 import SignUpForm from "@/components/auth/SignUpForm";
 import { useAuthForms } from "@/hooks/useAuthForms";
+import { z } from "zod";
 
 const Auth = () => {
   const {
@@ -45,13 +46,13 @@ const Auth = () => {
             {isSignUp ? (
               <SignUpForm 
                 form={signUpForm}
-                onSubmit={handleSignUp}
+                onSubmit={(values) => handleSignUp(values as z.infer<typeof signUpForm["_formValues"]>)}
                 isLoading={isLoading}
               />
             ) : (
               <SignInForm
                 form={signInForm}
-                onSubmit={handleSignIn}
+                onSubmit={(values) => handleSignIn(values as z.infer<typeof signInForm["_formValues"]>)}
                 isLoading={isLoading}
                 onOAuthSignIn={handleOAuthSignIn}
               />

@@ -3,14 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UseFormReturn } from "react-hook-form";
-import { z } from "zod";
 
 interface SignInFormProps {
   form: UseFormReturn<{
     email: string;
     password: string;
   }>;
-  onSubmit: (values: z.AnyZodObject) => void;
+  onSubmit: (values: { email: string; password: string; }) => void;
   isLoading: boolean;
   onOAuthSignIn: (provider: "google") => void;
 }
