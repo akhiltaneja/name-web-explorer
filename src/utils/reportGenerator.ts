@@ -1,3 +1,4 @@
+
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { SocialMediaProfile } from "@/types/socialMedia";
@@ -106,11 +107,7 @@ export const downloadTextReport = (name: string, profiles: SocialMediaProfile[])
         },
         margin: { left: 14, right: 14 },
         tableWidth: pageWidth - 28,
-        styles: { overflow: 'linebreak' },
-        columnStyles: {
-          0: { cellWidth: 50 },
-          1: { cellWidth: 'auto' }
-        }
+        styles: { overflow: 'linebreak' }
       });
       
       yPosition = (doc as any).lastAutoTable.finalY + 15;
@@ -196,6 +193,10 @@ export const emailTextReport = async (
         margin: { left: 14, right: 14 },
         tableWidth: pageWidth - 28,
         styles: { overflow: 'linebreak' },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 'auto' }
+        },
         didDrawCell: (data) => {
           // Make URLs clickable
           if (data.column.index === 1 && data.cell.section === 'body') {
@@ -205,14 +206,9 @@ export const emailTextReport = async (
             }
           }
         }
-      },
-      columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 'auto' }
-      }
-    });
-    
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
       
       // Add page if needed
       if (yPosition > 270) {
