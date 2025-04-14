@@ -28,13 +28,13 @@ const plans: PlanOption[] = [
     name: 'Premium',
     description: 'For regular users needing more searches.',
     price: 9,
-    limit: '1000 credits (1 credit = 1 search)',
+    limit: '500 credits (1 credit = 1 search)',
     features: [
       'Full social media search',
       'Enhanced profile details',
       'Priority support',
     ],
-    creditsAmount: 1000,
+    creditsAmount: 500,
     popular: true,
   },
   {

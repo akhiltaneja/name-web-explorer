@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import EmailVerificationDialog from "@/components/auth/EmailVerificationDialog";
+import Confetti from '@/components/auth/Confetti';
 
 const signUpSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -39,6 +40,7 @@ const Auth = () => {
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationError, setVerificationError] = useState<"sending_failed" | "rate_limit" | "user_exists" | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -122,6 +124,7 @@ const Auth = () => {
       setVerificationError(null);
       setVerificationEmail(values.email);
       setShowEmailVerification(true);
+      setShowConfetti(true);
       
       signUpForm.reset();
     } catch (error: any) {
@@ -142,13 +145,31 @@ const Auth = () => {
         email: values.email,
         password: values.password,
       });
-      if (error) throw error;
-      signInForm.reset();
-      navigate("/profile");
+      
+      if (error) {
+        if (error.message.includes("Invalid login credentials") || 
+            error.message.includes("Email not confirmed") ||
+            error.message.includes("user not found")) {
+          // If user doesn't exist, switch to signup form with email prefilled
+          setIsSignUp(true);
+          signUpForm.setValue("email", values.email);
+          signUpForm.setValue("password", values.password);
+          
+          toast({
+            title: "Account not found",
+            description: "We've switched to signup mode for you",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        signInForm.reset();
+        navigate("/profile");
+      }
     } catch (error: any) {
       toast({
-        title: "Error signing in",
-        description: error.message,
+        title: "Sign in failed",
+        description: error.message || "Failed to sign in",
         variant: "destructive",
       });
     } finally {
@@ -159,6 +180,8 @@ const Auth = () => {
   return (
     <>
       <div className="flex items-center justify-center h-screen bg-gray-100">
+        {showConfetti && <Confetti />}
+        
         <Card className="w-full max-w-md p-4">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">{isSignUp ? "Create an account" : "Sign in"}</CardTitle>
