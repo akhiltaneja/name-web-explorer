@@ -1,6 +1,6 @@
 
 import { User } from "@supabase/supabase-js";
-import { Calendar, CheckCircle, LogOut, Search, Sparkles } from "lucide-react";
+import { Calendar, CheckCircle, LogOut, Search, Sparkles, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -15,18 +15,19 @@ interface UserProfileHeaderProps {
 }
 
 const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProfileHeaderProps) => {
-  // Calculate usage and remaining searches
-  const usagePercentage = profile?.plan === 'free' 
-    ? Math.min(((profile?.checks_used % 3) / 3) * 100, 100)
-    : profile?.plan === 'premium' 
-      ? Math.min(((profile?.checks_used % 500) / 500) * 100, 100)
-      : 0;
-  
+  // Calculate remaining searches
   const remainingSearches = profile?.plan === 'free'
-    ? Math.max(0, 3 - (profile?.checks_used % 3))
+    ? Math.max(0, 10 - (profile?.checks_used % 10))
     : profile?.plan === 'premium'
       ? Math.max(0, 500 - (profile?.checks_used % 500))
       : Infinity;
+  
+  // Calculate usage percentage 
+  const usagePercentage = profile?.plan === 'free' 
+    ? Math.min(((10 - remainingSearches) / 10) * 100, 100)
+    : profile?.plan === 'premium' 
+      ? Math.min(((500 - remainingSearches) / 500) * 100, 100)
+      : 0;
 
   return (
     <div className="bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 rounded-lg p-8 mb-6 relative overflow-hidden shadow-sm border border-blue-100">
@@ -56,7 +57,7 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
           </div>
           <div className="text-gray-600 mb-4">{user.email}</div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-blue-500" />
               <div>
@@ -87,7 +88,7 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
                 <div className="text-gray-700">
                   {profile?.plan === 'free' && (
                     <span className={remainingSearches === 0 ? "text-red-600 font-semibold" : ""}>
-                      {remainingSearches} of 3 daily
+                      {remainingSearches} of 10 daily
                     </span>
                   )}
                   {profile?.plan === 'premium' && (
@@ -98,6 +99,16 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
                   {profile?.plan === 'unlimited' && (
                     <span>Unlimited</span>
                   )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-blue-500" />
+              <div>
+                <div className="text-sm text-gray-500">Lifetime searches</div>
+                <div className="text-gray-700 font-medium">
+                  {profile?.checks_used || 0}
                 </div>
               </div>
             </div>
@@ -132,11 +143,11 @@ const UserProfileHeader = ({ user, profile, onUpgradeClick, onLogout }: UserProf
       {profile?.plan !== 'unlimited' && (
         <div className="mt-6">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-600 font-medium">Usage</span>
+            <span className="text-gray-600 font-medium">Credits Remaining</span>
             <span className={`font-semibold ${remainingSearches === 0 ? 'text-red-600' : 'text-blue-600'}`}>
               {profile?.plan === 'free' 
-                ? `${3 - remainingSearches}/3 daily searches` 
-                : `${500 - remainingSearches}/500 monthly searches`
+                ? `${remainingSearches}/10 daily searches` 
+                : `${remainingSearches}/500 monthly searches`
               }
             </span>
           </div>

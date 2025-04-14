@@ -2,15 +2,16 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Mail, ExternalLink, RefreshCw, AlertTriangle } from "lucide-react";
+import { Mail, ExternalLink, RefreshCw, AlertTriangle, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface EmailVerificationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   email: string;
-  errorType?: "sending_failed" | "rate_limit" | null;
+  errorType?: "sending_failed" | "rate_limit" | "user_exists" | null;
 }
 
 const EmailVerificationDialog = ({ 
@@ -22,6 +23,7 @@ const EmailVerificationDialog = ({
   const [isResending, setIsResending] = useState(false);
   const { supabase } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
 
   useEffect(() => {
@@ -94,8 +96,47 @@ const EmailVerificationDialog = ({
     }
   };
 
+  const handleRedirectToSignIn = () => {
+    onClose();
+    navigate("/auth");
+  };
+
   const getDialogContent = () => {
-    if (errorType) {
+    if (errorType === "user_exists") {
+      return (
+        <>
+          <div className="mx-auto bg-amber-100 p-3 rounded-full mb-4">
+            <LogIn className="h-8 w-8 text-amber-600" />
+          </div>
+          <DialogTitle className="text-center text-2xl">Account Already Exists</DialogTitle>
+          <DialogDescription className="text-center">
+            An account with email address
+            <br />
+            <span className="font-medium text-black">{email}</span>
+            <br />
+            already exists
+          </DialogDescription>
+          
+          <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
+            <p className="text-sm text-blue-800 font-medium mb-2">
+              You already have an account with this email address.
+            </p>
+            <p className="text-sm text-blue-800">
+              Please sign in with your existing credentials. If you forgot your password, you can use the password reset option.
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3 mt-5">
+            <Button
+              className="w-full" 
+              onClick={handleRedirectToSignIn}
+            >
+              <LogIn className="mr-2 h-4 w-4" /> Go to Sign In
+            </Button>
+          </div>
+        </>
+      );
+    } else if (errorType) {
       return (
         <>
           <div className="mx-auto bg-amber-100 p-3 rounded-full mb-4">

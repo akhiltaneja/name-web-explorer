@@ -21,7 +21,7 @@ import FAQ from "@/components/search/FAQ";
 import { useSearch } from "@/hooks/useSearch";
 
 const RECENT_SEARCHES_KEY = "people_peeper_recent_searches";
-const MAX_RECENT_SEARCHES = 6;
+const MAX_RECENT_SEARCHES = 10;
 
 const Index = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -30,6 +30,8 @@ const Index = () => {
 
   const { toast } = useToast();
   const { user, profile, refreshProfile } = useAuth();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const {
     name,
@@ -58,8 +60,16 @@ const Index = () => {
     verificationProgress
   } = useSearch(user, profile, refreshProfile);
 
+  // Use different storage keys for logged-in users vs. guests
+  const getStorageKey = () => {
+    return user ? `${RECENT_SEARCHES_KEY}_${user.id}` : RECENT_SEARCHES_KEY;
+  };
+
+  // Load recent searches based on user
   useEffect(() => {
-    const storedSearches = localStorage.getItem(RECENT_SEARCHES_KEY);
+    const storageKey = getStorageKey();
+    const storedSearches = localStorage.getItem(storageKey);
+    
     if (storedSearches) {
       try {
         const parsedSearches = JSON.parse(storedSearches);
@@ -69,8 +79,11 @@ const Index = () => {
       } catch (e) {
         console.error("Error parsing recent searches:", e);
       }
+    } else {
+      // Clear recent searches when no stored data for this user
+      setRecentSearches([]);
     }
-  }, []);
+  }, [user?.id]); // Reload when user changes
 
   useEffect(() => {
     if (name && results.length > 0 && !isSearching && !isDeepVerifying) {
@@ -82,7 +95,7 @@ const Index = () => {
     setRecentSearches(prevSearches => {
       const filteredSearches = prevSearches.filter(s => s !== searchTerm);
       const newSearches = [searchTerm, ...filteredSearches].slice(0, MAX_RECENT_SEARCHES);
-      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(newSearches));
+      localStorage.setItem(getStorageKey(), JSON.stringify(newSearches));
       return newSearches;
     });
   };
@@ -90,14 +103,14 @@ const Index = () => {
   const clearRecentSearch = (searchTerm: string) => {
     setRecentSearches(prevSearches => {
       const newSearches = prevSearches.filter(s => s !== searchTerm);
-      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(newSearches));
+      localStorage.setItem(getStorageKey(), JSON.stringify(newSearches));
       return newSearches;
     });
   };
 
   const clearAllRecentSearches = () => {
     setRecentSearches([]);
-    localStorage.removeItem(RECENT_SEARCHES_KEY);
+    localStorage.removeItem(getStorageKey());
     toast({
       title: "Recent searches cleared",
       description: "Your search history has been cleared."

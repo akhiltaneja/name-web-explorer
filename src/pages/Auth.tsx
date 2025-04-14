@@ -38,7 +38,7 @@ const Auth = () => {
 
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
-  const [verificationError, setVerificationError] = useState<"sending_failed" | "rate_limit" | null>(null);
+  const [verificationError, setVerificationError] = useState<"sending_failed" | "rate_limit" | "user_exists" | null>(null);
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -84,7 +84,7 @@ const Auth = () => {
       // Get the site URL (handles both localhost and deployed URLs)
       const siteUrl = window.location.origin;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
@@ -103,6 +103,16 @@ const Auth = () => {
           setVerificationError("sending_failed");
           setVerificationEmail(values.email);
           setShowEmailVerification(true);
+          return;
+        } else if (error.message.includes("User already registered")) {
+          // Handle existing user better
+          setVerificationError("user_exists");
+          setVerificationEmail(values.email);
+          setShowEmailVerification(true);
+          
+          // Pre-fill the sign in form
+          setIsSignUp(false);
+          signInForm.setValue("email", values.email);
           return;
         } else {
           throw error;

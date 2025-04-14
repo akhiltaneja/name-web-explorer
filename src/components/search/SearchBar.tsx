@@ -19,7 +19,7 @@ interface SearchBarProps {
   checksRemaining: number;
   showLimitModal?: boolean;
   setShowLimitModal?: (show: boolean) => void;
-  profile?: any; // Add profile to the interface
+  profile?: any;
 }
 
 const SearchBar = ({ 
@@ -32,7 +32,7 @@ const SearchBar = ({
   checksRemaining,
   showLimitModal = false,
   setShowLimitModal = () => {},
-  profile // Destructure profile from props
+  profile
 }: SearchBarProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -68,6 +68,14 @@ const SearchBar = ({
 
   // Disable the button completely if limit is reached
   const isButtonDisabled = isSearching || !name.trim() || isLimitReached;
+
+  // Get the daily/monthly limit based on plan
+  const getSearchLimit = () => {
+    if (!profile) return 10; // Default for guest users
+    if (profile.plan === 'free') return 10;
+    if (profile.plan === 'premium') return 500;
+    return Infinity; // Unlimited plan
+  };
 
   return (
     <Card className={`mb-8 shadow-md border-blue-100 overflow-hidden`}>
@@ -124,7 +132,7 @@ const SearchBar = ({
                   <span className={checksRemaining <= 0 ? "text-red-500 font-semibold" : "text-gray-700 font-semibold"}>
                     {checksRemaining > 0 ? checksRemaining : 0}
                   </span> 
-                  <span> {checksRemaining === 1 ? "search" : "searches"} remaining</span>
+                  <span> of {getSearchLimit()} {profile?.plan === 'premium' ? 'monthly' : 'daily'} searches remaining</span>
                 </>
               )}
             </span>
