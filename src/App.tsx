@@ -1,12 +1,14 @@
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/AuthContext";
 import NotFound from "@/pages/NotFound";
 
-// Dynamically import page components
-const Index = lazy(() => import("@/pages/Index"));
+// Import Index component directly instead of lazy loading it
+import Index from "@/pages/Index";
+
+// Dynamically import other page components
 const Auth = lazy(() => import("@/pages/Auth"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
@@ -17,6 +19,40 @@ const Contact = lazy(() => import("@/pages/Contact"));
 const Settings = lazy(() => import("@/pages/Settings"));
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Set a timeout to handle potential loading issues
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        setLoadError("Loading is taking longer than expected. You may need to refresh the page.");
+      }
+    }, 10000);
+
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
+  useEffect(() => {
+    // Set loading to false once components are ready
+    setIsLoading(false);
+  }, []);
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen p-4">
+        <h1 className="text-xl font-bold mb-4">Error Loading Application</h1>
+        <p className="text-red-600 mb-4">{loadError}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <AuthProvider>
