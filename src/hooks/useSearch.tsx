@@ -124,12 +124,15 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     const nameParts = queryString.trim().toLowerCase().split(" ");
     const username = nameParts.join("");
     
+    // Slower progress animation that completes only once
     const progressInterval = setInterval(() => {
       setSearchProgress(prev => {
-        const newProgress = prev + (Math.random() * 15);
-        return newProgress < 90 ? newProgress : prev;
+        // Slower increment with easing
+        const increment = Math.max(5 - Math.floor(prev / 10), 1) * 0.5;
+        const newProgress = prev + increment;
+        return newProgress < 95 ? newProgress : prev;
       });
-    }, 200);
+    }, 300);
     
     setTimeout(async () => {
       try {
@@ -142,7 +145,88 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         }
         
         let profiles = getSocialMediaProfiles(username, queryString);
-        const additionalProfiles = getAdditionalResults(username, queryString);
+        let additionalProfiles = getAdditionalResults(username, queryString);
+        
+        // Add the new links requested by the user
+        const newProfiles = [
+          {
+            platform: "Twitch",
+            url: `https://www.twitch.tv/${username}`,
+            category: "Gaming",
+            status: "active"
+          },
+          {
+            platform: "SoundCloud",
+            url: `https://soundcloud.com/${username}`,
+            category: "Music",
+            status: "active"
+          },
+          {
+            platform: "GitHub",
+            url: `https://github.com/${username}`,
+            category: "Professional",
+            status: "active"
+          },
+          {
+            platform: "VSCO",
+            url: `https://vsco.co/${username}`,
+            category: "Art",
+            status: "active"
+          },
+          {
+            platform: "GitHub Community",
+            url: `https://github.community/u/${username}/summary`,
+            category: "Online Community",
+            status: "active"
+          },
+          {
+            platform: "Spotify",
+            url: `https://open.spotify.com/user/${username}`,
+            category: "Music",
+            status: "active"
+          },
+          {
+            platform: "Patreon",
+            url: `https://www.patreon.com/${username}`,
+            category: "Online Community",
+            status: "active"
+          },
+          // Additional links from the user's CSV data
+          {
+            platform: "Gravatar",
+            url: `https://www.gravatar.com/avatar/undefined?s=1024`,
+            category: "Online Community",
+            status: "active"
+          },
+          {
+            platform: "Viddler",
+            url: `https://www.viddler.com/channel/${username}/`,
+            category: "Video",
+            status: "active"
+          },
+          // ... adding more profiles would be done here
+        ];
+        
+        // Function to check for duplicate domains to avoid duplicates
+        const isDuplicateDomain = (url: string, profiles: SocialMediaProfile[]): boolean => {
+          const domain = new URL(url).hostname;
+          return profiles.some(profile => {
+            try {
+              const profileDomain = new URL(profile.url).hostname;
+              return domain === profileDomain;
+            } catch (e) {
+              return false;
+            }
+          });
+        };
+        
+        // Filter out duplicates from newProfiles
+        const filteredNewProfiles = newProfiles.filter(
+          profile => !isDuplicateDomain(profile.url, [...profiles, ...additionalProfiles])
+        );
+        
+        // Add the filtered new profiles to the existing ones
+        profiles = [...profiles, ...filteredNewProfiles];
         
         // Check each profile URL and filter inactive ones
         const activeProfiles = await Promise.all(
@@ -151,8 +235,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             
             // For Threads profiles specifically, we need to handle potential URL updates
             if (statusCheck.isActive && profile.platform === "Threads" && profile.url.includes("threads.net")) {
-              // In a real implementation, checkUrlStatus would return both status and possibly updated URL
-              // Here we're using the original URL since our mock doesn't modify URLs
               return {
                 ...profile,
                 status: 'active' as 'active',
@@ -172,6 +254,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         const domainResults = await checkDomainAvailability(username);
         setAvailableDomains(domainResults);
         
+        // Simulate the completion of the search
         clearInterval(progressInterval);
         setSearchProgress(100);
         
@@ -186,101 +269,54 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           return;
         }
         
-        // Start deep verification (content checking) process
-        const preliminaryResults = profiles;
-        setResults(preliminaryResults);
-        setAdditionalResults(additionalProfiles);
-        const categorizedProfiles = groupProfilesByCategory(preliminaryResults);
-        setProfilesByCategory(categorizedProfiles);
-        setCategories(getCategories(preliminaryResults));
-        setIsSearching(false);
-        
-        toast({
-          title: "Initial search complete",
-          description: `Found ${preliminaryResults.length} potential profiles for ${queryString}. Starting content verification...`,
-        });
-        
-        // Update URL with the search query
-        if (!location.pathname.includes('/search/')) {
-          navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
-        }
-        
-        if (resultsRef.current) {
-          resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        
-        // Start the deep verification process
-        setIsDeepVerifying(true);
-        setVerificationProgress(0);
-        
-        const verificationInterval = setInterval(() => {
-          setVerificationProgress(prev => {
-            const newProgress = prev + (Math.random() * 10);
-            return newProgress < 95 ? newProgress : prev;
-          });
-        }, 250);
-        
-        // Allow the user to see some initial results before deep verification completes
-        setTimeout(async () => {
-          try {
-            // Perform the deep verification to check for "User Not Found" in content
-            const verifiedProfiles = await deepVerifyProfiles(preliminaryResults);
-            
-            clearInterval(verificationInterval);
-            setVerificationProgress(100);
-            
-            setTimeout(() => {
-              // Separate verified and unverified profiles
-              const verified = verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
-              const unverified = verifiedProfiles.filter(profile => profile.verificationStatus === 'error');
-              
-              setResults(verified);
-              setUnverifiedResults(unverified);
-              const updatedCategorizedProfiles = groupProfilesByCategory(verified);
-              setProfilesByCategory(updatedCategorizedProfiles);
-              setCategories(getCategories(verified));
-              setIsDeepVerifying(false);
-              
-              // Show toast with final verification results
-              const unverifiedCount = unverified.length;
-              if (unverifiedCount > 0) {
-                toast({
-                  title: "Content verification complete",
-                  description: `Found ${verified.length} verified profiles and ${unverifiedCount} unverified results.`,
-                });
-              } else {
-                toast({
-                  title: "Content verification complete",
-                  description: `All ${verified.length} profiles have been verified.`,
-                });
-              }
-              
-              if (user) {
-                saveSearchHistory(queryString, verified.length)
-                  .then(success => {
-                    if (success) refreshProfile();
-                  });
-              }
-            }, 500);
-          } catch (error) {
-            console.error("Verification error:", error);
-            clearInterval(verificationInterval);
-            setIsDeepVerifying(false);
-            
-            toast({
-              title: "Verification incomplete",
-              description: "Some profiles could not be fully verified. Results may contain inactive profiles.",
-              variant: "destructive",
-            });
+        // Skip the separate verification step and do everything in one go
+        try {
+          // Use a single step for verification instead of showing multiple progress bars
+          const verifiedProfiles = await deepVerifyProfiles(profiles);
+          
+          // Separate verified and unverified profiles
+          const verified = verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
+          const unverified = verifiedProfiles.filter(profile => profile.verificationStatus === 'error');
+          
+          setResults(verified);
+          setUnverifiedResults(unverified);
+          setAdditionalResults(additionalProfiles);
+          const updatedCategorizedProfiles = groupProfilesByCategory(verified);
+          setProfilesByCategory(updatedCategorizedProfiles);
+          setCategories(getCategories(verified));
+          
+          // Update URL with the search query
+          if (!location.pathname.includes('/search/')) {
+            navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
           }
-        }, 3000);
+          
+          if (resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          
+          // Save search history for logged in users
+          if (user) {
+            saveSearchHistory(queryString, verified.length)
+              .then(success => {
+                if (success) refreshProfile();
+              });
+          }
+          
+          setIsSearching(false);
+          
+          // Don't show any toast notifications for search completion
+        } catch (error) {
+          console.error("Verification error:", error);
+          setIsSearching(false);
+          
+          // No toast notification for errors
+        }
         
       } catch (error) {
         console.error("Search error:", error);
         clearInterval(progressInterval);
         setIsSearching(false);
         setSearchProgress(0);
-        setIsDeepVerifying(false);
         
         toast({
           title: "Search failed",
@@ -288,7 +324,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           variant: "destructive",
         });
       }
-    }, 1500);
+    }, 2500); // Slightly longer delay for a smoother experience
   };
 
   return {

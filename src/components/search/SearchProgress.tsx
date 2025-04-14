@@ -18,7 +18,7 @@ const SearchProgress = ({
   isDeepVerifying = false,
   verificationProgress = 0
 }: SearchProgressProps) => {
-  // Combine the search and verification progress
+  // Combine the search and verification progress into a single progress bar
   const combinedIsSearching = isSearching || isDeepVerifying;
   const combinedProgress = isSearching 
     ? searchProgress 

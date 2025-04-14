@@ -60,9 +60,16 @@ export const downloadTextReport = (name: string, profiles: SocialMediaProfile[])
     });
     
     let yPosition = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
     
     // Add profiles by category
     Object.keys(profilesByCategory).forEach(category => {
+      // Check if we need a new page
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
       // Add category header
       doc.setFontSize(14);
       doc.setTextColor(99, 68, 156); // Purple color for branding
@@ -97,16 +104,17 @@ export const downloadTextReport = (name: string, profiles: SocialMediaProfile[])
               doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url, newWindow: true });
             }
           }
+        },
+        margin: { left: 14, right: 14 },
+        tableWidth: pageWidth - 28,
+        styles: { overflow: 'linebreak' },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 'auto' }
         }
       });
       
       yPosition = (doc as any).lastAutoTable.finalY + 15;
-      
-      // Add page if needed
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
     });
     
     // Add footer
@@ -160,6 +168,7 @@ export const emailTextReport = async (
     });
     
     let yPosition = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
     
     // Add profiles by category
     Object.keys(profilesByCategory).forEach(category => {
@@ -185,8 +194,11 @@ export const emailTextReport = async (
         head: [['Platform', 'URL']],
         body: tableData,
         headStyles: { fillColor: [99, 68, 156] }, // Purple color for branding
-        columnStyles: { 
-          0: { cellWidth: 40 },
+        margin: { left: 14, right: 14 },
+        tableWidth: pageWidth - 28,
+        styles: { overflow: 'linebreak' },
+        columnStyles: {
+          0: { cellWidth: 50 },
           1: { cellWidth: 'auto' }
         },
         didDrawCell: (data) => {
@@ -219,16 +231,12 @@ export const emailTextReport = async (
       doc.text(`Page ${i} of ${pageCount}`, 196, 290, { align: 'right' });
     }
     
-    const pdfOutput = doc.output('arraybuffer');
-    const pdfBase64 = Buffer.from(pdfOutput).toString('base64');
-    
-    // Send email with the report via Supabase function
-    // Implement this when an email service is set up
+    // For now, let's simulate successful email sending
+    // In a production environment, this would be connected to a real email service
     console.log(`Sending report to ${recipientEmail} for search: ${name}`);
     
-    // Mock the email sending for now
-    // TODO: Implement actual email sending via a backend service
-    
+    // Returning true simulates successful email sending
+    // In production, you would verify that the email was actually sent successfully
     return true;
   } catch (error) {
     console.error('Error sending email report:', error);

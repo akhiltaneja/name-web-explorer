@@ -53,9 +53,6 @@ const AdditionalResults = ({
                 {unverifiedResults.length} found
               </span>
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              These profiles may contain errors or "User Not Found" messages
-            </p>
           </div>
 
           <div className={`grid gap-2 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
