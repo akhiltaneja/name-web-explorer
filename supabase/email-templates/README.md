@@ -80,7 +80,7 @@ Welcome to PeoplePeeper - Please Confirm Your Email
       <p>Thank you for signing up. To complete your registration and start discovering social media profiles, please confirm your email address.</p>
       
       <div style="text-align: center;">
-        <a href="{{ .ConfirmationURL }}" class="button">Confirm My Email</a>
+        <a href="{{ .ConfirmationURL }}" class="button" target="_blank" rel="noopener noreferrer">Confirm My Email</a>
       </div>
       
       <p>If you didn't create an account with us, you can safely ignore this email.</p>
@@ -278,8 +278,14 @@ Reset Your PeoplePeeper Password
 
 1. **Site URL Configuration**: 
    - Go to Authentication → URL Configuration
-   - Set the Site URL to your deployed app URL (not localhost)
-   - Add all your redirect URLs (including local development URLs for testing)
+   - Set the Site URL to your deployed app URL (e.g., https://peoplepeeper.com)
+   - Add all your redirect URLs including:
+     - https://peoplepeeper.com
+     - https://peoplepeeper.com/auth
+     - https://peoplepeeper.com/profile
+     - http://localhost:8080 (for local development)
+     - http://localhost:8080/auth
+     - http://localhost:8080/profile
 
 2. **Email Provider**: 
    - For production use, set up a custom SMTP provider in Authentication → Email Settings
@@ -288,3 +294,5 @@ Reset Your PeoplePeeper Password
 3. **Testing**: 
    - Always test your email templates with real email addresses to ensure they display correctly
    - Check both desktop and mobile email clients
+
+```

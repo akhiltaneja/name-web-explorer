@@ -33,7 +33,7 @@ const EmailVerificationDialog = ({
   }, [isOpen, errorType]);
 
   const handleOpenEmail = () => {
-    // Common email providers
+    // Common email providers - open in new tab
     if (email.includes('@gmail.com')) {
       window.open('https://gmail.com', '_blank');
     } else if (email.includes('@yahoo.com')) {
@@ -51,9 +51,16 @@ const EmailVerificationDialog = ({
   const handleResendVerification = async () => {
     setIsResending(true);
     try {
+      // Get the site URL to ensure proper redirection
+      const siteUrl = window.location.origin;
+      
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email: email
+        email: email,
+        options: {
+          // Use site URL to ensure proper redirection after email confirmation
+          emailRedirectTo: `${siteUrl}/auth`,
+        }
       });
       
       if (error) {
@@ -144,6 +151,9 @@ const EmailVerificationDialog = ({
         <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
           <p className="text-sm text-blue-800">
             <span className="font-medium">🎉 You're almost there!</span> Click the verification link in your email to complete the sign-up process.
+          </p>
+          <p className="text-sm text-blue-800 mt-2">
+            <span className="font-medium">Note:</span> The verification link will open in this window. Make sure to save any unsaved work before clicking it.
           </p>
         </div>
 

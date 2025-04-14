@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -80,9 +81,16 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
+      // Get the site URL (handles both localhost and deployed URLs)
+      const siteUrl = window.location.origin;
+      
       const { error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
+        options: {
+          // Use site URL to ensure proper redirection after email confirmation
+          emailRedirectTo: `${siteUrl}/auth`,
+        }
       });
       
       if (error) {
