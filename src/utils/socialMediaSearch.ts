@@ -1,4 +1,3 @@
-
 import { SocialMediaProfile } from "@/types/socialMedia";
 
 export const getSocialMediaProfiles = (username: string, fullName: string): SocialMediaProfile[] => {
@@ -81,7 +80,7 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "T",
       color: "#9146FF",
-      category: "Streaming"
+      category: "Gaming"
     },
     {
       platform: "Discord",
@@ -97,6 +96,14 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       username: username,
       icon: "W",
       color: "#25D366",
+      category: "Messaging"
+    },
+    {
+      platform: "Telegram",
+      url: `https://t.me/${username}`,
+      username: username,
+      icon: "T",
+      color: "#0088cc",
       category: "Messaging"
     },
     {
@@ -131,7 +138,62 @@ export const getSocialMediaProfiles = (username: string, fullName: string): Soci
       color: "#000000",
       category: "Social network"
     },
-    // Additional platforms
+    {
+      platform: "Flickr",
+      url: `https://www.flickr.com/search/?text=${encodeURIComponent(fullName)}`,
+      username: fullName,
+      icon: "F",
+      color: "#0063dc",
+      category: "Art"
+    },
+    {
+      platform: "SoundCloud",
+      url: `https://soundcloud.com/${username}`,
+      username: username,
+      icon: "S",
+      color: "#FF5500",
+      category: "Music"
+    },
+    {
+      platform: "GitHub",
+      url: `https://github.com/${username}`,
+      username: username,
+      icon: "G",
+      color: "#181717",
+      category: "Professional"
+    },
+    {
+      platform: "VSCO",
+      url: `https://vsco.co/${username}`,
+      username: username,
+      icon: "V",
+      color: "#000000",
+      category: "Art"
+    },
+    {
+      platform: "GitHub Community",
+      url: `https://github.community/u/${username}/summary`,
+      username: username,
+      icon: "G",
+      color: "#181717",
+      category: "Online Community"
+    },
+    {
+      platform: "Spotify",
+      url: `https://open.spotify.com/user/${username}`,
+      username: username,
+      icon: "S",
+      color: "#1DB954",
+      category: "Music"
+    },
+    {
+      platform: "Patreon",
+      url: `https://www.patreon.com/${username}`,
+      username: username,
+      icon: "P",
+      color: "#F96854",
+      category: "Online Community"
+    },
     {
       platform: "Gravatar",
       url: `https://www.gravatar.com/avatar/undefined?s=1024`,

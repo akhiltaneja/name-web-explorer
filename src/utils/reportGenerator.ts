@@ -190,13 +190,13 @@ export const emailTextReport = async (
         head: [['Platform', 'URL']],
         body: tableData,
         headStyles: { fillColor: [99, 68, 156] }, // Purple color for branding
-        margin: { left: 14, right: 14 },
-        tableWidth: pageWidth - 28,
-        styles: { overflow: 'linebreak' },
         columnStyles: {
           0: { cellWidth: 50 },
           1: { cellWidth: 'auto' }
         },
+        margin: { left: 14, right: 14 },
+        tableWidth: pageWidth - 28,
+        styles: { overflow: 'linebreak' },
         didDrawCell: (data) => {
           // Make URLs clickable
           if (data.column.index === 1 && data.cell.section === 'body') {

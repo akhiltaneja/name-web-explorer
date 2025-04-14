@@ -13,6 +13,8 @@ import {
 import { useSearchLimit } from "./useSearchLimit";
 import { SocialMediaProfile } from "@/types/socialMedia";
 
+const MAX_RECENT_SEARCHES = 5;
+
 export const useSearch = (user: any, profile: any, refreshProfile: () => void) => {
   const [name, setName] = useState("");
   const [results, setResults] = useState<SocialMediaProfile[]>([]);
@@ -117,11 +119,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     
     const progressInterval = setInterval(() => {
       setSearchProgress(prev => {
-        const increment = Math.max(5 - Math.floor(prev / 10), 1) * 0.5;
+        const increment = Math.max(5 - Math.floor(prev / 20), 1) * 0.8;
         const newProgress = prev + increment;
-        return newProgress < 95 ? newProgress : prev;
+        return newProgress < 95 ? newProgress : 95;
       });
-    }, 300);
+    }, 400);
     
     setTimeout(async () => {
       try {
@@ -200,35 +202,39 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             status: "active"
           },
           {
-            platform: "Gravatar",
-            url: `https://www.gravatar.com/avatar/undefined?s=1024`,
+            platform: "Telegram",
+            url: `https://t.me/${username}`,
             username: username,
-            icon: "gravatar",
-            color: "#1E8CBE",
-            category: "Online Community",
+            icon: "telegram",
+            color: "#0088cc",
+            category: "Messaging",
             status: "active"
           },
           {
-            platform: "Viddler",
-            url: `https://www.viddler.com/channel/${username}/`,
-            username: username,
-            icon: "viddler",
-            color: "#2C2C2C",
-            category: "Video",
+            platform: "Flickr",
+            url: `https://www.flickr.com/search/?text=${encodeURIComponent(queryString)}`,
+            username: queryString,
+            icon: "flickr",
+            color: "#0063dc",
+            category: "Art",
             status: "active"
           }
         ];
         
         const isDuplicateDomain = (url: string, profiles: SocialMediaProfile[]): boolean => {
-          const domain = new URL(url).hostname;
-          return profiles.some(profile => {
-            try {
-              const profileDomain = new URL(profile.url).hostname;
-              return domain === profileDomain;
-            } catch (e) {
-              return false;
-            }
-          });
+          try {
+            const domain = new URL(url).hostname;
+            return profiles.some(profile => {
+              try {
+                const profileDomain = new URL(profile.url).hostname;
+                return domain === profileDomain;
+              } catch (e) {
+                return false;
+              }
+            });
+          } catch (e) {
+            return false;
+          }
         };
         
         const filteredNewProfiles = newProfiles.filter(
@@ -275,17 +281,11 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         }
         
         try {
-          const verifiedProfiles = await deepVerifyProfiles(profiles);
-          
-          const verified = verifiedProfiles.filter(profile => profile.verificationStatus !== 'error');
-          const unverified = verifiedProfiles.filter(profile => profile.verificationStatus === 'error');
-          
-          setResults(verified);
-          setUnverifiedResults(unverified);
+          setResults(profiles);
           setAdditionalResults(additionalProfiles);
-          const updatedCategorizedProfiles = groupProfilesByCategory(verified);
+          const updatedCategorizedProfiles = groupProfilesByCategory(profiles);
           setProfilesByCategory(updatedCategorizedProfiles);
-          setCategories(getCategories(verified));
+          setCategories(getCategories(profiles));
           
           if (!location.pathname.includes('/search/')) {
             navigate(`/search/${encodeURIComponent(queryString)}`, { replace: true });
@@ -296,7 +296,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           }
           
           if (user) {
-            saveSearchHistory(queryString, verified.length)
+            saveSearchHistory(queryString, profiles.length)
               .then(success => {
                 if (success) refreshProfile();
               });

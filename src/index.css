@@ -119,3 +119,19 @@
 .animate-shimmer {
   animation: shimmer 1.5s infinite;
 }
+
+/* Dark mode and light mode toast styling */
+.dark .Toaster__toast {
+  @apply bg-gray-800 text-white border-gray-700;
+}
+
+.dark .Toaster__toast-message {
+  @apply text-gray-200;
+}
+
+/* Center aligned toasts */
+.Toaster__container {
+  @apply left-1/2 transform -translate-x-1/2 !important;
+  width: fit-content !important;
+  max-width: 90vw !important;
+}

@@ -3,6 +3,7 @@ import { Suspense, lazy, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/hooks/useTheme";
 import NotFound from "@/pages/NotFound";
 
 // Import Index component directly instead of lazy loading it
@@ -55,31 +56,33 @@ function App() {
 
   return (
     <Router>
-      <AuthProvider>
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center h-screen">
-              <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-            </div>
-          }
-        >
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/search/:query" element={<Index />} />
-            <Route path="/knowledge-base" element={<KnowledgeBase />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-        <Toaster />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/search/:query" element={<Index />} />
+              <Route path="/knowledge-base" element={<KnowledgeBase />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+          <Toaster />
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }
