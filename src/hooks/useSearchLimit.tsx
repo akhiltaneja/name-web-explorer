@@ -139,7 +139,7 @@ export const useSearchLimit = (user: any, profile: any) => {
           toast({
             title: "Last search used",
             description: "You've used your last free search for today.",
-            variant: "warning",
+            variant: "default", // Changed from "warning" to "default"
           });
         }
 
@@ -169,7 +169,7 @@ export const useSearchLimit = (user: any, profile: any) => {
               toast({
                 title: "Guest limit reached",
                 description: "Sign in or create an account for more searches.",
-                variant: "warning",
+                variant: "default", // Changed from "warning" to "default"
               });
               return false;
             }
