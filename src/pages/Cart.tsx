@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,7 @@ const Cart = () => {
     // Load PayPal SDK script
     if (!document.querySelector('script[src*="paypal"]')) {
       const script = document.createElement('script');
-      script.src = "https://www.paypal.com/sdk/js?client-id=test&currency=USD";
+      script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD";
       script.addEventListener('load', () => {
         renderPayPalButtons();
       });
@@ -113,10 +114,10 @@ const Cart = () => {
 
     window.paypal.Buttons({
       style: {
-        color: 'blue',
-        shape: 'rect',
-        label: 'pay',
-        height: 45
+        shape: "pill",
+        layout: "vertical",
+        color: "blue",
+        label: "checkout",
       },
       
       createOrder: async () => {
@@ -133,6 +134,8 @@ const Cart = () => {
             return "";
           }
           
+          // For testing purposes, we're using a mock API response
+          // In production, this would call your actual backend
           const response = await supabase.functions.invoke('create-paypal-order', {
             body: {
               planId: selectedPlan.id,
@@ -159,16 +162,16 @@ const Cart = () => {
         }
       },
       
-      onApprove: async (data) => {
+      onApprove: async (data: any) => {
         try {
           setLoading(true);
           
-          const { orderId } = data;
+          const { orderID } = data;
           
           const response = await supabase.functions.invoke('capture-paypal-order', {
             body: {
-              orderId,
-              userId: user.id,
+              orderId: orderID,
+              userId: user?.id,
               planId: selectedPlan.id
             }
           });
@@ -204,7 +207,7 @@ const Cart = () => {
         });
       },
       
-      onError: (err) => {
+      onError: (err: any) => {
         console.error('PayPal error:', err);
         toast({
           title: "Payment error",

@@ -23,14 +23,14 @@ const AdditionalResults = ({
       {additionalResults.length > 0 && (
         <>
           <div className="mt-8 mb-3">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
               <Globe className="h-5 w-5 text-blue-500" />
               Additional Web Results
-              <span className="text-sm font-normal bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 py-0.5 px-2 rounded-full border border-blue-200 dark:border-blue-800">
+              <span className="text-sm font-normal bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full border border-blue-200">
                 {filteredAdditionalResults.length} found
               </span>
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               Additional profiles found from across the web
             </p>
           </div>
@@ -46,10 +46,10 @@ const AdditionalResults = ({
       {unverifiedResults.length > 0 && (
         <>
           <div className="mt-8 mb-3">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
               <AlertCircle className="h-5 w-5 text-amber-500" />
               Unverified Results
-              <span className="text-sm font-normal bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100 py-0.5 px-2 rounded-full border border-amber-200 dark:border-amber-800">
+              <span className="text-sm font-normal bg-amber-100 text-amber-800 py-0.5 px-2 rounded-full border border-amber-200">
                 {unverifiedResults.length} found
               </span>
             </h2>

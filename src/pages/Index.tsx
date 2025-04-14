@@ -21,7 +21,7 @@ import FAQ from "@/components/search/FAQ";
 import { useSearch } from "@/hooks/useSearch";
 
 const RECENT_SEARCHES_KEY = "people_peeper_recent_searches";
-const MAX_RECENT_SEARCHES = 5; // Reduced to 5 from 10
+const MAX_RECENT_SEARCHES = 5; // Maximum 5 recent searches
 
 const Index = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -185,7 +185,7 @@ const Index = () => {
     !(isSearching || isDeepVerifying);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-white text-gray-800 flex flex-col">
       <Header />
       
       <main className="flex-grow">

@@ -190,10 +190,6 @@ export const emailTextReport = async (
         head: [['Platform', 'URL']],
         body: tableData,
         headStyles: { fillColor: [99, 68, 156] }, // Purple color for branding
-        columnStyles: {
-          0: { cellWidth: 50 },
-          1: { cellWidth: 'auto' }
-        },
         margin: { left: 14, right: 14 },
         tableWidth: pageWidth - 28,
         styles: { overflow: 'linebreak' },
@@ -205,6 +201,10 @@ export const emailTextReport = async (
               doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url, newWindow: true });
             }
           }
+        },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 'auto' }
         }
       });
       
