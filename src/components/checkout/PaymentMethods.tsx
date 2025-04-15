@@ -112,7 +112,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             return null;
           }
         },
-        onApprove: async (data: any) => {
+        onApprove: async (data: any, actions: any) => {
           try {
             setLoading(true);
             setError(null);
@@ -136,7 +136,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             
             await refreshProfile();
             navigate('/profile');
-            return true;
           } catch (error: any) {
             console.error('Payment capture error:', error);
             setError(error.message || "Payment failed");
@@ -145,7 +144,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               description: error.message || "There was an issue processing your payment",
               variant: "destructive",
             });
-            return false;
           } finally {
             setLoading(false);
           }
