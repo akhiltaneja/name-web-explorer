@@ -18,6 +18,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const [error, setError] = useState<string | null>(null);
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   const scriptLoaded = useRef(false);
+  const buttonsRendered = useRef(false);
   
   const { toast } = useToast();
   const { selectedPlan, calculateTotal } = useCart();
@@ -27,6 +28,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const loadPayPalScript = () => {
     if (scriptLoaded.current) return;
     
+    // Remove any existing PayPal script to avoid conflicts
     const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
     if (existingScript) {
       document.body.removeChild(existingScript);
@@ -39,7 +41,11 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     
     script.onload = () => {
       scriptLoaded.current = true;
-      renderPayPalButtons();
+      console.log("PayPal script loaded successfully");
+      // Add a small timeout to ensure PayPal SDK is fully initialized
+      setTimeout(() => {
+        renderPayPalButtons();
+      }, 100);
     };
     
     script.onerror = (e) => {
@@ -62,8 +68,18 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       return;
     }
     
-    try {
+    // Clear the container to avoid duplicate buttons
+    if (paypalContainerRef.current) {
       paypalContainerRef.current.innerHTML = '';
+    }
+    
+    if (buttonsRendered.current) {
+      console.log("Buttons already rendered, skipping");
+      return;
+    }
+    
+    try {
+      console.log("Attempting to render PayPal buttons");
       const amount = calculateTotal(selectedPlan.price).toFixed(2);
       
       window.paypal.Buttons({
@@ -71,9 +87,25 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           color: 'gold',
           shape: 'rect',
           layout: 'vertical',
+          tagline: false
+        },
+        onClick: () => {
+          console.log("PayPal button clicked");
+          // Check if user is logged in
+          if (!user) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in to continue with the purchase.",
+              variant: "destructive",
+            });
+            navigate('/auth', { state: { returnTo: '/cart' } });
+            return false;
+          }
+          return true;
         },
         createOrder: async () => {
           try {
+            console.log("Creating PayPal order");
             setLoading(true);
             setError(null);
             
@@ -99,6 +131,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               throw new Error(response.error.message || 'Failed to create order');
             }
             
+            console.log("PayPal order created:", response.data.id);
             return response.data.id;
           } catch (error: any) {
             console.error('Error creating order:', error);
@@ -114,6 +147,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         },
         onApprove: async (data: any, actions: any) => {
           try {
+            console.log("PayPal payment approved:", data.orderID);
             setLoading(true);
             setError(null);
             
@@ -149,7 +183,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           }
         },
         onCancel: () => {
-          console.log("Payment cancelled");
+          console.log("Payment cancelled by user");
           toast({
             title: "Payment Cancelled",
             description: "You've cancelled the payment process",
@@ -168,6 +202,9 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         }
       }).render(paypalContainerRef.current);
       
+      buttonsRendered.current = true;
+      console.log("PayPal buttons rendered successfully");
+      
     } catch (error: any) {
       console.error("Error rendering PayPal buttons:", error);
       setError("Failed to initialize payment options");
@@ -177,10 +214,16 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   
   useEffect(() => {
     if (!selectedPlan) return;
+    
+    // Reset button render status when component mounts or selectedPlan changes
+    buttonsRendered.current = false;
+    
+    // Load PayPal script
     loadPayPalScript();
     
     return () => {
       scriptLoaded.current = false;
+      buttonsRendered.current = false;
     };
   }, [selectedPlan]);
 
@@ -214,6 +257,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               <div 
                 ref={paypalContainerRef}
                 className="w-full min-h-[150px]"
+                id="paypal-button-container"
               />
               
               <div className="text-center text-sm text-gray-500 flex items-center justify-center mt-4">
