@@ -218,7 +218,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             });
             setLoading(false);
           }
-        }).render(paypalButtonContainerRef.current);
+        }).render('#paypal-button-container'); // Fix: Changed from passing the DOM element to passing the selector string
 
         setLoading(false);
       } catch (error) {
