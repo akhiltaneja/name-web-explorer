@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,11 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 declare global {
   interface Window {
-    paypal?: {
-      Buttons: (config: any) => {
-        render: (containerId: string) => void;
-      };
-    };
+    paypal?: any;
   }
 }
 
@@ -80,14 +75,12 @@ const CartContent = () => {
     if (plan) {
       setSelectedPlan(plan);
       
-      // Update the URL with the new plan ID without navigating
       const url = new URL(window.location.href);
       url.searchParams.set('plan', planId);
       window.history.replaceState({}, '', url.toString());
     }
   };
 
-  // Store the cart return path in session storage for redirect after login
   useEffect(() => {
     sessionStorage.setItem('cartReturnPath', location.pathname + location.search);
   }, [location]);
