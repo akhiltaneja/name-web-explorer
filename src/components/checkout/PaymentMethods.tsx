@@ -7,7 +7,6 @@ import { Lock } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import PaypalLogo from "./PayPalLogo";
 
 interface PaymentMethodsProps {
   loading: boolean;
@@ -218,7 +217,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             });
             setLoading(false);
           }
-        }).render('#paypal-button-container'); // Fix: Changed from passing the DOM element to passing the selector string
+        }).render('#paypal-button-container');
 
         setLoading(false);
       } catch (error) {
@@ -232,87 +231,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       }
     }
   }, [paypalInitialized, selectedPlan, user]);
-
-  // Direct redirect to PayPal checkout using the approval URL
-  const handleDirectPayPalCheckout = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to make a purchase.",
-          variant: "destructive",
-        });
-        
-        const returnPath = sessionStorage.getItem('cartReturnPath') || '/cart';
-        navigate('/auth', { state: { returnTo: returnPath } });
-        return;
-      }
-      
-      if (!selectedPlan) {
-        toast({
-          title: "Error",
-          description: "No plan selected.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const amount = calculateTotal(selectedPlan.price).toFixed(2);
-      
-      console.log("Creating PayPal order for direct checkout:", {
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        amount
-      });
-      
-      // Call our Supabase function to create a PayPal order
-      const response = await supabase.functions.invoke('create-paypal-order', {
-        body: {
-          planId: selectedPlan.id,
-          planName: selectedPlan.name,
-          amount
-        }
-      });
-      
-      console.log("Direct checkout order response:", response);
-      
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to create PayPal order');
-      }
-      
-      if (!response.data || !response.data.id) {
-        throw new Error('Invalid response from payment service');
-      }
-      
-      // Store order details in session storage for later verification
-      sessionStorage.setItem('paypal_order_id', response.data.id);
-      sessionStorage.setItem('paypal_plan_id', selectedPlan.id);
-      
-      // Extract the approval URL for direct navigation
-      const approvalUrl = response.data.links.find(link => link.rel === "approve")?.href;
-      
-      if (!approvalUrl) {
-        throw new Error('No approval URL found in PayPal response');
-      }
-      
-      // Redirect user to PayPal checkout
-      console.log("Redirecting to PayPal approval URL:", approvalUrl);
-      window.location.href = approvalUrl;
-      
-    } catch (error) {
-      console.error('Error initiating direct PayPal checkout:', error);
-      setError(error.message || "Payment initialization failed");
-      toast({
-        title: "Payment Error",
-        description: error.message || "Could not start the payment process. Please try again.",
-        variant: "destructive",
-      });
-      setLoading(false);
-    }
-  };
 
   return (
     <Card className="shadow-sm">
@@ -337,24 +255,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             </div>
           ) : (
             <>
-              {/* Direct PayPal checkout button */}
-              <button
-                onClick={handleDirectPayPalCheckout}
-                disabled={loading || !selectedPlan}
-                className="w-full bg-[#0070ba] hover:bg-[#003087] text-white py-3 px-4 rounded-md transition-colors flex items-center justify-center"
-              >
-                <PaypalLogo />
-              </button>
-              
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or pay with PayPal buttons</span>
-                </div>
-              </div>
-              
               {/* PayPal SDK buttons container */}
               <div 
                 id="paypal-button-container" 
@@ -375,8 +275,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               </div>
             </>
           )}
-          
-          <div id="result-message" className="mt-4 text-center text-sm"></div>
         </div>
       </CardContent>
     </Card>

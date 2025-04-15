@@ -115,7 +115,7 @@ serve(async (req) => {
       );
     }
 
-    // Create order with PayPal - following the standard integration pattern
+    // Create order with PayPal - for in-context/popup payment experience
     const orderPayload = {
       intent: "CAPTURE",
       purchase_units: [
@@ -147,11 +147,8 @@ serve(async (req) => {
       ],
       application_context: {
         brand_name: "CandidateChecker",
-        landing_page: "LOGIN", // Changed from BILLING to LOGIN for better checkout experience
-        user_action: "PAY_NOW",
-        return_url: "https://candidatechecker.io/payment-success", // This should be handled by your frontend
-        cancel_url: "https://candidatechecker.io/payment-cancelled", // This should be handled by your frontend
-        shipping_preference: "NO_SHIPPING"
+        shipping_preference: "NO_SHIPPING",
+        user_action: "PAY_NOW"
       },
     };
 
@@ -195,30 +192,12 @@ serve(async (req) => {
 
     console.log("PayPal order created successfully:", orderData);
 
-    // Extract the approval URL for direct navigation
-    const approvalUrl = orderData.links.find(link => link.rel === "approve")?.href;
-
-    if (!approvalUrl) {
-      console.error("No approval URL found in PayPal response");
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid PayPal response",
-          details: "No approval URL found in order response"
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Return successful response with PayPal order details
+    // Return successful response with PayPal order ID
     return new Response(
       JSON.stringify({
         id: orderData.id,
         status: orderData.status,
-        links: orderData.links,
-        approvalUrl: approvalUrl
+        links: orderData.links
       }),
       {
         status: 200,
