@@ -1,13 +1,13 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import PaypalLogo from "./PayPalLogo";
 
 interface PaymentMethodsProps {
   loading: boolean;
@@ -17,18 +17,17 @@ interface PaymentMethodsProps {
 const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const [error, setError] = useState<string | null>(null);
   const [paypalInitialized, setPaypalInitialized] = useState(false);
+  const paypalButtonContainerRef = useRef<HTMLDivElement | null>(null);
   
   const { toast } = useToast();
   const { selectedPlan, calculateTotal } = useCart();
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  // Load PayPal SDK
   const loadPayPalScript = () => {
     if (document.querySelector('script[src*="paypal.com/sdk/js"]')) {
       // Script already loaded
       setPaypalInitialized(true);
-      renderPayPalButtons();
       return;
     }
 
@@ -40,7 +39,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     script.onload = () => {
       console.log("PayPal script loaded successfully");
       setPaypalInitialized(true);
-      renderPayPalButtons();
     };
     
     script.onerror = () => {
@@ -57,179 +55,262 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   };
 
   // Initialize PayPal on component mount
-  useState(() => {
+  useEffect(() => {
     if (selectedPlan) {
       loadPayPalScript();
     }
-  });
+  }, [selectedPlan]);
 
-  const renderPayPalButtons = () => {
-    if (!window.paypal || !selectedPlan) return;
-    
-    // Clear any existing buttons first
-    const container = document.getElementById('paypal-button-container');
-    if (container) {
-      container.innerHTML = '';
-    }
+  // Render PayPal buttons once script is loaded
+  useEffect(() => {
+    if (paypalInitialized && window.paypal && selectedPlan && paypalButtonContainerRef.current) {
+      // Clear any existing buttons first
+      if (paypalButtonContainerRef.current) {
+        paypalButtonContainerRef.current.innerHTML = '';
+      }
 
-    try {
-      window.paypal.Buttons({
-        style: {
-          shape: "rect",
-          layout: "vertical",
-          color: "gold",
-          label: "paypal",
-        },
-        async createOrder() {
-          try {
-            setLoading(true);
-            setError(null);
-            
-            // Check if user is logged in
-            if (!user) {
-              toast({
-                title: "Authentication required",
-                description: "You need to be logged in to make a purchase.",
-                variant: "destructive",
-              });
+      try {
+        const amount = calculateTotal(selectedPlan.price).toFixed(2);
+        
+        window.paypal.Buttons({
+          style: {
+            shape: "rect",
+            layout: "vertical",
+            color: "gold",
+            label: "paypal",
+          },
+          async createOrder() {
+            try {
+              setLoading(true);
+              setError(null);
               
-              // Save current location to redirect back after login
-              const returnPath = sessionStorage.getItem('cartReturnPath');
-              navigate('/auth', { state: { returnTo: returnPath } });
-              return null;
-            }
-            
-            const amount = calculateTotal(selectedPlan.price);
-            
-            console.log("Creating PayPal order with params:", {
-              planId: selectedPlan.id,
-              planName: selectedPlan.name,
-              amount: amount.toFixed(2)
-            });
-            
-            // Call our Supabase function to create a PayPal order
-            const response = await supabase.functions.invoke('create-paypal-order', {
-              body: {
+              // Check if user is logged in
+              if (!user) {
+                toast({
+                  title: "Authentication required",
+                  description: "You need to be logged in to make a purchase.",
+                  variant: "destructive",
+                });
+                
+                // Save current location to redirect back after login
+                const returnPath = sessionStorage.getItem('cartReturnPath') || '/cart';
+                navigate('/auth', { state: { returnTo: returnPath } });
+                return null;
+              }
+              
+              console.log("Creating PayPal order with params:", {
                 planId: selectedPlan.id,
                 planName: selectedPlan.name,
-                amount: amount.toFixed(2)
+                amount: amount
+              });
+              
+              // Call our Supabase function to create a PayPal order
+              const response = await supabase.functions.invoke('create-paypal-order', {
+                body: {
+                  planId: selectedPlan.id,
+                  planName: selectedPlan.name,
+                  amount: amount
+                }
+              });
+              
+              console.log("Create order response:", response);
+              
+              if (response.error) {
+                throw new Error(response.error.message || 'Failed to create PayPal order');
               }
-            });
-            
-            console.log("Create order response:", response);
-            
-            if (response.error) {
-              throw new Error(response.error.message || 'Failed to create PayPal order');
+              
+              if (!response.data || !response.data.id) {
+                throw new Error('Invalid response from payment service');
+              }
+              
+              // Return the order ID so PayPal can complete the transaction
+              return response.data.id;
+            } catch (error) {
+              console.error('Error creating PayPal order:', error);
+              setError(error.message || "Payment initialization failed");
+              toast({
+                title: "Payment Error",
+                description: error.message || "Could not start the payment process. Please try again.",
+                variant: "destructive",
+              });
+              setLoading(false);
+              return null;
             }
-            
-            if (!response.data || !response.data.id) {
-              throw new Error('Invalid response from payment service');
+          },
+          async onApprove(data, actions) {
+            try {
+              setLoading(true);
+              setError(null);
+              
+              // Get the order ID from PayPal
+              const { orderID } = data;
+              console.log("Order approved:", orderID);
+              
+              // Call our Supabase function to capture the payment
+              const response = await supabase.functions.invoke('capture-paypal-order', {
+                body: {
+                  orderId: orderID,
+                  userId: user?.id,
+                  planId: selectedPlan.id
+                }
+              });
+              
+              console.log("Capture response:", response);
+              
+              if (response.error) {
+                throw new Error(response.error.message || 'Failed to capture PayPal payment');
+              }
+              
+              if (!response.data || !response.data.success) {
+                throw new Error('Invalid response from payment service');
+              }
+              
+              // Payment successful!
+              toast({
+                title: "Payment successful!",
+                description: `Your ${selectedPlan.name} plan is now active.`,
+              });
+              
+              // Refresh the user profile to get updated plan information
+              await refreshProfile();
+              navigate('/profile');
+              return true;
+            } catch (error) {
+              // Handle specific errors from PayPal
+              if (error.message?.includes('INSTRUMENT_DECLINED')) {
+                toast({
+                  title: "Payment method declined",
+                  description: "Your payment method was declined. Please try a different payment method.",
+                  variant: "destructive",
+                });
+                // Allow the user to try again
+                if (actions?.restart) {
+                  return actions.restart();
+                }
+              } else {
+                console.error('Error capturing PayPal payment:', error);
+                setError(error.message || "Payment failed");
+                toast({
+                  title: "Payment failed",
+                  description: error.message || "There was an issue processing your payment. Please try again.",
+                  variant: "destructive",
+                });
+              }
+              return false;
+            } finally {
+              setLoading(false);
             }
-            
-            // Return the order ID so PayPal can complete the transaction
-            return response.data.id;
-          } catch (error) {
-            console.error('Error creating PayPal order:', error);
-            setError(error.message || "Payment initialization failed");
+          },
+          onCancel: () => {
             toast({
-              title: "Payment Error",
-              description: error.message || "Could not start the payment process. Please try again.",
+              title: "Payment cancelled",
+              description: "You've cancelled the payment process. No payment was made.",
+            });
+            setLoading(false);
+          },
+          onError: (err) => {
+            console.error('PayPal error:', err);
+            setError("Payment processing error");
+            toast({
+              title: "Payment error",
+              description: "An error occurred during the payment process. Please try again.",
               variant: "destructive",
             });
             setLoading(false);
-            return null;
           }
-        },
-        async onApprove(data, actions) {
-          try {
-            setLoading(true);
-            setError(null);
-            
-            // Get the order ID from PayPal
-            const { orderID } = data;
-            console.log("Order approved:", orderID);
-            
-            // Call our Supabase function to capture the payment
-            const response = await supabase.functions.invoke('capture-paypal-order', {
-              body: {
-                orderId: orderID,
-                userId: user?.id,
-                planId: selectedPlan.id
-              }
-            });
-            
-            console.log("Capture response:", response);
-            
-            if (response.error) {
-              throw new Error(response.error.message || 'Failed to capture PayPal payment');
-            }
-            
-            if (!response.data || !response.data.success) {
-              throw new Error('Invalid response from payment service');
-            }
-            
-            // Payment successful!
-            toast({
-              title: "Payment successful!",
-              description: `Your ${selectedPlan.name} plan is now active.`,
-            });
-            
-            // Refresh the user profile to get updated plan information
-            await refreshProfile();
-            navigate('/profile');
-            return true;
-          } catch (error) {
-            // Handle specific errors from PayPal
-            if (error.message?.includes('INSTRUMENT_DECLINED')) {
-              toast({
-                title: "Payment method declined",
-                description: "Your payment method was declined. Please try a different payment method.",
-                variant: "destructive",
-              });
-              // Allow the user to try again
-              if (actions?.restart) {
-                return actions.restart();
-              }
-            } else {
-              console.error('Error capturing PayPal payment:', error);
-              setError(error.message || "Payment failed");
-              toast({
-                title: "Payment failed",
-                description: error.message || "There was an issue processing your payment. Please try again.",
-                variant: "destructive",
-              });
-            }
-            return false;
-          } finally {
-            setLoading(false);
-          }
-        },
-        onCancel: () => {
-          toast({
-            title: "Payment cancelled",
-            description: "You've cancelled the payment process. No payment was made.",
-          });
-          setLoading(false);
-        },
-        onError: (err) => {
-          console.error('PayPal error:', err);
-          setError("Payment processing error");
-          toast({
-            title: "Payment error",
-            description: "An error occurred during the payment process. Please try again.",
-            variant: "destructive",
-          });
-          setLoading(false);
+        }).render(paypalButtonContainerRef.current);
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error rendering PayPal buttons:", error);
+        setError("Failed to initialize payment options");
+        toast({
+          title: "Payment Error",
+          description: "Failed to initialize payment options. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [paypalInitialized, selectedPlan, user]);
+
+  // Direct redirect to PayPal checkout using the approval URL
+  const handleDirectPayPalCheckout = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to make a purchase.",
+          variant: "destructive",
+        });
+        
+        const returnPath = sessionStorage.getItem('cartReturnPath') || '/cart';
+        navigate('/auth', { state: { returnTo: returnPath } });
+        return;
+      }
+      
+      if (!selectedPlan) {
+        toast({
+          title: "Error",
+          description: "No plan selected.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const amount = calculateTotal(selectedPlan.price).toFixed(2);
+      
+      console.log("Creating PayPal order for direct checkout:", {
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        amount
+      });
+      
+      // Call our Supabase function to create a PayPal order
+      const response = await supabase.functions.invoke('create-paypal-order', {
+        body: {
+          planId: selectedPlan.id,
+          planName: selectedPlan.name,
+          amount
         }
-      }).render('#paypal-button-container');
+      });
+      
+      console.log("Direct checkout order response:", response);
+      
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create PayPal order');
+      }
+      
+      if (!response.data || !response.data.id) {
+        throw new Error('Invalid response from payment service');
+      }
+      
+      // Store order details in session storage for later verification
+      sessionStorage.setItem('paypal_order_id', response.data.id);
+      sessionStorage.setItem('paypal_plan_id', selectedPlan.id);
+      
+      // Extract the approval URL for direct navigation
+      const approvalUrl = response.data.links.find(link => link.rel === "approve")?.href;
+      
+      if (!approvalUrl) {
+        throw new Error('No approval URL found in PayPal response');
+      }
+      
+      // Redirect user to PayPal checkout
+      console.log("Redirecting to PayPal approval URL:", approvalUrl);
+      window.location.href = approvalUrl;
+      
     } catch (error) {
-      console.error("Error rendering PayPal buttons:", error);
-      setError("Failed to initialize payment options");
+      console.error('Error initiating direct PayPal checkout:', error);
+      setError(error.message || "Payment initialization failed");
       toast({
         title: "Payment Error",
-        description: "Failed to initialize payment options. Please try again later.",
+        description: error.message || "Could not start the payment process. Please try again.",
         variant: "destructive",
       });
+      setLoading(false);
     }
   };
 
@@ -256,7 +337,30 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             </div>
           ) : (
             <>
-              <div id="paypal-button-container" className="w-full mt-4 min-h-[150px]"></div>
+              {/* Direct PayPal checkout button */}
+              <button
+                onClick={handleDirectPayPalCheckout}
+                disabled={loading || !selectedPlan}
+                className="w-full bg-[#0070ba] hover:bg-[#003087] text-white py-3 px-4 rounded-md transition-colors flex items-center justify-center"
+              >
+                <PaypalLogo />
+              </button>
+              
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or pay with PayPal buttons</span>
+                </div>
+              </div>
+              
+              {/* PayPal SDK buttons container */}
+              <div 
+                id="paypal-button-container" 
+                ref={paypalButtonContainerRef} 
+                className="w-full mt-4 min-h-[150px]"
+              ></div>
               
               {!paypalInitialized && (
                 <div className="text-center py-6">

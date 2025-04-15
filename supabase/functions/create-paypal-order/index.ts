@@ -147,10 +147,10 @@ serve(async (req) => {
       ],
       application_context: {
         brand_name: "CandidateChecker",
-        landing_page: "BILLING",
+        landing_page: "LOGIN", // Changed from BILLING to LOGIN for better checkout experience
         user_action: "PAY_NOW",
-        return_url: "https://candidatechecker.io/payment-success",
-        cancel_url: "https://candidatechecker.io/payment-cancelled",
+        return_url: "https://candidatechecker.io/payment-success", // This should be handled by your frontend
+        cancel_url: "https://candidatechecker.io/payment-cancelled", // This should be handled by your frontend
         shipping_preference: "NO_SHIPPING"
       },
     };
@@ -197,6 +197,20 @@ serve(async (req) => {
 
     // Extract the approval URL for direct navigation
     const approvalUrl = orderData.links.find(link => link.rel === "approve")?.href;
+
+    if (!approvalUrl) {
+      console.error("No approval URL found in PayPal response");
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid PayPal response",
+          details: "No approval URL found in order response"
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Return successful response with PayPal order details
     return new Response(
