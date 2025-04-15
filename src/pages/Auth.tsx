@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Google } from "lucide-react";
+import { Google as LogIn } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,7 @@ const Auth = () => {
     setShowEmailVerification,
     verificationEmail,
     verificationError,
-    setVerificationError, // This is missing in the hooks response
+    setVerificationError,
     showConfetti,
     signUpForm,
     signInForm,
@@ -49,10 +49,8 @@ const Auth = () => {
 
   const { user } = useAuth();
 
-  // Redirect to the return path when authenticated
   useEffect(() => {
     if (user) {
-      // Check if there's a return path to go back to (like the cart page)
       if (returnTo) {
         navigate(returnTo);
       } else {
@@ -176,7 +174,7 @@ const Auth = () => {
                 onClick={() => handleOAuthSignIn("google")}
                 disabled={isLoading}
               >
-                <Google className="w-5 h-5 mr-2" />
+                <LogIn className="w-5 h-5 mr-2" />
                 Sign In with Google
               </Button>
             </div>
@@ -230,7 +228,6 @@ const Auth = () => {
         </Card>
       </div>
 
-      {/* Email Verification Alert */}
       <AlertDialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
         <AlertDialogContent>
           <AlertDialogHeader>
