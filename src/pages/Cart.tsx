@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +11,7 @@ import { CartProvider, useCart } from "@/context/CartContext";
 import FlashDealTimer from "@/components/checkout/FlashDealTimer";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-declare global {
-  interface Window {
-    paypal?: any;
-  }
-}
+// The global interface is now defined in the global.d.ts file
 
 const plans: PlanOption[] = [
   {

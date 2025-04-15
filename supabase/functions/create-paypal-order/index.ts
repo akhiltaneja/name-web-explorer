@@ -115,7 +115,7 @@ serve(async (req) => {
       );
     }
 
-    // Create order with PayPal - for in-context/popup payment experience
+    // Create order with PayPal - simplified version for better compatibility
     const orderPayload = {
       intent: "CAPTURE",
       purchase_units: [
@@ -124,25 +124,8 @@ serve(async (req) => {
           description: `CandidateChecker ${planName} Plan`,
           amount: {
             currency_code: "USD",
-            value: String(amount),
-            breakdown: {
-              item_total: {
-                currency_code: "USD",
-                value: String(amount)
-              }
-            }
-          },
-          items: [
-            {
-              name: `${planName} Plan`,
-              unit_amount: {
-                currency_code: "USD",
-                value: String(amount)
-              },
-              quantity: "1",
-              description: `CandidateChecker ${planName} Subscription`
-            }
-          ]
+            value: amount
+          }
         },
       ],
       application_context: {
@@ -150,8 +133,7 @@ serve(async (req) => {
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
         return_url: "https://your-app.com/success",
-        cancel_url: "https://your-app.com/cancel",
-        landing_page: "LOGIN" // Set to LOGIN to ensure popup works properly
+        cancel_url: "https://your-app.com/cancel"
       },
     };
 
