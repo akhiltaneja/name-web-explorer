@@ -169,12 +169,16 @@ serve(async (req) => {
     const orderData = await orderResponse.json();
     console.log("PayPal order created successfully:", orderData);
 
-    // Return successful response with PayPal order details
+    // Extract the approval URL for direct navigation
+    const approvalUrl = orderData.links.find(link => link.rel === "approve")?.href;
+
+    // Return successful response with PayPal order details and direct approval URL
     return new Response(
       JSON.stringify({
         id: orderData.id,
         status: orderData.status,
         links: orderData.links,
+        approvalUrl: approvalUrl, // Include the direct approval URL
       }),
       {
         status: 200,

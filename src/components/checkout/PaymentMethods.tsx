@@ -39,6 +39,13 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     setPaypalError(null);
   }, [paymentMethod]);
 
+  // Function to manually redirect to PayPal checkout
+  const redirectToPayPal = async (orderId) => {
+    // Find the approval URL from the links array
+    const approvalLink = `https://www.paypal.com/checkoutnow?token=${orderId}`;
+    window.open(approvalLink, '_blank');
+  };
+
   useEffect(() => {
     if (!selectedPlan) return;
 
@@ -50,6 +57,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
 
       const script = document.createElement('script');
       script.id = 'paypal-script';
+      // Make sure to use the sandbox URL for testing
       script.src = `https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&intent=capture`;
       script.setAttribute('data-sdk-integration-source', 'button-factory');
       
@@ -73,6 +81,20 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
 
     loadPayPalScript();
   }, [selectedPlan, toast]);
+
+  useEffect(() => {
+    // Clear out the PayPal button container and re-render buttons when needed
+    if (paymentMethod === "paypal") {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const container = document.getElementById('paypal-button-container');
+        if (container) {
+          container.innerHTML = '';
+          setPaypalButtonsRendered(false);
+        }
+      }, 100);
+    }
+  }, [paymentMethod]);
 
   useEffect(() => {
     if (paypalScriptLoaded && selectedPlan && paymentMethod === "paypal" && !paypalButtonsRendered) {
@@ -138,6 +160,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             throw new Error('Invalid response from payment service');
           }
           
+          // Store the order ID in localStorage for potential manual redirect
+          localStorage.setItem('pendingPayPalOrderId', response.data.id);
+          
+          // Return the order ID for PayPal to handle
           return response.data.id;
         } catch (error) {
           console.error('Error creating PayPal order:', error);
@@ -177,6 +203,9 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           if (!response.data || !response.data.success) {
             throw new Error('Invalid response from payment service');
           }
+          
+          // Clear the pending order ID
+          localStorage.removeItem('pendingPayPalOrderId');
           
           toast({
             title: "Payment successful!",
@@ -252,6 +281,69 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     }
   };
   
+  // Function to handle manual PayPal redirect when buttons fail
+  const handleManualPayPalRedirect = async () => {
+    try {
+      setLoading(true);
+      
+      // Check if user is authenticated
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to make a purchase.",
+          variant: "destructive",
+        });
+        
+        // Save current location to redirect back after login
+        const returnPath = sessionStorage.getItem('cartReturnPath');
+        navigate('/auth', { state: { returnTo: returnPath } });
+        return;
+      }
+      
+      const amount = calculateTotal(selectedPlan.price);
+      
+      // Create a new PayPal order
+      const response = await supabase.functions.invoke('create-paypal-order', {
+        body: {
+          planId: selectedPlan.id,
+          planName: selectedPlan.name,
+          amount: amount.toFixed(2)
+        }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create PayPal order');
+      }
+      
+      if (!response.data || !response.data.id) {
+        throw new Error('Invalid response from payment service');
+      }
+      
+      const orderId = response.data.id;
+      
+      // Find the approval URL
+      const approvalLink = `https://www.paypal.com/checkoutnow?token=${orderId}`;
+      
+      // Open in new tab
+      window.open(approvalLink, '_blank');
+      
+      toast({
+        title: "PayPal checkout opened",
+        description: "Complete your payment in the PayPal window that opened. After payment, return here to confirm.",
+      });
+      
+    } catch (error) {
+      console.error('Error with manual PayPal redirect:', error);
+      toast({
+        title: "Payment Error",
+        description: error.message || "Failed to start PayPal checkout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const handleCardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -313,11 +405,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         return;
       }
       
-      // In a real implementation with a payment processor, you would:
-      // 1. Tokenize the card details
-      // 2. Send the token to your backend
-      // 3. Process the payment on the backend
-      // For this demo, we'll simulate a successful payment
+      toast({
+        title: "Demo Mode",
+        description: "This is a demo implementation. In a real application, you would be redirected to a secure payment gateway. We'll simulate a successful payment.",
+      });
       
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -349,8 +440,8 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       }
       
       toast({
-        title: "Payment successful!",
-        description: `Your ${selectedPlan?.name} plan is now active.`,
+        title: "Demo Payment successful!",
+        description: `This is a simulated successful payment. Your ${selectedPlan?.name} plan is now active.`,
       });
       
       // Update user profile with the new plan information
@@ -436,6 +527,22 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
             <p className="mt-3 text-gray-600">Loading payment options...</p>
           </div>  
+        )}
+        
+        {/* Alternative manual PayPal button for when Smart Buttons fail */}
+        {paypalScriptLoaded && !loading && (
+          <div className="mt-4">
+            <Button 
+              type="button" 
+              onClick={handleManualPayPalRedirect}
+              className="w-full bg-[#0070ba] hover:bg-[#003087] text-white py-3"
+            >
+              Checkout with PayPal
+            </Button>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              If the PayPal buttons above are not working, use this button instead
+            </p>
+          </div>
         )}
         
         <div className="text-center text-sm text-gray-500 flex items-center justify-center mt-4">
@@ -529,6 +636,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800 mt-4">
           <p className="font-medium">Demo Mode</p>
           <p className="mt-1">This is a demo implementation. In production, you would integrate with a real payment processor.</p>
+          <p className="mt-1">The credit card payment is simulated and will always succeed without actual payment processing.</p>
         </div>
       </TabsContent>
     </Tabs>
