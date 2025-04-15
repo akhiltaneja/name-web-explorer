@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,23 +16,40 @@ interface PaymentMethodsProps {
 const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const [error, setError] = useState<string | null>(null);
   const [paypalInitialized, setPaypalInitialized] = useState(false);
-  const paypalButtonContainerRef = useRef<HTMLDivElement | null>(null);
+  const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false);
   
   const { toast } = useToast();
   const { selectedPlan, calculateTotal } = useCart();
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
+  // Clean up any previous PayPal script
+  useEffect(() => {
+    // Remove any existing PayPal script
+    const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+    if (existingScript) {
+      existingScript.remove();
+      // Also clear the paypal button container
+      const container = document.getElementById('paypal-button-container');
+      if (container) {
+        container.innerHTML = '';
+      }
+    }
+    setPaypalInitialized(false);
+    setPaypalButtonsRendered(false);
+  }, []);
+
   const loadPayPalScript = () => {
+    // Make sure we're not duplicating the script
     if (document.querySelector('script[src*="paypal.com/sdk/js"]')) {
-      // Script already loaded
+      console.log("PayPal script already exists, not loading again");
       setPaypalInitialized(true);
       return;
     }
 
     const script = document.createElement('script');
-    script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&buyer-country=US&currency=USD&components=buttons&enable-funding=card&disable-funding=venmo,paylater";
-    script.dataset.sdkIntegrationSource = "developer-studio";
+    script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&components=buttons&disable-funding=venmo,paylater";
+    script.dataset.sdkIntegrationSource = "button-factory";
     script.async = true;
     
     script.onload = () => {
@@ -62,14 +79,18 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
 
   // Render PayPal buttons once script is loaded
   useEffect(() => {
-    if (paypalInitialized && window.paypal && selectedPlan && paypalButtonContainerRef.current) {
-      // Clear any existing buttons first
-      if (paypalButtonContainerRef.current) {
-        paypalButtonContainerRef.current.innerHTML = '';
-      }
-
+    if (paypalInitialized && window.paypal && selectedPlan && !paypalButtonsRendered) {
       try {
         const amount = calculateTotal(selectedPlan.price).toFixed(2);
+        const container = document.getElementById('paypal-button-container');
+        
+        if (!container) {
+          console.error("PayPal button container not found");
+          return;
+        }
+        
+        // Clear any existing content
+        container.innerHTML = '';
         
         window.paypal.Buttons({
           style: {
@@ -217,20 +238,27 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             });
             setLoading(false);
           }
-        }).render('#paypal-button-container');
-
-        setLoading(false);
+        }).render('#paypal-button-container').then(() => {
+          setPaypalButtonsRendered(true);
+          setLoading(false);
+          console.log("PayPal buttons rendered successfully");
+        }).catch(err => {
+          console.error("Error rendering PayPal buttons:", err);
+          setError("Failed to initialize payment options");
+          setLoading(false);
+        });
       } catch (error) {
-        console.error("Error rendering PayPal buttons:", error);
+        console.error("Error setting up PayPal buttons:", error);
         setError("Failed to initialize payment options");
         toast({
           title: "Payment Error",
           description: "Failed to initialize payment options. Please try again later.",
           variant: "destructive",
         });
+        setLoading(false);
       }
     }
-  }, [paypalInitialized, selectedPlan, user]);
+  }, [paypalInitialized, selectedPlan, user, paypalButtonsRendered]);
 
   return (
     <Card className="shadow-sm">
@@ -258,7 +286,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               {/* PayPal SDK buttons container */}
               <div 
                 id="paypal-button-container" 
-                ref={paypalButtonContainerRef} 
                 className="w-full mt-4 min-h-[150px]"
               ></div>
               

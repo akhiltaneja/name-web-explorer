@@ -148,7 +148,9 @@ serve(async (req) => {
       application_context: {
         brand_name: "CandidateChecker",
         shipping_preference: "NO_SHIPPING",
-        user_action: "PAY_NOW"
+        user_action: "PAY_NOW",
+        return_url: "https://your-app.com/success",
+        cancel_url: "https://your-app.com/cancel"
       },
     };
 
