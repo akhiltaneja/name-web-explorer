@@ -134,6 +134,7 @@ serve(async (req) => {
         user_action: "PAY_NOW",
         return_url: "https://candidatechecker.io/payment-success",
         cancel_url: "https://candidatechecker.io/payment-cancelled",
+        shipping_preference: "NO_SHIPPING"
       },
     };
 

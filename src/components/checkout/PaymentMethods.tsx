@@ -21,6 +21,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const [paymentMethod, setPaymentMethod] = useState<"paypal" | "card">("paypal");
   const [paypalScriptLoaded, setPaypalScriptLoaded] = useState(false);
   const [paypalError, setPaypalError] = useState<string | null>(null);
+  const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false);
   
   // Card form state
   const [cardNumber, setCardNumber] = useState("");
@@ -74,10 +75,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   }, [selectedPlan, toast]);
 
   useEffect(() => {
-    if (paypalScriptLoaded && selectedPlan && paymentMethod === "paypal") {
+    if (paypalScriptLoaded && selectedPlan && paymentMethod === "paypal" && !paypalButtonsRendered) {
       renderPayPalButtons();
     }
-  }, [paypalScriptLoaded, paymentMethod, selectedPlan]);
+  }, [paypalScriptLoaded, paymentMethod, selectedPlan, paypalButtonsRendered]);
 
   const renderPayPalButtons = () => {
     if (!selectedPlan || !window.paypal) return;
@@ -146,13 +147,12 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             description: error.message || "Could not start the payment process. Please try again.",
             variant: "destructive",
           });
-          return null;
-        } finally {
           setLoading(false);
+          return null;
         }
       };
 
-      const onApproveHandler = async (data: any, actions: any) => {
+      const onApproveHandler = async (data, actions) => {
         try {
           setLoading(true);
           setPaypalError(null);
@@ -201,38 +201,54 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       };
 
       if (paypalButtonContainer && paymentMethod === "paypal") {
-        window.paypal.Buttons({
-          style: {
-            shape: "rect",
-            layout: "vertical"
-          },
-          createOrder: createOrderHandler,
-          onApprove: onApproveHandler,
-          onCancel: () => {
-            toast({
-              title: "Payment cancelled",
-              description: "You've cancelled the payment process. No payment was made.",
-            });
-          },
-          onError: (err: any) => {
-            console.error('PayPal error:', err);
-            setPaypalError("Payment processing error");
-            toast({
-              title: "Payment error",
-              description: "An error occurred during the payment process. Please try again.",
-              variant: "destructive",
-            });
-          }
-        }).render('#paypal-button-container');
+        try {
+          window.paypal.Buttons({
+            style: {
+              shape: "rect",
+              layout: "vertical"
+            },
+            createOrder: createOrderHandler,
+            onApprove: onApproveHandler,
+            onCancel: () => {
+              toast({
+                title: "Payment cancelled",
+                description: "You've cancelled the payment process. No payment was made.",
+              });
+              setLoading(false);
+            },
+            onError: (err) => {
+              console.error('PayPal error:', err);
+              setPaypalError("Payment processing error");
+              toast({
+                title: "Payment error",
+                description: "An error occurred during the payment process. Please try again.",
+                variant: "destructive",
+              });
+              setLoading(false);
+            }
+          }).render('#paypal-button-container');
+          
+          setPaypalButtonsRendered(true);
+        } catch (renderError) {
+          console.error("Error rendering PayPal buttons:", renderError);
+          setPaypalError("Failed to initialize payment options");
+          toast({
+            title: "Payment Error",
+            description: "Failed to initialize payment options. Please try again later.",
+            variant: "destructive",
+          });
+          setLoading(false);
+        }
       }
     } catch (error) {
-      console.error("Error rendering PayPal buttons:", error);
+      console.error("Error setting up PayPal buttons:", error);
       setPaypalError("Failed to initialize payment");
       toast({
         title: "Payment Error",
         description: "Failed to initialize payment options. Please try again later.",
         variant: "destructive",
       });
+      setLoading(false);
     }
   };
   
@@ -252,9 +268,6 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       return;
     }
     
-    // In a real implementation, this would validate and process the card payment
-    // For now, we'll just simulate a payment process
-    
     try {
       setLoading(true);
       
@@ -265,6 +278,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           description: "Please fill in all card details.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
       
@@ -275,16 +289,39 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           description: "Please enter a valid 16-digit card number.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
       
-      // This would integrate with a real payment processor in production
-      // For demo purposes, we'll proceed with a mock payment process
+      if (cardCvc.length < 3) {
+        toast({
+          title: "Invalid CVC",
+          description: "Please enter a valid CVC code.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       
-      // Simulate API call to process payment
+      if (cardExpiry.length < 5 || !cardExpiry.includes('/')) {
+        toast({
+          title: "Invalid expiry date",
+          description: "Please enter a valid expiry date (MM/YY).",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // In a real implementation with a payment processor, you would:
+      // 1. Tokenize the card details
+      // 2. Send the token to your backend
+      // 3. Process the payment on the backend
+      // For this demo, we'll simulate a successful payment
+      
+      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Update user profile with the new plan information
       // Calculate plan duration based on plan type
       let planDuration = 30; // default 30 days for most plans
       if (selectedPlan?.id === 'premium') {

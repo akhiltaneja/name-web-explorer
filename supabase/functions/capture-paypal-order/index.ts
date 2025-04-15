@@ -150,24 +150,42 @@ serve(async (req) => {
     const orderStatus = await orderStatusResponse.json();
     console.log("Order status from PayPal:", orderStatus);
 
+    // Validate that the order is in a capturable state
+    if (orderStatus.status !== "CREATED" && orderStatus.status !== "APPROVED") {
+      console.error("Order is not in a capturable state:", orderStatus.status);
+      return new Response(
+        JSON.stringify({ 
+          error: "Order cannot be captured",
+          details: `Order status is ${orderStatus.status}, expected CREATED or APPROVED`
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Capture the order (complete the payment)
     const captureResponse = await fetch(`${paypalApiUrl}/v2/checkout/orders/${orderId}/capture`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "Prefer": "return=representation"
       },
     });
 
+    // Handle capture response
+    const captureData = await captureResponse.json();
+    
     if (!captureResponse.ok) {
-      const captureError = await captureResponse.text();
       console.error("PayPal capture error status:", captureResponse.status);
-      console.error("PayPal capture error response:", captureError);
+      console.error("PayPal capture error response:", captureData);
       return new Response(
         JSON.stringify({ 
           error: "Failed to capture PayPal payment",
           status: captureResponse.status,
-          details: captureError
+          details: captureData
         }),
         {
           status: 500,
@@ -176,8 +194,22 @@ serve(async (req) => {
       );
     }
 
-    const captureData = await captureResponse.json();
     console.log("Payment captured from PayPal:", captureData);
+
+    // Check if capture was successful
+    if (captureData.status !== "COMPLETED") {
+      console.error("PayPal capture status is not COMPLETED:", captureData.status);
+      return new Response(
+        JSON.stringify({ 
+          error: "Payment capture not completed",
+          details: `Capture status is ${captureData.status}, expected COMPLETED`
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Update user's plan in Supabase
     // Calculate plan duration based on plan type
