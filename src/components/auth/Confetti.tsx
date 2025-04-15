@@ -1,10 +1,19 @@
 
 import { useEffect, useState } from 'react';
 
-const Confetti = () => {
+interface ConfettiProps {
+  isVisible: boolean;
+}
+
+export const Confetti = ({ isVisible }: ConfettiProps) => {
   const [pieces, setPieces] = useState<JSX.Element[]>([]);
 
   useEffect(() => {
+    if (!isVisible) {
+      setPieces([]);
+      return;
+    }
+    
     const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4CAF50'];
     const confettiPieces = [];
     
@@ -55,7 +64,9 @@ const Confetti = () => {
     return () => {
       document.head.removeChild(style);
     };
-  }, []);
+  }, [isVisible]);
+
+  if (!isVisible) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50">

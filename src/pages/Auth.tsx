@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Github, Google } from "lucide-react";
+import { LucideGoogle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Confetti } from "@/components/Confetti";
+import { Confetti } from "@/components/auth/Confetti";
 
 import { useAuthForms, SignUpFormValues, SignInFormValues } from "@/hooks/useAuthForms";
 
@@ -38,6 +39,7 @@ const Auth = () => {
     setShowEmailVerification,
     verificationEmail,
     verificationError,
+    setVerificationError, // This is missing in the hooks response
     showConfetti,
     signUpForm,
     signInForm,
@@ -175,7 +177,7 @@ const Auth = () => {
                 onClick={() => handleOAuthSignIn("google")}
                 disabled={isLoading}
               >
-                <Google className="w-5 h-5 mr-2" />
+                <LucideGoogle className="w-5 h-5 mr-2" />
                 Sign In with Google
               </Button>
             </div>
@@ -258,7 +260,6 @@ const Auth = () => {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
               setShowEmailVerification(false);
-              setVerificationError(null);
             }}>
               Close
             </AlertDialogCancel>
