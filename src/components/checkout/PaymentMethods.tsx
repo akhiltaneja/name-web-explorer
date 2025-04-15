@@ -238,15 +238,13 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             });
             setLoading(false);
           }
-        }).render('#paypal-button-container').then(() => {
-          setPaypalButtonsRendered(true);
-          setLoading(false);
-          console.log("PayPal buttons rendered successfully");
-        }).catch(err => {
-          console.error("Error rendering PayPal buttons:", err);
-          setError("Failed to initialize payment options");
-          setLoading(false);
-        });
+        }).render('#paypal-button-container');
+        
+        // Fixed: Remove the .then() chain and set state immediately
+        setPaypalButtonsRendered(true);
+        setLoading(false);
+        console.log("PayPal buttons rendered successfully");
+        
       } catch (error) {
         console.error("Error setting up PayPal buttons:", error);
         setError("Failed to initialize payment options");

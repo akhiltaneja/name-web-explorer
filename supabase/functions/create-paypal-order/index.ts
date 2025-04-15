@@ -150,7 +150,8 @@ serve(async (req) => {
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
         return_url: "https://your-app.com/success",
-        cancel_url: "https://your-app.com/cancel"
+        cancel_url: "https://your-app.com/cancel",
+        landing_page: "LOGIN" // Set to LOGIN to ensure popup works properly
       },
     };
 
