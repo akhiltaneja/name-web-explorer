@@ -115,7 +115,7 @@ serve(async (req) => {
       );
     }
 
-    // Create order with PayPal
+    // Create order with PayPal - following the standard integration pattern
     const orderPayload = {
       intent: "CAPTURE",
       purchase_units: [
@@ -125,7 +125,24 @@ serve(async (req) => {
           amount: {
             currency_code: "USD",
             value: String(amount),
+            breakdown: {
+              item_total: {
+                currency_code: "USD",
+                value: String(amount)
+              }
+            }
           },
+          items: [
+            {
+              name: `${planName} Plan`,
+              unit_amount: {
+                currency_code: "USD",
+                value: String(amount)
+              },
+              quantity: "1",
+              description: `CandidateChecker ${planName} Subscription`
+            }
+          ]
         },
       ],
       application_context: {
@@ -145,19 +162,29 @@ serve(async (req) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "Prefer": "return=representation"
       },
       body: JSON.stringify(orderPayload),
     });
 
+    // Handle the order response
+    const orderData = await orderResponse.json();
+    
     if (!orderResponse.ok) {
-      const orderError = await orderResponse.text();
       console.error("PayPal order creation error status:", orderResponse.status);
-      console.error("PayPal order creation error response:", orderError);
+      console.error("PayPal order creation error response:", orderData);
+      
+      // Check for specific error details
+      const errorDetail = orderData?.details?.[0];
+      const errorMessage = errorDetail
+        ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
+        : JSON.stringify(orderData);
+      
       return new Response(
         JSON.stringify({ 
           error: "Failed to create PayPal order",
           status: orderResponse.status,
-          details: orderError
+          details: errorMessage
         }),
         {
           status: 500,
@@ -166,19 +193,18 @@ serve(async (req) => {
       );
     }
 
-    const orderData = await orderResponse.json();
     console.log("PayPal order created successfully:", orderData);
 
     // Extract the approval URL for direct navigation
     const approvalUrl = orderData.links.find(link => link.rel === "approve")?.href;
 
-    // Return successful response with PayPal order details and direct approval URL
+    // Return successful response with PayPal order details
     return new Response(
       JSON.stringify({
         id: orderData.id,
         status: orderData.status,
         links: orderData.links,
-        approvalUrl: approvalUrl, // Include the direct approval URL
+        approvalUrl: approvalUrl
       }),
       {
         status: 200,

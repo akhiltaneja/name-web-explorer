@@ -181,11 +181,18 @@ serve(async (req) => {
     if (!captureResponse.ok) {
       console.error("PayPal capture error status:", captureResponse.status);
       console.error("PayPal capture error response:", captureData);
+      
+      // Check for specific error details
+      const errorDetail = captureData?.details?.[0];
+      const errorMessage = errorDetail
+        ? `${errorDetail.issue} ${errorDetail.description} (${captureData.debug_id})`
+        : JSON.stringify(captureData);
+      
       return new Response(
         JSON.stringify({ 
           error: "Failed to capture PayPal payment",
           status: captureResponse.status,
-          details: captureData
+          details: errorMessage
         }),
         {
           status: 500,
@@ -206,6 +213,25 @@ serve(async (req) => {
         }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Extract the transaction details
+    const transaction = 
+      captureData?.purchase_units?.[0]?.payments?.captures?.[0] ||
+      captureData?.purchase_units?.[0]?.payments?.authorizations?.[0];
+      
+    if (!transaction) {
+      console.error("No transaction details found in PayPal response");
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid PayPal response",
+          details: "No transaction details found"
+        }),
+        {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -254,7 +280,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        captureId: captureData.id,
+        captureId: transaction.id,
+        transactionStatus: transaction.status,
         status: captureData.status,
         plan: planId,
         planEndDate: endDate.toISOString(),
