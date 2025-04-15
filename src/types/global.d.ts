@@ -1,4 +1,8 @@
 
 interface Window {
-  paypal: any;
+  paypal: {
+    Buttons: (config: any) => {
+      render: (container: HTMLElement | string) => void;
+    };
+  };
 }
