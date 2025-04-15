@@ -69,7 +69,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     }
 
     const script = document.createElement('script');
-    script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&components=buttons&disable-funding=venmo,paylater";
+    script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&components=buttons&debug=true&disable-funding=venmo,paylater";
     script.dataset.sdkIntegrationSource = "button-factory";
     script.async = true;
     
@@ -117,6 +117,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             color: "gold",
             label: "paypal",
           },
+          fundingSource: window.paypal.FUNDING.PAYPAL,
           createOrder: async function() {
             try {
               setLoading(true);
