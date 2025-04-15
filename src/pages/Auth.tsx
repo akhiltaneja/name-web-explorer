@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { LucideGoogle } from "lucide-react";
+import { Google } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -177,7 +176,7 @@ const Auth = () => {
                 onClick={() => handleOAuthSignIn("google")}
                 disabled={isLoading}
               >
-                <LucideGoogle className="w-5 h-5 mr-2" />
+                <Google className="w-5 h-5 mr-2" />
                 Sign In with Google
               </Button>
             </div>
