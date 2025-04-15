@@ -1,4 +1,4 @@
-
+import { useEffect, useRef } from "react";
 import { PlanOption } from "@/types/socialMedia";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,37 @@ interface PlanCardProps {
 }
 
 const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
+  const paypalContainerRef = useRef<HTMLDivElement>(null);
+  const scriptLoaded = useRef(false);
+
+  useEffect(() => {
+    if (plan.id !== 'premium' || scriptLoaded.current) return;
+
+    const script = document.createElement('script');
+    script.src = "https://www.paypal.com/sdk/js?client-id=BAAtdxoyXiYsItLT8-n_CXdFo4Wxj3rwVTy9nDu1i7a1Yez6Ohwcks5kF8JRQdJN6eEpxSPUsOG62manmw&components=hosted-buttons&disable-funding=venmo&currency=USD";
+    script.crossOrigin = "anonymous";
+    script.async = true;
+    
+    script.onload = () => {
+      scriptLoaded.current = true;
+      if (paypalContainerRef.current && plan.id === 'premium') {
+        window.paypal.HostedButtons({
+          hostedButtonId: "9UJUQBPHTR9MY"
+        }).render("#paypal-container-9UJUQBPHTR9MY");
+      }
+    };
+    
+    document.head.appendChild(script);
+    
+    return () => {
+      scriptLoaded.current = false;
+      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      if (existingScript) {
+        document.head.removeChild(existingScript);
+      }
+    };
+  }, [plan.id]);
+
   return (
     <Card className={`relative border-gray-200 shadow-sm ${
       plan.popular 
@@ -87,13 +118,15 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
           >
             Free Default
           </Button>
+        ) : plan.id === 'premium' ? (
+          <div 
+            ref={paypalContainerRef}
+            className="w-full min-h-[40px]"
+            id="paypal-container-9UJUQBPHTR9MY"
+          />
         ) : (
           <Button 
-            className={`w-full ${
-              plan.popular 
-                ? 'bg-purple-600 hover:bg-purple-700' 
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+            className="w-full bg-blue-600 hover:bg-blue-700"
             onClick={() => onSelectPlan(plan.id)}
           >
             Upgrade
