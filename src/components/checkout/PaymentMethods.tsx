@@ -20,6 +20,7 @@ interface PaymentMethodsProps {
 const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const [paymentMethod, setPaymentMethod] = useState<"paypal" | "card">("paypal");
   const [paypalScriptLoaded, setPaypalScriptLoaded] = useState(false);
+  const [paypalError, setPaypalError] = useState<string | null>(null);
   
   // Card form state
   const [cardNumber, setCardNumber] = useState("");
@@ -32,6 +33,11 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
+  // Clear any errors when switching payment methods
+  useEffect(() => {
+    setPaypalError(null);
+  }, [paymentMethod]);
+
   useEffect(() => {
     if (!selectedPlan) return;
 
@@ -43,8 +49,8 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
 
       const script = document.createElement('script');
       script.id = 'paypal-script';
-      script.src = `https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&buyer-country=US&currency=USD&components=buttons&enable-funding=card&disable-funding=venmo,paylater`;
-      script.setAttribute('data-sdk-integration-source', 'developer-studio');
+      script.src = `https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&intent=capture`;
+      script.setAttribute('data-sdk-integration-source', 'button-factory');
       
       script.onload = () => {
         console.log("PayPal script loaded successfully");
@@ -53,6 +59,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
 
       script.onerror = (error) => {
         console.error("Failed to load PayPal script:", error);
+        setPaypalError("Failed to load payment provider");
         toast({
           title: "Payment Error",
           description: "Failed to load payment provider. Please try again later.",
@@ -67,7 +74,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   }, [selectedPlan, toast]);
 
   useEffect(() => {
-    if (paypalScriptLoaded && selectedPlan) {
+    if (paypalScriptLoaded && selectedPlan && paymentMethod === "paypal") {
       renderPayPalButtons();
     }
   }, [paypalScriptLoaded, paymentMethod, selectedPlan]);
@@ -77,12 +84,19 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
 
     const paypalButtonContainer = document.getElementById('paypal-button-container');
     
-    if (paypalButtonContainer) paypalButtonContainer.innerHTML = '';
+    if (!paypalButtonContainer) {
+      console.error("PayPal button container not found");
+      return;
+    }
+    
+    // Clear the container before rendering
+    paypalButtonContainer.innerHTML = '';
 
     try {
       const createOrderHandler = async () => {
         try {
           setLoading(true);
+          setPaypalError(null);
           
           if (!user) {
             toast({
@@ -94,10 +108,16 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             // Save current location to redirect back after login
             const returnPath = sessionStorage.getItem('cartReturnPath');
             navigate('/auth', { state: { returnTo: returnPath } });
-            return "";
+            return null;
           }
           
           const amount = calculateTotal(selectedPlan.price);
+          
+          console.log("Creating PayPal order with params:", {
+            planId: selectedPlan.id,
+            planName: selectedPlan.name,
+            amount: amount.toFixed(2)
+          });
           
           const response = await supabase.functions.invoke('create-paypal-order', {
             body: {
@@ -109,27 +129,33 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           
           console.log("Create order response:", response);
           
+          if (response.error) {
+            throw new Error(response.error.message || 'Failed to create PayPal order');
+          }
+          
           if (!response.data || !response.data.id) {
-            throw new Error('Failed to create PayPal order');
+            throw new Error('Invalid response from payment service');
           }
           
           return response.data.id;
         } catch (error) {
           console.error('Error creating PayPal order:', error);
+          setPaypalError(error.message || "Payment initialization failed");
           toast({
             title: "Payment initialization failed",
-            description: "Could not start the payment process. Please try again.",
+            description: error.message || "Could not start the payment process. Please try again.",
             variant: "destructive",
           });
-          return "";
+          return null;
         } finally {
           setLoading(false);
         }
       };
 
-      const onApproveHandler = async (data: any) => {
+      const onApproveHandler = async (data: any, actions: any) => {
         try {
           setLoading(true);
+          setPaypalError(null);
           
           const { orderID } = data;
           console.log("Order approved:", orderID);
@@ -144,8 +170,12 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           
           console.log("Capture response:", response);
           
+          if (response.error) {
+            throw new Error(response.error.message || 'Failed to capture PayPal payment');
+          }
+          
           if (!response.data || !response.data.success) {
-            throw new Error('Failed to capture PayPal payment');
+            throw new Error('Invalid response from payment service');
           }
           
           toast({
@@ -155,13 +185,16 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           
           await refreshProfile();
           navigate('/profile');
+          return true;
         } catch (error) {
           console.error('Error capturing PayPal payment:', error);
+          setPaypalError(error.message || "Payment failed");
           toast({
             title: "Payment failed",
-            description: "There was an issue processing your payment. Please try again.",
+            description: error.message || "There was an issue processing your payment. Please try again.",
             variant: "destructive",
           });
+          return false;
         } finally {
           setLoading(false);
         }
@@ -171,9 +204,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         window.paypal.Buttons({
           style: {
             shape: "rect",
-            layout: "vertical",
-            color: "blue",
-            label: "pay"
+            layout: "vertical"
           },
           createOrder: createOrderHandler,
           onApprove: onApproveHandler,
@@ -185,6 +216,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           },
           onError: (err: any) => {
             console.error('PayPal error:', err);
+            setPaypalError("Payment processing error");
             toast({
               title: "Payment error",
               description: "An error occurred during the payment process. Please try again.",
@@ -195,6 +227,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       }
     } catch (error) {
       console.error("Error rendering PayPal buttons:", error);
+      setPaypalError("Failed to initialize payment");
       toast({
         title: "Payment Error",
         description: "Failed to initialize payment options. Please try again later.",
@@ -249,7 +282,34 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       // For demo purposes, we'll proceed with a mock payment process
       
       // Simulate API call to process payment
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Update user profile with the new plan information
+      // Calculate plan duration based on plan type
+      let planDuration = 30; // default 30 days for most plans
+      if (selectedPlan?.id === 'premium') {
+        planDuration = 30; // 30 days for premium
+      } else if (selectedPlan?.id === 'unlimited') {
+        planDuration = 365; // 1 year for unlimited
+      }
+
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setDate(now.getDate() + planDuration);
+      
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          plan: selectedPlan?.id,
+          plan_start_date: now.toISOString(),
+          plan_end_date: endDate.toISOString(),
+        })
+        .eq('id', user.id);
+        
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
       
       toast({
         title: "Payment successful!",
@@ -264,7 +324,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       console.error('Error processing card payment:', error);
       toast({
         title: "Payment failed",
-        description: "There was an issue processing your payment. Please try again.",
+        description: error.message || "There was an issue processing your payment. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -318,19 +378,29 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       </TabsList>
       
       <TabsContent value="paypal" className="space-y-4">
+        {paypalError && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-600 mb-4">
+            <p>Error: {paypalError}</p>
+            <p className="mt-1 text-xs">Please try again or use a different payment method.</p>
+          </div>
+        )}
+        
         <div id="paypal-button-container" className="w-full mt-4"></div>
+        
         {loading && (
           <div className="text-center py-6">
             <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
             <p className="mt-3 text-gray-600">Processing payment...</p>
           </div>
         )}
+        
         {!paypalScriptLoaded && !loading && (
           <div className="text-center py-6">
             <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
             <p className="mt-3 text-gray-600">Loading payment options...</p>
           </div>  
         )}
+        
         <div className="text-center text-sm text-gray-500 flex items-center justify-center mt-4">
           <Lock className="h-4 w-4 mr-1 text-gray-400" />
           Secure payment powered by PayPal
@@ -417,6 +487,11 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         <div className="text-center text-sm text-gray-500 flex items-center justify-center mt-2">
           <Lock className="h-4 w-4 mr-1 text-gray-400" />
           Your card information is secure and encrypted
+        </div>
+        
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800 mt-4">
+          <p className="font-medium">Demo Mode</p>
+          <p className="mt-1">This is a demo implementation. In production, you would integrate with a real payment processor.</p>
         </div>
       </TabsContent>
     </Tabs>

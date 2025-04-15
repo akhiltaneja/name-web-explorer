@@ -37,7 +37,10 @@ serve(async (req) => {
     if (!paypalClientId || !paypalSecret) {
       console.error("Missing PayPal credentials");
       return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
+        JSON.stringify({ 
+          error: "Server configuration error",
+          details: "Missing PayPal credentials" 
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -57,11 +60,15 @@ serve(async (req) => {
     }
 
     // Parse request body to get orderId and userId
-    const { orderId, userId, planId } = await req.json();
+    const requestData = await req.json();
+    const { orderId, userId, planId } = requestData;
 
     if (!orderId || !userId || !planId) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
+        JSON.stringify({ 
+          error: "Missing required parameters",
+          details: "orderId, userId, and planId are required"
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,12 +88,16 @@ serve(async (req) => {
       body: "grant_type=client_credentials",
     });
 
-    const tokenData = await tokenResponse.json();
-
     if (!tokenResponse.ok) {
-      console.error("PayPal token error:", tokenData);
+      const tokenError = await tokenResponse.text();
+      console.error("PayPal token error status:", tokenResponse.status);
+      console.error("PayPal token error response:", tokenError);
       return new Response(
-        JSON.stringify({ error: "Failed to authenticate with PayPal" }),
+        JSON.stringify({ 
+          error: "Failed to authenticate with PayPal",
+          status: tokenResponse.status,
+          details: tokenError
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -94,7 +105,50 @@ serve(async (req) => {
       );
     }
 
+    const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      console.error("No access token in PayPal response:", tokenData);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid authentication response from PayPal",
+          details: "No access token received"
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // First, check the order status to make sure it's valid
+    const orderStatusResponse = await fetch(`${paypalApiUrl}/v2/checkout/orders/${orderId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!orderStatusResponse.ok) {
+      const orderError = await orderStatusResponse.text();
+      console.error("PayPal order status error:", orderError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to verify PayPal order",
+          status: orderStatusResponse.status,
+          details: orderError
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const orderStatus = await orderStatusResponse.json();
+    console.log("Order status from PayPal:", orderStatus);
 
     // Capture the order (complete the payment)
     const captureResponse = await fetch(`${paypalApiUrl}/v2/checkout/orders/${orderId}/capture`, {
@@ -105,18 +159,25 @@ serve(async (req) => {
       },
     });
 
-    const captureData = await captureResponse.json();
-
     if (!captureResponse.ok) {
-      console.error("PayPal capture error:", captureData);
+      const captureError = await captureResponse.text();
+      console.error("PayPal capture error status:", captureResponse.status);
+      console.error("PayPal capture error response:", captureError);
       return new Response(
-        JSON.stringify({ error: "Failed to capture PayPal payment" }),
+        JSON.stringify({ 
+          error: "Failed to capture PayPal payment",
+          status: captureResponse.status,
+          details: captureError
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    const captureData = await captureResponse.json();
+    console.log("Payment captured from PayPal:", captureData);
 
     // Update user's plan in Supabase
     // Calculate plan duration based on plan type
@@ -144,7 +205,10 @@ serve(async (req) => {
     if (updateError) {
       console.error("Error updating user plan:", updateError);
       return new Response(
-        JSON.stringify({ error: "Payment successful but failed to update plan" }),
+        JSON.stringify({ 
+          error: "Payment successful but failed to update plan",
+          details: updateError.message
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -171,7 +235,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error capturing PayPal payment:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ 
+        error: "Internal server error",
+        details: error.message
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
