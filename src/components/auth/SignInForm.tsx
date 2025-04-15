@@ -1,82 +1,114 @@
 
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UseFormReturn } from "react-hook-form";
-import { SignInFormValues } from "@/hooks/useAuthForms";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { Mail, Lock, Loader2, LogIn } from "lucide-react";
+import { useState } from "react";
 
-interface SignInFormProps {
-  form: UseFormReturn<SignInFormValues>;
-  onSubmit: (values: SignInFormValues) => void;
-  isLoading: boolean;
-  onOAuthSignIn: (provider: "google") => void;
-}
+const signInSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+});
 
-const SignInForm = ({ form, onSubmit, isLoading, onOAuthSignIn }: SignInFormProps) => {
+type SignInFormValues = z.infer<typeof signInSchema>;
+
+export const SignInForm = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { supabase } = useAuth();
+  const { toast } = useToast();
+
+  const form = useForm<SignInFormValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (values: SignInFormValues) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="grid gap-4">
-      <Button 
-        variant="outline" 
-        className="w-full" 
-        onClick={() => onOAuthSignIn("google")} 
-        disabled={isLoading}
-      >
-        {isLoading ? 
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> 
-          : <span className="mr-2">G</span>
-        }
-        Google
-      </Button>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or continue with
-          </span>
-        </div>
-      </div>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
-          <Input 
-            id="email" 
-            type="email" 
-            placeholder="Enter your email" 
-            {...form.register("email")} 
-            disabled={isLoading} 
-          />
-          {form.formState.errors.email && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.email.message}
-            </p>
-          )}
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 animate-in slide-in-from-bottom-2">
+      <div className="space-y-2">
+        <div className="relative">
+          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            id="password"
+            {...form.register("email")}
+            type="email"
+            placeholder="Enter your email"
+            className="pl-9"
+          />
+        </div>
+        {form.formState.errors.email && (
+          <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <div className="relative">
+          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            {...form.register("password")}
             type="password"
             placeholder="Enter your password"
-            {...form.register("password")}
-            disabled={isLoading}
+            className="pl-9"
           />
-          {form.formState.errors.password && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.password.message}
-            </p>
-          )}
         </div>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div> 
-            : "Sign In"
-          }
-        </Button>
-      </form>
-    </div>
+        {form.formState.errors.password && (
+          <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
+        )}
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          <>
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign In
+          </>
+        )}
+      </Button>
+
+      <div className="text-center text-sm">
+        <a href="/forgot-password" className="text-blue-600 hover:underline">
+          Forgot your password?
+        </a>
+      </div>
+    </form>
   );
 };
-
-export default SignInForm;
