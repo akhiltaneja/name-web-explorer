@@ -13,6 +13,12 @@ interface PaymentMethodsProps {
   setLoading: (loading: boolean) => void;
 }
 
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
 const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const [error, setError] = useState<string | null>(null);
   const [paypalInitialized, setPaypalInitialized] = useState(false);
@@ -23,21 +29,36 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  // Clean up any previous PayPal script
+  // Clean up any previous PayPal script on component mount or plan change
   useEffect(() => {
-    // Remove any existing PayPal script
-    const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
-    if (existingScript) {
-      existingScript.remove();
-      // Also clear the paypal button container
+    const cleanupPayPal = () => {
+      // Remove any existing PayPal script
+      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      if (existingScript) {
+        existingScript.remove();
+      }
+      
+      // Clear the PayPal button container
       const container = document.getElementById('paypal-button-container');
       if (container) {
         container.innerHTML = '';
       }
+      
+      setPaypalInitialized(false);
+      setPaypalButtonsRendered(false);
+    };
+    
+    cleanupPayPal();
+    
+    // Only load PayPal if we have a selected plan
+    if (selectedPlan) {
+      loadPayPalScript();
     }
-    setPaypalInitialized(false);
-    setPaypalButtonsRendered(false);
-  }, []);
+    
+    return () => {
+      cleanupPayPal();
+    };
+  }, [selectedPlan]);
 
   const loadPayPalScript = () => {
     // Make sure we're not duplicating the script
@@ -70,16 +91,13 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     document.body.appendChild(script);
   };
 
-  // Initialize PayPal on component mount
-  useEffect(() => {
-    if (selectedPlan) {
-      loadPayPalScript();
-    }
-  }, [selectedPlan]);
-
   // Render PayPal buttons once script is loaded
   useEffect(() => {
-    if (paypalInitialized && window.paypal && selectedPlan && !paypalButtonsRendered) {
+    const renderPayPalButtons = () => {
+      if (!paypalInitialized || !window.paypal || !selectedPlan || paypalButtonsRendered) {
+        return;
+      }
+      
       try {
         const amount = calculateTotal(selectedPlan.price).toFixed(2);
         const container = document.getElementById('paypal-button-container');
@@ -99,7 +117,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
             color: "gold",
             label: "paypal",
           },
-          async createOrder() {
+          createOrder: async function() {
             try {
               setLoading(true);
               setError(null);
@@ -143,9 +161,8 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
                 throw new Error('Invalid response from payment service');
               }
               
-              // Return the order ID so PayPal can complete the transaction
               return response.data.id;
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error creating PayPal order:', error);
               setError(error.message || "Payment initialization failed");
               toast({
@@ -157,7 +174,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               return null;
             }
           },
-          async onApprove(data, actions) {
+          onApprove: async function(data: any, actions: any) {
             try {
               setLoading(true);
               setError(null);
@@ -195,40 +212,39 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               await refreshProfile();
               navigate('/profile');
               return true;
-            } catch (error) {
+            } catch (error: any) {
               // Handle specific errors from PayPal
-              if (error.message?.includes('INSTRUMENT_DECLINED')) {
+              console.error('Error capturing PayPal payment:', error);
+              setError(error.message || "Payment failed");
+              toast({
+                title: "Payment failed",
+                description: error.message || "There was an issue processing your payment. Please try again.",
+                variant: "destructive",
+              });
+              
+              if (error.message?.includes('INSTRUMENT_DECLINED') && actions?.restart) {
                 toast({
                   title: "Payment method declined",
                   description: "Your payment method was declined. Please try a different payment method.",
                   variant: "destructive",
                 });
                 // Allow the user to try again
-                if (actions?.restart) {
-                  return actions.restart();
-                }
-              } else {
-                console.error('Error capturing PayPal payment:', error);
-                setError(error.message || "Payment failed");
-                toast({
-                  title: "Payment failed",
-                  description: error.message || "There was an issue processing your payment. Please try again.",
-                  variant: "destructive",
-                });
+                return actions.restart();
               }
+              
               return false;
             } finally {
               setLoading(false);
             }
           },
-          onCancel: () => {
+          onCancel: function() {
             toast({
               title: "Payment cancelled",
               description: "You've cancelled the payment process. No payment was made.",
             });
             setLoading(false);
           },
-          onError: (err) => {
+          onError: function(err: any) {
             console.error('PayPal error:', err);
             setError("Payment processing error");
             toast({
@@ -240,12 +256,11 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
           }
         }).render('#paypal-button-container');
         
-        // Fixed: Remove the .then() chain and set state immediately
         setPaypalButtonsRendered(true);
         setLoading(false);
         console.log("PayPal buttons rendered successfully");
         
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error setting up PayPal buttons:", error);
         setError("Failed to initialize payment options");
         toast({
@@ -255,8 +270,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         });
         setLoading(false);
       }
-    }
-  }, [paypalInitialized, selectedPlan, user, paypalButtonsRendered]);
+    };
+    
+    renderPayPalButtons();
+  }, [paypalInitialized, selectedPlan, user, navigate, toast, calculateTotal, refreshProfile, paypalButtonsRendered, setLoading]);
 
   return (
     <Card className="shadow-sm">

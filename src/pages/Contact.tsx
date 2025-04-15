@@ -2,19 +2,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Mail, Send } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -35,20 +35,37 @@ const Contact = () => {
     
     setIsSubmitting(true);
     
-    // Simulate sending the form
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Message sent",
-      description: "Thanks for reaching out. We'll get back to you soon!",
-    });
-    
-    // Reset form
-    setName("");
-    setEmail("");
-    setCompany("");
-    setMessage("");
-    setIsSubmitting(false);
+    try {
+      // Send the form data to our Supabase Edge Function
+      const { error } = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          name,
+          email,
+          message
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Message sent",
+        description: "Thanks for reaching out. We'll get back to you soon!",
+      });
+      
+      // Reset form
+      setName("");
+      setEmail("");
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending contact form:", error);
+      toast({
+        title: "Something went wrong",
+        description: "Unable to send your message. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -68,52 +85,40 @@ const Contact = () => {
           </Button>
           
           <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Contact Our Sales Team</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Get in Touch</h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Have questions about our plans or need a custom solution? We're here to help!
+              Have questions or need assistance? We're here to help! Fill out the form below and we'll get back to you shortly.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-5 gap-8">
-            <div className="md:col-span-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Send us a message</CardTitle>
-                  <CardDescription>Fill out the form below and we'll get back to you within 24 hours.</CardDescription>
-                </CardHeader>
-                <CardContent>
+          <Card className="shadow-md backdrop-blur-sm bg-white/90 border-none overflow-hidden">
+            <CardContent className="p-0">
+              <div className="grid md:grid-cols-5 gap-0">
+                {/* Left side - Form */}
+                <div className="md:col-span-3 p-8">
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
-                        <Input 
-                          id="name" 
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          placeholder="John Doe"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                        <Input 
-                          id="email" 
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="john@example.com"
-                          required
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="name" 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="John Doe"
+                        required
+                        className="border-gray-300"
+                      />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="company">Company</Label>
+                      <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                       <Input 
-                        id="company" 
-                        value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                        placeholder="Your company name"
+                        id="email" 
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="john@example.com"
+                        required
+                        className="border-gray-300"
                       />
                     </div>
                     
@@ -123,15 +128,16 @@ const Contact = () => {
                         id="message" 
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Tell us about your requirements or questions"
+                        placeholder="How can we help you?"
                         rows={5}
                         required
+                        className="border-gray-300"
                       />
                     </div>
                     
                     <Button 
                       type="submit" 
-                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      className="w-full bg-blue-600 hover:bg-blue-700"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
@@ -147,39 +153,37 @@ const Contact = () => {
                       )}
                     </Button>
                   </form>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-1">Email</h3>
-                    <p className="text-gray-600">sales@peoplepeeper.com</p>
+                </div>
+                
+                {/* Right side - Decorative */}
+                <div className="md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-600 p-8 text-white flex flex-col justify-center">
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <Mail className="h-10 w-10 mx-auto mb-2 opacity-90" />
+                      <h3 className="text-xl font-semibold mb-1">Contact Us</h3>
+                      <p className="opacity-90">We'd love to hear from you</p>
+                    </div>
+                    
+                    <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                      <p className="text-sm leading-relaxed">
+                        Our team is dedicated to providing exceptional service. We aim to respond to all inquiries within 24 hours during business days.
+                      </p>
+                    </div>
+                    
+                    <div className="text-center mt-4">
+                      <p className="text-sm opacity-90">Email us directly:</p>
+                      <a 
+                        href="mailto:support@peoplepeeper.com" 
+                        className="text-white hover:underline mt-1 inline-block"
+                      >
+                        support@peoplepeeper.com
+                      </a>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-1">Phone</h3>
-                    <p className="text-gray-600">+1 (555) 123-4567</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-1">Office Hours</h3>
-                    <p className="text-gray-600">Monday - Friday: 9AM - 5PM EST</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-1">Business Inquiries</h3>
-                    <p className="text-gray-600">For business partnerships, enterprise solutions, or custom packages.</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
       

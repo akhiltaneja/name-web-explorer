@@ -52,7 +52,7 @@ const Auth = () => {
                     <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
                     <p className="text-sm text-muted-foreground">Enter your details to get started</p>
                   </div>
-                  <SignUpForm />
+                  <SignUpForm onSignupSuccess={() => setShowConfetti(true)} />
                 </TabsContent>
               </Tabs>
             </div>
