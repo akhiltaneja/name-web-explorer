@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Google as LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
