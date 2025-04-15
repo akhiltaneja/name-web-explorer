@@ -4,7 +4,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertDialog } from "@/components/ui/alert-dialog";
 import { SignInForm } from "@/components/auth/SignInForm";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { Confetti } from "@/components/auth/Confetti";
@@ -14,6 +13,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const returnTo = (location.state as any)?.returnTo || '/profile';
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
+  const [showConfetti, setShowConfetti] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -60,8 +60,7 @@ const Auth = () => {
             {/* Right side - Decorative */}
             <div className="hidden md:block relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-600">
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12zm0-2c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z\" fill=\"%23FFFFFF\" fill-opacity=\"0.05\"/%3E%3C/svg%3E')] opacity-10">
-                </div>
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12zm0-2c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z\" fill=\"%23FFFFFF\" fill-opacity=\"0.05\"/%3E%3C/svg%3E')] opacity-10"></div>
                 <div className="relative h-full p-6 sm:p-8 flex flex-col justify-center text-white space-y-6">
                   <h2 className="text-3xl font-bold">{activeTab === "signin" ? "Welcome Back!" : "Join Us Today!"}</h2>
                   <p className="text-lg opacity-90">
@@ -89,7 +88,7 @@ const Auth = () => {
           </div>
         </Card>
       </div>
-      <Confetti />
+      {showConfetti && <Confetti isVisible={true} />}
     </div>
   );
 };
