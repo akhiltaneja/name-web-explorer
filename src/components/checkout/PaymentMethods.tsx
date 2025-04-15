@@ -90,7 +90,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
               description: "You need to be logged in to make a purchase.",
               variant: "destructive",
             });
-            navigate('/auth');
+            
+            // Save current location to redirect back after login
+            const returnPath = sessionStorage.getItem('cartReturnPath');
+            navigate('/auth', { state: { returnTo: returnPath } });
             return "";
           }
           
@@ -167,10 +170,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       if (paypalButtonContainer && paymentMethod === "paypal") {
         window.paypal.Buttons({
           style: {
-            shape: "pill",
+            shape: "rect",
             layout: "vertical",
             color: "blue",
-            label: "paypal"
+            label: "pay"
           },
           createOrder: createOrderHandler,
           onApprove: onApproveHandler,
@@ -209,7 +212,10 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
         description: "You need to be logged in to make a purchase.",
         variant: "destructive",
       });
-      navigate('/auth');
+      
+      // Save current location to redirect back after login
+      const returnPath = sessionStorage.getItem('cartReturnPath');
+      navigate('/auth', { state: { returnTo: returnPath } });
       return;
     }
     
@@ -240,17 +246,19 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
       }
       
       // This would integrate with a real payment processor in production
-      // For demo purposes, we'll just show a success message
+      // For demo purposes, we'll proceed with a mock payment process
       
-      setTimeout(() => {
-        toast({
-          title: "Payment successful!",
-          description: `Your ${selectedPlan?.name} plan is now active.`,
-        });
-        
-        refreshProfile();
-        navigate('/profile');
-      }, 2000);
+      // Simulate API call to process payment
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Payment successful!",
+        description: `Your ${selectedPlan?.name} plan is now active.`,
+      });
+      
+      // Update user profile with the new plan information
+      await refreshProfile();
+      navigate('/profile');
       
     } catch (error) {
       console.error('Error processing card payment:', error);
@@ -297,7 +305,7 @@ const PaymentMethods = ({ loading, setLoading }: PaymentMethodsProps) => {
     <Tabs defaultValue="paypal" onValueChange={(value) => setPaymentMethod(value as "paypal" | "card")}>
       <TabsList className="grid w-full grid-cols-2 mb-6">
         <TabsTrigger value="paypal" className="h-12 flex items-center justify-center">
-          <div className="flex items-center justify-center h-8 px-4">
+          <div className="flex items-center justify-center h-8">
             <PaypalLogo />
           </div>
         </TabsTrigger>

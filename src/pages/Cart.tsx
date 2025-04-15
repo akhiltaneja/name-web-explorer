@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tag, Zap } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { PlanOption } from "@/types/socialMedia";
@@ -11,7 +10,6 @@ import OrderSummary from "@/components/checkout/OrderSummary";
 import { CartProvider, useCart } from "@/context/CartContext";
 import FlashDealTimer from "@/components/checkout/FlashDealTimer";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
 declare global {
   interface Window {
@@ -57,6 +55,7 @@ const plans: PlanOption[] = [
 const CartContent = () => {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const planId = searchParams.get('plan');
   const navigate = useNavigate();
   const { selectedPlan, setSelectedPlan } = useCart();
@@ -88,6 +87,11 @@ const CartContent = () => {
     }
   };
 
+  // Store the cart return path in session storage for redirect after login
+  useEffect(() => {
+    sessionStorage.setItem('cartReturnPath', location.pathname + location.search);
+  }, [location]);
+
   if (!selectedPlan) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -116,9 +120,10 @@ const CartContent = () => {
                 className="space-y-4"
               >
                 {plans.filter(p => p.id !== 'free').map((plan) => (
-                  <div 
-                    key={plan.id} 
-                    className={`relative border rounded-lg p-4 transition-all ${
+                  <label
+                    key={plan.id}
+                    htmlFor={`plan-${plan.id}`}
+                    className={`relative block border rounded-lg p-4 transition-all cursor-pointer ${
                       selectedPlan.id === plan.id 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-200 hover:border-blue-300'
@@ -133,12 +138,9 @@ const CartContent = () => {
                       <div className="flex-grow">
                         <div className="flex items-start justify-between">
                           <div>
-                            <Label 
-                              htmlFor={`plan-${plan.id}`} 
-                              className="font-medium text-gray-900 text-base cursor-pointer"
-                            >
+                            <span className="font-medium text-gray-900 text-base">
                               {plan.name}
-                            </Label>
+                            </span>
                             <p className="text-sm text-gray-500 mt-1">{plan.limit}</p>
                           </div>
                           <div className="flex items-baseline">
@@ -159,7 +161,7 @@ const CartContent = () => {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </label>
                 ))}
               </RadioGroup>
             </CardContent>

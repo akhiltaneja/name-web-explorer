@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Clock, User, Tag, Calendar } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 // Import the blog data
 import { blogPosts } from "./blogData";
@@ -45,20 +45,12 @@ const BlogIndex = () => {
                   </CardDescription>
                 </div>
                 
-                <div className="mt-4">
-                  <div className="flex items-center text-sm text-gray-600 mb-4">
-                    <User size={16} className="mr-2" />
-                    <span>{featuredPost.author}</span>
-                    <span className="mx-2">•</span>
-                    <Calendar size={16} className="mr-2" />
-                    <span>{featuredPost.date}</span>
-                  </div>
-                  <Button asChild className="mt-2">
-                    <Link to={`/blog/${featuredPost.slug}`}>
-                      Read More
-                    </Link>
-                  </Button>
-                </div>
+                <Button asChild className="mt-4 self-start">
+                  <Link to={`/blog/${featuredPost.slug}`} className="flex items-center">
+                    Read Article
+                    <ChevronRight size={18} className="ml-1" />
+                  </Link>
+                </Button>
               </div>
             </div>
           </Card>
@@ -71,31 +63,30 @@ const BlogIndex = () => {
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {otherPosts.map(post => (
-            <Card key={post.id} className="flex flex-col h-full">
+            <Card key={post.id} className="flex flex-col h-full group hover:shadow-md transition-shadow">
               <div className="h-48 overflow-hidden">
                 <img 
                   src={post.image} 
                   alt={post.title}
-                  className="h-full w-full object-cover transition-transform hover:scale-105"
+                  className="h-full w-full object-cover transition-transform group-hover:scale-105 duration-300"
                 />
               </div>
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-xl">
                   <Link to={`/blog/${post.slug}`} className="hover:text-blue-700 transition-colors">
                     {post.title}
                   </Link>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-grow">
+              <CardContent className="flex-grow pb-2">
                 <p className="text-gray-600">{post.summary}</p>
               </CardContent>
-              <CardFooter className="flex justify-between items-center pt-0">
-                <div className="flex items-center text-sm text-gray-500">
-                  <Clock size={14} className="mr-1" />
-                  <span>{post.date}</span>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to={`/blog/${post.slug}`}>Read More</Link>
+              <CardFooter className="pt-0">
+                <Button variant="ghost" size="sm" asChild className="text-blue-600 p-0 hover:bg-transparent hover:text-blue-800">
+                  <Link to={`/blog/${post.slug}`} className="flex items-center">
+                    Read Article
+                    <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
