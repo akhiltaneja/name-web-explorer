@@ -5,13 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { PlanOption } from "@/types/socialMedia";
-import PaymentMethods from "@/components/checkout/PaymentMethods";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import { CartProvider, useCart } from "@/context/CartContext";
-import FlashDealTimer from "@/components/checkout/FlashDealTimer";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-// The global interface is now defined in the global.d.ts file
 
 const plans: PlanOption[] = [
   {
@@ -51,6 +47,7 @@ const CartContent = () => {
   const planId = searchParams.get('plan');
   const navigate = useNavigate();
   const { selectedPlan, setSelectedPlan } = useCart();
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
     if (!planId) {
@@ -67,16 +64,36 @@ const CartContent = () => {
     setSelectedPlan(plan);
   }, [planId, navigate, setSelectedPlan]);
 
-  const handlePlanSwitch = (planId: string) => {
-    const plan = plans.find(p => p.id === planId);
-    if (plan) {
-      setSelectedPlan(plan);
+  useEffect(() => {
+    if (scriptLoaded) return;
+
+    const script = document.createElement('script');
+    script.src = "https://www.paypal.com/sdk/js?client-id=BAAtdxoyXiYsItLT8-n_CXdFo4Wxj3rwVTy9nDu1i7a1Yez6Ohwcks5kF8JRQdJN6eEpxSPUsOG62manmw&components=hosted-buttons&disable-funding=venmo&currency=USD";
+    script.crossOrigin = "anonymous";
+    script.async = true;
+    
+    script.onload = () => {
+      setScriptLoaded(true);
       
-      const url = new URL(window.location.href);
-      url.searchParams.set('plan', planId);
-      window.history.replaceState({}, '', url.toString());
-    }
-  };
+      // Initialize both buttons
+      window.paypal.HostedButtons({
+        hostedButtonId: "9UJUQBPHTR9MY"
+      }).render("#paypal-container-9UJUQBPHTR9MY");
+      
+      window.paypal.HostedButtons({
+        hostedButtonId: "2UTTJZG37LRMN"
+      }).render("#paypal-container-2UTTJZG37LRMN");
+    };
+    
+    document.head.appendChild(script);
+    
+    return () => {
+      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      if (existingScript) {
+        document.head.removeChild(existingScript);
+      }
+    };
+  }, [scriptLoaded]);
 
   useEffect(() => {
     sessionStorage.setItem('cartReturnPath', location.pathname + location.search);
@@ -94,19 +111,26 @@ const CartContent = () => {
     <div className="container mx-auto max-w-5xl">
       <div className="text-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Complete Your Purchase</h1>
-        <p className="text-sm text-gray-600 mt-1">Select your plan and payment method</p>
       </div>
       
       <div className="grid md:grid-cols-12 gap-8">
         <div className="md:col-span-7">
-          <Card className="mb-6 shadow-sm">
+          <Card className="shadow-sm">
             <CardHeader className="border-b pb-3">
               <CardTitle className="text-lg">Select Plan</CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               <RadioGroup 
                 value={selectedPlan.id} 
-                onValueChange={handlePlanSwitch}
+                onValueChange={(id) => {
+                  const plan = plans.find(p => p.id === id);
+                  if (plan) {
+                    setSelectedPlan(plan);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('plan', id);
+                    window.history.replaceState({}, '', url.toString());
+                  }
+                }}
                 className="space-y-4"
               >
                 {plans.filter(p => p.id !== 'free').map((plan) => (
@@ -119,50 +143,14 @@ const CartContent = () => {
                         : 'border-gray-200 hover:border-blue-300'
                     }`}
                   >
-                    <div className="flex items-start">
-                      <RadioGroupItem 
-                        value={plan.id} 
-                        id={`plan-${plan.id}`} 
-                        className="mt-1 mr-3"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <span className="font-medium text-gray-900 text-base">
-                              {plan.name}
-                            </span>
-                            <p className="text-sm text-gray-500 mt-1">{plan.limit}</p>
-                          </div>
-                          <div className="flex items-baseline">
-                            <span className="text-xl font-bold">${plan.price}</span>
-                            {plan.originalPrice && (
-                              <span className="text-sm text-gray-500 line-through ml-2">
-                                ${plan.originalPrice}
-                              </span>
-                            )}
-                            <span className="text-sm text-gray-500 ml-1">/month</span>
-                          </div>
-                        </div>
-                        
-                        {plan.id === 'unlimited' && (
-                          <div className="mt-2">
-                            <FlashDealTimer initialMinutes={10} />
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <RadioGroupItem 
+                      value={plan.id} 
+                      id={`plan-${plan.id}`} 
+                      className="mt-1 mr-3"
+                    />
                   </label>
                 ))}
               </RadioGroup>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="border-b pb-3">
-              <CardTitle className="text-lg">Payment Method</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <PaymentMethods loading={loading} setLoading={setLoading} />
             </CardContent>
           </Card>
         </div>
