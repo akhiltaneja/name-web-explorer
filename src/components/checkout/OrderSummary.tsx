@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
+import { toast } from "@/components/ui/use-toast";
 
 const OrderSummary = () => {
   const navigate = useNavigate();
@@ -20,18 +21,22 @@ const OrderSummary = () => {
       
       script.onload = () => {
         if (window.paypal) {
+          // Set up a listener for payment completion
+          window.addEventListener('message', (event) => {
+            if (event.data === 'paymentComplete') {
+              toast({
+                title: "Payment Successful",
+                description: "Thank you for your purchase!",
+              });
+            }
+          });
+          
           const premiumButton = window.paypal.HostedButtons({
-            hostedButtonId: "9UJUQBPHTR9MY",
-            onComplete: () => {
-              console.log("Payment completed!");
-            },
+            hostedButtonId: "9UJUQBPHTR9MY"
           });
           
           const unlimitedButton = window.paypal.HostedButtons({
-            hostedButtonId: "2UTTJZG37LRMN",
-            onComplete: () => {
-              console.log("Payment completed!");
-            },
+            hostedButtonId: "2UTTJZG37LRMN"
           });
 
           premiumButton.render("#paypal-container-9UJUQBPHTR9MY");
@@ -46,6 +51,9 @@ const OrderSummary = () => {
         if (existingScript) {
           document.head.removeChild(existingScript);
         }
+        
+        // Remove event listener
+        window.removeEventListener('message', () => {});
       };
     };
 

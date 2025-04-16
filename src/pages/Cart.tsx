@@ -65,37 +65,6 @@ const CartContent = () => {
   }, [planId, navigate, setSelectedPlan]);
 
   useEffect(() => {
-    if (scriptLoaded) return;
-
-    const script = document.createElement('script');
-    script.src = "https://www.paypal.com/sdk/js?client-id=BAAtdxoyXiYsItLT8-n_CXdFo4Wxj3rwVTy9nDu1i7a1Yez6Ohwcks5kF8JRQdJN6eEpxSPUsOG62manmw&components=hosted-buttons&disable-funding=venmo&currency=USD";
-    script.crossOrigin = "anonymous";
-    script.async = true;
-    
-    script.onload = () => {
-      setScriptLoaded(true);
-      
-      // Initialize both buttons
-      window.paypal.HostedButtons({
-        hostedButtonId: "9UJUQBPHTR9MY"
-      }).render("#paypal-container-9UJUQBPHTR9MY");
-      
-      window.paypal.HostedButtons({
-        hostedButtonId: "2UTTJZG37LRMN"
-      }).render("#paypal-container-2UTTJZG37LRMN");
-    };
-    
-    document.head.appendChild(script);
-    
-    return () => {
-      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-      }
-    };
-  }, [scriptLoaded]);
-
-  useEffect(() => {
     sessionStorage.setItem('cartReturnPath', location.pathname + location.search);
   }, [location]);
 
@@ -188,4 +157,3 @@ const Cart = () => {
 };
 
 export default Cart;
-
