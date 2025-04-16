@@ -12,12 +12,15 @@ const OrderSummary = () => {
 
   useEffect(() => {
     if (selectedPlan?.id === 'premium') {
-      // Render PayPal button for premium plan
+      window.paypal?.HostedButtons?.({
+        hostedButtonId: "XQZZ6RFD6SF7U"
+      }).render("#paypal-container-premium");
+    } else if (selectedPlan?.id === 'unlimited') {
       window.paypal?.HostedButtons?.({
         hostedButtonId: "9UJUQBPHTR9MY"
-      }).render("#paypal-container-premium");
+      }).render("#paypal-container-unlimited");
     }
-  }, [selectedPlan]);
+  }, [selectedPlan?.id]);
 
   if (!selectedPlan) return null;
 
@@ -35,7 +38,10 @@ const OrderSummary = () => {
               <div className="text-sm text-gray-500 mt-1">{selectedPlan.limit}</div>
             </div>
             
-            <div id="paypal-container-premium" className="w-full max-w-md min-h-[150px]"></div>
+            <div 
+              id={`paypal-container-${selectedPlan.id}`}
+              className="w-full max-w-md min-h-[150px]"
+            />
           </div>
         </div>
       </CardContent>
