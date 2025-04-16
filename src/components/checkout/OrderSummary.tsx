@@ -18,21 +18,39 @@ const OrderSummary = () => {
       </CardHeader>
       <CardContent className="p-5">
         <div className="space-y-4">
-          <div>
-            <div className="flex items-start justify-between mb-1">
-              {selectedPlan.id === 'premium' ? (
-                <div 
-                  id="paypal-container-9UJUQBPHTR9MY"
-                  className="w-full min-h-[40px]"
-                />
-              ) : (
-                <div 
-                  id="paypal-container-2UTTJZG37LRMN"
-                  className="w-full min-h-[40px]"
-                />
-              )}
+          {selectedPlan.id === 'premium' ? (
+            <div className="flex justify-center">
+              <form 
+                action="https://www.paypal.com/ncp/payment/9UJUQBPHTR9MY" 
+                method="post" 
+                target="_blank" 
+                className="inline-grid justify-items-center content-start gap-2"
+              >
+                <style>{`.pp-9UJUQBPHTR9MY{text-align:center;border:none;border-radius:0.25rem;min-width:11.625rem;padding:0 2rem;height:2.625rem;font-weight:bold;background-color:#FFD140;color:#000000;font-family:"Helvetica Neue",Arial,sans-serif;font-size:1rem;line-height:1.25rem;cursor:pointer;}`}</style>
+                <input className="pp-9UJUQBPHTR9MY" type="submit" value="Buy Now" />
+                <img src="https://www.paypalobjects.com/images/Debit_Credit_APM.svg" alt="cards" />
+                <section>
+                  Powered by <img src="https://www.paypalobjects.com/paypal-ui/logos/svg/paypal-wordmark-color.svg" alt="paypal" style={{ height: '0.875rem', verticalAlign: 'middle' }}/>
+                </section>
+              </form>
             </div>
-          </div>
+          ) : (
+            <div className="flex justify-center">
+              <form 
+                action="https://www.paypal.com/ncp/payment/2UTTJZG37LRMN" 
+                method="post" 
+                target="_blank" 
+                className="inline-grid justify-items-center content-start gap-2"
+              >
+                <style>{`.pp-2UTTJZG37LRMN{text-align:center;border:none;border-radius:0.25rem;min-width:11.625rem;padding:0 2rem;height:2.625rem;font-weight:bold;background-color:#FFD140;color:#000000;font-family:"Helvetica Neue",Arial,sans-serif;font-size:1rem;line-height:1.25rem;cursor:pointer;}`}</style>
+                <input className="pp-2UTTJZG37LRMN" type="submit" value="Buy Now" />
+                <img src="https://www.paypalobjects.com/images/Debit_Credit_APM.svg" alt="cards" />
+                <section>
+                  Powered by <img src="https://www.paypalobjects.com/paypal-ui/logos/svg/paypal-wordmark-color.svg" alt="paypal" style={{ height: '0.875rem', verticalAlign: 'middle' }}/>
+                </section>
+              </form>
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="flex flex-col space-y-3 border-t bg-gray-50 p-5">
