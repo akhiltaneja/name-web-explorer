@@ -15,23 +15,33 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
   const paypalButtonsRendered = useRef(false);
   const [sdkReady, setSdkReady] = useState(false);
 
+  // Clear any existing PayPal scripts on mount to avoid conflicts
   useEffect(() => {
-    // Clean up any existing PayPal script to avoid duplicates
-    const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
-    if (existingScript) {
-      document.head.removeChild(existingScript);
-      // Reset state when cleaning up previous script
-      paypalLoaded.current = false;
-      paypalButtonsRendered.current = false;
-      setSdkReady(false);
-    }
+    const cleanupPayPalScript = () => {
+      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      if (existingScript) {
+        document.head.removeChild(existingScript);
+        paypalLoaded.current = false;
+        paypalButtonsRendered.current = false;
+        setSdkReady(false);
+      }
 
+      // Also clean up any PayPal button containers
+      const container = document.getElementById('paypal-button-container');
+      if (container) {
+        container.innerHTML = '';
+      }
+    };
+
+    // Clean up on mount
+    cleanupPayPalScript();
+
+    // Load PayPal script with proper configuration
     const loadPayPalScript = () => {
-      // Create the script tag
       const script = document.createElement('script');
-      script.src = "https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&buyer-country=US&currency=USD&components=buttons&enable-funding=card&disable-funding=venmo,paylater";
+      script.src = `https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&intent=capture&components=buttons&disable-funding=venmo,paylater`;
       script.async = true;
-      script.defer = true; // Add defer to ensure proper loading
+      script.defer = true;
 
       script.onload = () => {
         console.log("PayPal SDK loaded successfully");
@@ -55,10 +65,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
     
     // Clean up on component unmount
     return () => {
-      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-      }
+      cleanupPayPalScript();
     };
   }, []); // Only load on initial mount
 
@@ -88,6 +95,17 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         createOrder: async () => {
           try {
             console.log("Creating PayPal order for:", { productId, amount });
+            
+            // Get the current user session to verify authentication
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+              toast({
+                title: "Authentication Error",
+                description: "You need to be logged in to make a purchase.",
+                variant: "destructive"
+              });
+              throw new Error("User not authenticated");
+            }
             
             const { data, error } = await supabase.functions.invoke("create-paypal-order", {
               body: {
@@ -129,12 +147,13 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
             throw error;
           }
         },
-        onApprove: async (data: any, actions: any) => {
+        onApprove: async (data) => {
           try {
             console.log("Payment approved, capturing order:", data.orderID);
             
-            const user = await supabase.auth.getUser();
-            const userId = user.data.user?.id;
+            // Get the current user
+            const { data: { user } } = await supabase.auth.getUser();
+            const userId = user?.id;
             
             if (!userId) {
               toast({
@@ -163,18 +182,19 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
               throw new Error(error.message);
             }
 
-            const errorDetail = captureData?.details?.[0];
-
-            if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
-              return actions.restart();
-            } 
-            
-            if (errorDetail) {
-              throw new Error(`${errorDetail.description} (${captureData.debug_id})`);
-            } 
-            
-            if (!captureData.success) {
-              throw new Error(JSON.stringify(captureData));
+            if (!captureData?.success) {
+              const errorDetail = captureData?.details?.[0];
+              const errorMessage = errorDetail
+                ? `${errorDetail.issue} ${errorDetail.description}`
+                : JSON.stringify(captureData);
+                
+              console.error("Error in capture response:", errorMessage);
+              toast({
+                title: "Payment Failed",
+                description: "Sorry, your transaction could not be processed. Please try again.",
+                variant: "destructive"
+              });
+              return;
             }
 
             console.log("Payment captured successfully:", captureData);
@@ -201,7 +221,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
             description: "You have cancelled the payment process.",
           });
         },
-        onError: (err: any) => {
+        onError: (err) => {
           console.error("PayPal error:", err);
           toast({
             title: "Payment Error",
@@ -216,24 +236,26 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         console.error("PayPal Buttons are not eligible for this configuration");
         toast({
           title: "Payment Method Unavailable",
-          description: "PayPal checkout is not available for this purchase. Please try a different payment method.",
+          description: "PayPal checkout is not available for this purchase. Please try another payment method.",
           variant: "destructive"
         });
         return;
       }
 
       // Render the buttons
-      paypalButtons.render("#paypal-button-container").then(() => {
-        console.log("PayPal buttons rendered successfully");
-        paypalButtonsRendered.current = true;
-      }).catch((renderError: any) => {
-        console.error("Error rendering PayPal buttons:", renderError);
-        toast({
-          title: "Error",
-          description: "Failed to initialize payment system. Please try again later.",
-          variant: "destructive"
+      paypalButtons.render("#paypal-button-container")
+        .then(() => {
+          console.log("PayPal buttons rendered successfully");
+          paypalButtonsRendered.current = true;
+        })
+        .catch((renderError) => {
+          console.error("Error rendering PayPal buttons:", renderError);
+          toast({
+            title: "Error",
+            description: "Failed to initialize payment system. Please try again later.",
+            variant: "destructive"
+          });
         });
-      });
     } catch (error) {
       console.error("Error setting up PayPal buttons:", error);
       toast({
