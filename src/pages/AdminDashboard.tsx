@@ -34,7 +34,7 @@ import { Separator } from "@/components/ui/separator";
 import DefaultAvatar from "@/components/DefaultAvatar";
 import CountdownTimer from "@/components/search/CountdownTimer";
 import ResetCreditsButton from "@/components/profile/ResetCreditsButton";
-import { Tables } from "@/integrations/supabase/types";
+import { Database, Tables } from "@/integrations/supabase/types";
 
 interface UserData {
   id: string;
@@ -90,11 +90,11 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserData[]>([]);
-  const [anonUsers, setAnonUsers] = useState<Tables['anon_users']['Row'][]>([]);
+  const [anonUsers, setAnonUsers] = useState<Tables<"anon_users">["Row"][]>([]);
   const [searches, setSearches] = useState<SearchData[]>([]);
   const [logs, setLogs] = useState<LogData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
-  const [filteredAnonUsers, setFilteredAnonUsers] = useState<Tables['anon_users']['Row'][]>([]);
+  const [filteredAnonUsers, setFilteredAnonUsers] = useState<Tables<"anon_users">["Row"][]>([]);
   const [filteredSearches, setFilteredSearches] = useState<SearchData[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogData[]>([]);
   const [userSearch, setUserSearch] = useState("");
