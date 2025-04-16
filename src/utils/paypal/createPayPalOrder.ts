@@ -17,30 +17,50 @@ export const createPayPalOrder = async (productId: string, amount: number) => {
       throw new Error("User not authenticated");
     }
     
+    const userId = session.user.id;
+
+    // Add validation for inputs
+    if (!productId || !amount || amount <= 0) {
+      toast({
+        title: "Invalid Parameters",
+        description: "Product and amount are required for checkout.",
+        variant: "destructive"
+      });
+      throw new Error("Invalid parameters for order creation");
+    }
+
+    // Create the order through Supabase function
     const { data, error } = await supabase.functions.invoke("create-paypal-order", {
       body: {
         planId: productId,
-        planName: productId.charAt(0).toUpperCase() + productId.slice(1),
-        amount: amount.toString()
+        planName: productId.charAt(0).toUpperCase() + productId.slice(1), 
+        amount: amount.toString(),
+        userId: userId  // Pass user ID for tracking
       }
     });
 
     if (error) {
       console.error("Error creating order:", error);
+      toast({
+        title: "Order Creation Failed",
+        description: error.message || "Could not create PayPal order",
+        variant: "destructive"
+      });
       throw error;
     }
 
-    if (data && data.id) {
-      console.log("Order created successfully with ID:", data.id);
-      return data.id;
+    if (!data || !data.id) {
+      console.error("Invalid order data received:", data);
+      toast({
+        title: "Order Creation Failed",
+        description: "Invalid order data received from server",
+        variant: "destructive"
+      });
+      throw new Error("Invalid order data");
     }
 
-    const errorDetail = data?.details?.[0];
-    const errorMessage = errorDetail
-      ? `${errorDetail.issue} ${errorDetail.description} (${data.debug_id})`
-      : JSON.stringify(data);
-
-    throw new Error(errorMessage);
+    console.log("Order created successfully with ID:", data.id);
+    return data.id;
   } catch (error) {
     console.error("Create order error:", error);
     toast({

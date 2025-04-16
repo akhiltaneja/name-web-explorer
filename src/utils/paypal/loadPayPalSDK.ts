@@ -2,12 +2,14 @@
 const PAYPAL_SDK_URL = 'https://www.paypal.com/sdk/js';
 
 export const getPayPalScriptUrl = (config: { clientId: string }) => {
+  // Use URL parameters to create a properly encoded URL
   const params = new URLSearchParams({
     'client-id': config.clientId,
     currency: 'USD',
     intent: 'capture',
     components: 'buttons',
-    'disable-funding': 'venmo,paylater'
+    'disable-funding': 'venmo,paylater',
+    'debug': 'false' // Disable debug mode in production
   });
   
   return `${PAYPAL_SDK_URL}?${params.toString()}`;
@@ -27,9 +29,12 @@ export const cleanupPayPalScript = () => {
 };
 
 export const loadPayPalScript = (clientId: string): Promise<void> => {
+  // First clean up any existing PayPal scripts to avoid conflicts
+  cleanupPayPalScript();
+  
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = getPayPalScriptUrl({ clientId: clientId });
+    script.src = getPayPalScriptUrl({ clientId });
     script.async = true;
     script.defer = true;
 

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { cleanupPayPalScript, loadPayPalScript } from '@/utils/paypal/loadPayPalSDK';
 import { createPayPalOrder } from '@/utils/paypal/createPayPalOrder';
 import { capturePayPalPayment } from '@/utils/paypal/capturePayPalPayment';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PayPalButtonsConfig {
   amount: number;
@@ -16,39 +17,71 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
   const paypalLoaded = useRef(false);
   const paypalButtonsRendered = useRef(false);
   const [sdkReady, setSdkReady] = useState(false);
-
-  // Clear any existing PayPal scripts on mount to avoid conflicts
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
+  // Check authentication status first
   useEffect(() => {
-    // Clean up on mount
-    cleanupPayPalScript();
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!session);
+        if (!session) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to make a purchase.",
+            variant: "destructive"
+          });
+          // Redirect to login page
+          navigate('/auth');
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        setIsAuthenticated(false);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
-    // Load PayPal script with proper configuration
+  // Load PayPal SDK once authenticated
+  useEffect(() => {
+    if (isAuthenticated === false) return; // Don't load if not authenticated
+    if (paypalLoaded.current) return; // Prevent multiple loads
+    
     const initPayPal = async () => {
       try {
+        setIsLoading(true);
+        // Using live client ID - for sandbox testing
         await loadPayPalScript('AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl');
         paypalLoaded.current = true;
         setSdkReady(true);
       } catch (error) {
+        console.error("PayPal SDK load error:", error);
         toast({
           title: "Error",
           description: "Failed to load payment system. Please try again later.",
           variant: "destructive"
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    initPayPal();
+    if (isAuthenticated) {
+      initPayPal();
+    }
     
     // Clean up on component unmount
     return () => {
       cleanupPayPalScript();
     };
-  }, []); // Only load on initial mount
+  }, [isAuthenticated]); // Only load after auth check
 
   // Render PayPal buttons once SDK is loaded
   useEffect(() => {
-    if (!sdkReady || paypalButtonsRendered.current || !window.paypal?.Buttons) return;
-
+    if (!sdkReady || paypalButtonsRendered.current || !window.paypal?.Buttons || isLoading) return;
+    
     const container = document.getElementById('paypal-button-container');
     if (!container) {
       console.error("PayPal button container not found");
@@ -66,18 +99,35 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           color: "blue",
           label: "checkout",
         },
-        createOrder: () => createPayPalOrder(productId, amount),
+        // Create order function
+        createOrder: async () => {
+          try {
+            // Create an order ID on the server
+            return await createPayPalOrder(productId, amount);
+          } catch (err) {
+            console.error("Create order error:", err);
+            throw err;
+          }
+        },
         onApprove: async (data) => {
           try {
+            setIsLoading(true);
+            // Capture the payment
             const captureData = await capturePayPalPayment(data, productId);
+            
+            // Show success message
             toast({
               title: "Payment Successful",
               description: `Your ${productId} plan has been activated.`,
             });
+            
+            // Navigate to profile page
             navigate('/profile?tab=plans');
           } catch (error) {
             // Error handling is done in capturePayPalPayment
             console.error('Payment capture failed:', error);
+          } finally {
+            setIsLoading(false);
           }
         },
         onCancel: () => {
@@ -130,5 +180,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         variant: "destructive"
       });
     }
-  }, [sdkReady, amount, productId, navigate]);
+  }, [sdkReady, amount, productId, navigate, isLoading]);
+  
+  return { isLoading };
 };

@@ -4,6 +4,15 @@ import { toast } from "@/components/ui/use-toast";
 
 export const capturePayPalPayment = async (orderData: { orderID: string }, productId: string) => {
   try {
+    if (!orderData || !orderData.orderID) {
+      toast({
+        title: "Payment Error",
+        description: "Missing order information for payment capture.",
+        variant: "destructive"
+      });
+      throw new Error("Invalid order data for capture");
+    }
+    
     console.log("Payment approved, capturing order:", orderData.orderID);
     
     // Get the current user
@@ -19,6 +28,7 @@ export const capturePayPalPayment = async (orderData: { orderID: string }, produ
       throw new Error("User not authenticated");
     }
 
+    // Send to capture endpoint
     const { data: captureData, error } = await supabase.functions.invoke("capture-paypal-order", {
       body: {
         orderId: orderData.orderID,
@@ -29,6 +39,11 @@ export const capturePayPalPayment = async (orderData: { orderID: string }, produ
 
     if (error) {
       console.error("Error capturing payment:", error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Could not capture payment",
+        variant: "destructive"
+      });
       throw error;
     }
 
@@ -39,6 +54,11 @@ export const capturePayPalPayment = async (orderData: { orderID: string }, produ
         : JSON.stringify(captureData);
         
       console.error("Error in capture response:", errorMessage);
+      toast({
+        title: "Payment Failed",
+        description: "Error processing payment. Please try again.",
+        variant: "destructive"
+      });
       throw new Error(errorMessage);
     }
 
