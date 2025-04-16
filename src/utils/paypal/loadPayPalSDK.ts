@@ -9,7 +9,8 @@ export const getPayPalScriptUrl = (config: { clientId: string }) => {
     intent: 'capture',
     components: 'buttons',
     'disable-funding': 'venmo,paylater',
-    'debug': 'false' // Disable debug mode in production
+    'debug': 'false', // Disable debug mode in production
+    'buyer-country': 'US' // Add buyer country to improve compatibility
   });
   
   return `${PAYPAL_SDK_URL}?${params.toString()}`;
@@ -33,10 +34,20 @@ export const loadPayPalScript = (clientId: string): Promise<void> => {
   cleanupPayPalScript();
   
   return new Promise((resolve, reject) => {
+    if (!clientId) {
+      console.error("PayPal client ID is missing");
+      reject(new Error("Missing PayPal client ID"));
+      return;
+    }
+    
     const script = document.createElement('script');
     script.src = getPayPalScriptUrl({ clientId });
     script.async = true;
     script.defer = true;
+    
+    // Add data attributes for better tracing
+    script.setAttribute('data-namespace', 'paypal-sdk');
+    script.setAttribute('data-page', 'checkout');
 
     script.onload = () => {
       console.log("PayPal SDK loaded successfully");

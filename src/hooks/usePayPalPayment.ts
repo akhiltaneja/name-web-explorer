@@ -19,6 +19,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
   const [sdkReady, setSdkReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Check authentication status first
   useEffect(() => {
@@ -38,6 +39,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
       } catch (error) {
         console.error("Auth check error:", error);
         setIsAuthenticated(false);
+        setError("Authentication error. Please refresh and try again.");
       }
     };
     
@@ -52,12 +54,17 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
     const initPayPal = async () => {
       try {
         setIsLoading(true);
-        // Using live client ID - for sandbox testing
-        await loadPayPalScript('AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl');
+        setError(null);
+        
+        // Use sandbox client ID - critical for testing
+        const clientId = 'AUZfgCVN_xyWzKu09D9gQ-9SUNAt57fGbX5jkfBIgbMPRPCKOHuY3aMRNNkVmxOtRTz-3wC6mHR27BzU';
+        await loadPayPalScript(clientId);
+        
         paypalLoaded.current = true;
         setSdkReady(true);
       } catch (error) {
         console.error("PayPal SDK load error:", error);
+        setError("Failed to load payment system. Please try again later.");
         toast({
           title: "Error",
           description: "Failed to load payment system. Please try again later.",
@@ -102,16 +109,22 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         // Create order function
         createOrder: async () => {
           try {
+            setIsLoading(true);
+            setError(null);
             // Create an order ID on the server
             return await createPayPalOrder(productId, amount);
           } catch (err) {
             console.error("Create order error:", err);
+            setError("Failed to create order. Please try again.");
             throw err;
+          } finally {
+            setIsLoading(false);
           }
         },
         onApprove: async (data) => {
           try {
             setIsLoading(true);
+            setError(null);
             // Capture the payment
             const captureData = await capturePayPalPayment(data, productId);
             
@@ -126,12 +139,14 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           } catch (error) {
             // Error handling is done in capturePayPalPayment
             console.error('Payment capture failed:', error);
+            setError("Payment capture failed. Please try again.");
           } finally {
             setIsLoading(false);
           }
         },
         onCancel: () => {
           console.log("Payment cancelled by user");
+          setError(null);
           toast({
             title: "Payment Cancelled",
             description: "You have cancelled the payment process.",
@@ -139,6 +154,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         },
         onError: (err) => {
           console.error("PayPal error:", err);
+          setError("Payment processing error. Please try again.");
           toast({
             title: "Payment Error",
             description: "An error occurred during the payment process. Please try again.",
@@ -150,6 +166,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
       // Check if buttons can be rendered
       if (!paypalButtons.isEligible()) {
         console.error("PayPal Buttons are not eligible for this configuration");
+        setError("PayPal checkout is not available for this purchase. Please try another payment method.");
         toast({
           title: "Payment Method Unavailable",
           description: "PayPal checkout is not available for this purchase. Please try another payment method.",
@@ -166,6 +183,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         })
         .catch((renderError) => {
           console.error("Error rendering PayPal buttons:", renderError);
+          setError("Failed to initialize payment system. Please try again later.");
           toast({
             title: "Error",
             description: "Failed to initialize payment system. Please try again later.",
@@ -174,6 +192,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         });
     } catch (error) {
       console.error("Error setting up PayPal buttons:", error);
+      setError("Failed to initialize payment system. Please try again later.");
       toast({
         title: "Error",
         description: "Failed to initialize payment system. Please try again later.",
@@ -182,5 +201,5 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
     }
   }, [sdkReady, amount, productId, navigate, isLoading]);
   
-  return { isLoading };
+  return { isLoading, error };
 };

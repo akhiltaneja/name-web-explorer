@@ -34,7 +34,7 @@ export const createPayPalOrder = async (productId: string, amount: number) => {
       body: {
         planId: productId,
         planName: productId.charAt(0).toUpperCase() + productId.slice(1), 
-        amount: amount.toString(),
+        amount: amount.toFixed(2), // Ensure proper decimal formatting
         userId: userId  // Pass user ID for tracking
       }
     });

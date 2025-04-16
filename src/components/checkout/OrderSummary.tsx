@@ -19,7 +19,16 @@ const OrderSummary = () => {
   };
 
   // Initialize PayPal payment system with loading state
-  const { isLoading } = usePayPalPayment(planConfig);
+  const { isLoading, error } = usePayPalPayment(planConfig);
+
+  // Update error state when error changes
+  useEffect(() => {
+    if (error) {
+      setPaymentError(error);
+    } else {
+      setPaymentError('');
+    }
+  }, [error]);
 
   // Clear any error when component unmounts or when selectedPlan changes
   useEffect(() => {
