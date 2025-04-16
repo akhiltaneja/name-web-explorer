@@ -81,8 +81,9 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/admin" element={<AuthorizedAdminRouteWrapper />} />
-            <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+            <Route path="/admin-control-dashboard-s3cr3t" element={<AuthorizedAdminRouteWrapper />} />
+            <Route path="/admin" element={<Navigate to="/" replace />} />
+            <Route path="/admin-dashboard" element={<Navigate to="/" replace />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/search/:query" element={<Index />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />

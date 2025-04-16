@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut } from "lucide-react";
+import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut, Shield } from "lucide-react";
 import DefaultAvatar from "./DefaultAvatar";
 
 const Header = () => {
@@ -42,10 +42,10 @@ const Header = () => {
           {isAdmin && (
             <Button 
               variant="outline" 
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/admin-control-dashboard-s3cr3t')}
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
-              <LayoutDashboard className="mr-2 h-4 w-4" />
+              <Shield className="mr-2 h-4 w-4" />
               Admin
             </Button>
           )}

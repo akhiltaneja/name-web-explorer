@@ -20,6 +20,12 @@ const BlogPost = () => {
   useEffect(() => {
     // In a real app, this would be a database query
     const foundPost = blogPosts.find(p => p.slug === slug);
+    
+    // If it's the Sharenting post, fix the image URL
+    if (foundPost && foundPost.title.includes("Sharenting")) {
+      foundPost.image = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=2400&q=80";
+    }
+    
     setPost(foundPost);
     
     // Find related posts (excluding current post)

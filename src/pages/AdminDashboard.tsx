@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -27,7 +26,8 @@ import {
   ListFilter,
   PieChart,
   AreaChart,
-  LayoutList
+  LayoutList,
+  UserCheck
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DefaultAvatar from "@/components/DefaultAvatar";
@@ -42,6 +42,14 @@ interface UserData {
   plan: string;
   checks_used: number;
   daily_searches_used?: number;
+}
+
+interface AnonUserData {
+  id: string;
+  identifier: string;
+  created_at: string;
+  last_seen: string;
+  search_count: number;
 }
 
 interface SearchData {
@@ -69,22 +77,32 @@ interface LogData {
   user_email?: string;
 }
 
+const createAnonUsersTable = async () => {
+  const { error } = await supabase.rpc('create_anon_users_table_if_not_exists');
+  if (error) console.error("Error creating anon_users table:", error);
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserData[]>([]);
+  const [anonUsers, setAnonUsers] = useState<AnonUserData[]>([]);
   const [searches, setSearches] = useState<SearchData[]>([]);
   const [logs, setLogs] = useState<LogData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
+  const [filteredAnonUsers, setFilteredAnonUsers] = useState<AnonUserData[]>([]);
   const [filteredSearches, setFilteredSearches] = useState<SearchData[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogData[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [anonUserSearch, setAnonUserSearch] = useState("");
   const [querySearch, setQuerySearch] = useState("");
   const [logSearch, setLogSearch] = useState("");
   const [totalSearches, setTotalSearches] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [totalVerifiedUsers, setTotalVerifiedUsers] = useState(0);
+  const [totalAnonUsers, setTotalAnonUsers] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [avgResultsPerSearch, setAvgResultsPerSearch] = useState(0);
   const [activeTab, setActiveTab] = useState("stats");
@@ -96,7 +114,7 @@ const AdminDashboard = () => {
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const [loading, setLoading] = useState(true);
   const [searchStats, setSearchStats] = useState<{ name: string; searches: number }[]>([]);
-  const [userStats, setUserStats] = useState<{ date: string; count: number }[]>([]);
+  const [userStats, setUserStats] = useState<{ date: string; count: number; verified: number; anonymous: number }[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -106,9 +124,9 @@ const AdminDashboard = () => {
 
     const checkAdmin = async () => {
       try {
-        // Check if user is admin (email is akhiltaneja92@gmail.com)
         if (profile && profile.email === "akhiltaneja92@gmail.com") {
           setIsAdmin(true);
+          await createAnonUsersTable();
           await fetchData();
         } else {
           toast({
@@ -132,17 +150,56 @@ const AdminDashboard = () => {
     checkAdmin();
   }, [navigate, user, profile, toast]);
 
+  const trackAnonUser = async (identifier: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('anon_users')
+        .select('*')
+        .eq('identifier', identifier)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      if (!data) {
+        await supabase.from('anon_users').insert({
+          identifier: identifier,
+          search_count: 1
+        });
+      } else {
+        await supabase
+          .from('anon_users')
+          .update({ 
+            last_seen: new Date().toISOString(),
+            search_count: data.search_count + 1
+          })
+          .eq('id', data.id);
+      }
+    } catch (error) {
+      console.error("Error tracking anonymous user:", error);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users data
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*');
       
       if (usersError) throw usersError;
       
-      // Fetch searches data
+      const { data: anonUsersData, error: anonUsersError } = await supabase
+        .from('anon_users')
+        .select('*')
+        .order('last_seen', { ascending: false });
+      
+      if (anonUsersError) {
+        console.error("Error fetching anonymous users:", anonUsersError);
+        await createAnonUsersTable();
+      }
+      
       const { data: searchesData, error: searchesError } = await supabase
         .from('searches')
         .select('*')
@@ -150,7 +207,6 @@ const AdminDashboard = () => {
       
       if (searchesError) throw searchesError;
       
-      // Fetch user emails for searches
       const searchesWithEmails = await Promise.all(
         searchesData.map(async (search) => {
           const { data: userData, error: userError } = await supabase
@@ -161,12 +217,11 @@ const AdminDashboard = () => {
           
           return {
             ...search,
-            user_email: userError ? 'Unknown' : userData.email
+            user_email: userError ? 'Anonymous' : userData.email
           };
         })
       );
       
-      // Try to fetch logs data
       let { data: logsData, error: logsError } = await supabase
         .from('admin_logs')
         .select('*')
@@ -179,7 +234,6 @@ const AdminDashboard = () => {
         logsData = [];
       }
       
-      // Add user emails to logs
       const logsWithEmails = await Promise.all(
         (logsData || []).map(async (log) => {
           const { data: userData, error: userError } = await supabase
@@ -196,6 +250,7 @@ const AdminDashboard = () => {
       );
       
       const formattedUsers = usersData as UserData[];
+      const formattedAnonUsers = anonUsersData as AnonUserData[] || [];
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -220,25 +275,28 @@ const AdminDashboard = () => {
       
       const formattedLogs = logsWithEmails as LogData[];
       
-      // Mock revenue calculation - in a real app, this would come from payment records
       const premiumUsers = formattedUsers.filter(u => u.plan === 'premium').length;
       const unlimitedUsers = formattedUsers.filter(u => u.plan === 'unlimited').length;
       const revenue = (premiumUsers * 9.99) + (unlimitedUsers * 29.99);
       
       setUsers(usersWithDailySearches);
       setFilteredUsers(usersWithDailySearches);
+      setAnonUsers(formattedAnonUsers);
+      setFilteredAnonUsers(formattedAnonUsers);
       setSearches(formattedSearches);
       setFilteredSearches(formattedSearches);
       setLogs(formattedLogs);
       setFilteredLogs(formattedLogs);
-      setTotalUsers(formattedUsers.length);
+      setTotalVerifiedUsers(formattedUsers.length);
+      setTotalAnonUsers(formattedAnonUsers.length);
+      setTotalUsers(formattedUsers.length + formattedAnonUsers.length);
       setTotalSearches(formattedSearches.length);
       setTotalRevenue(revenue);
       
       const totalResults = formattedSearches.reduce((acc, search) => acc + search.result_count, 0);
       setAvgResultsPerSearch(formattedSearches.length ? totalResults / formattedSearches.length : 0);
       
-      generateStatsData(formattedSearches, formattedUsers);
+      generateStatsData(formattedSearches, formattedUsers, formattedAnonUsers);
       
     } catch (error) {
       console.error("Error fetching admin data:", error);
@@ -252,7 +310,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const generateStatsData = (searchesData: SearchData[], usersData: UserData[]) => {
+  const generateStatsData = (searchesData: SearchData[], usersData: UserData[], anonUsersData: AnonUserData[]) => {
     const searchesByDay = searchesData.reduce((acc: Record<string, number>, search) => {
       const date = new Date(search.created_at).toLocaleDateString();
       acc[date] = (acc[date] || 0) + 1;
@@ -266,22 +324,37 @@ const AdminDashboard = () => {
     
     setSearchStats(searchStatsData);
     
-    const usersByDay = usersData.reduce((acc: Record<string, number>, user) => {
+    const usersByDay = usersData.reduce((acc: Record<string, { verified: number, anonymous: number }>, user) => {
       const date = new Date(user.created_at).toLocaleDateString();
-      acc[date] = (acc[date] || 0) + 1;
+      if (!acc[date]) {
+        acc[date] = { verified: 0, anonymous: 0 };
+      }
+      acc[date].verified += 1;
       return acc;
     }, {});
+    
+    anonUsersData.forEach(anonUser => {
+      const date = new Date(anonUser.created_at).toLocaleDateString();
+      if (!usersByDay[date]) {
+        usersByDay[date] = { verified: 0, anonymous: 0 };
+      }
+      usersByDay[date].anonymous += 1;
+    });
     
     const dates = Object.keys(usersByDay).sort((a, b) => 
       new Date(a).getTime() - new Date(b).getTime()
     );
     
-    let cumulativeCount = 0;
+    let cumulativeVerified = 0;
+    let cumulativeAnonymous = 0;
     const userGrowthData = dates.map(date => {
-      cumulativeCount += usersByDay[date];
+      cumulativeVerified += usersByDay[date].verified;
+      cumulativeAnonymous += usersByDay[date].anonymous;
       return {
         date,
-        count: cumulativeCount
+        count: cumulativeVerified + cumulativeAnonymous,
+        verified: cumulativeVerified,
+        anonymous: cumulativeAnonymous
       };
     });
     
@@ -295,6 +368,18 @@ const AdminDashboard = () => {
       setFilteredUsers(
         users.filter((user) =>
           user.email.toLowerCase().includes(userSearch.toLowerCase())
+        )
+      );
+    }
+  };
+
+  const handleAnonUserSearch = () => {
+    if (anonUserSearch.trim() === "") {
+      setFilteredAnonUsers(anonUsers);
+    } else {
+      setFilteredAnonUsers(
+        anonUsers.filter((user) =>
+          user.identifier.toLowerCase().includes(anonUserSearch.toLowerCase())
         )
       );
     }
@@ -369,7 +454,6 @@ const AdminDashboard = () => {
       
       if (error) throw error;
       
-      // Log this action
       if (user && user.id) {
         try {
           await supabase
@@ -382,7 +466,6 @@ const AdminDashboard = () => {
             });
         } catch (logError) {
           console.error("Error logging action:", logError);
-          // Continue even if logging fails
         }
       }
       
@@ -402,7 +485,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
@@ -433,6 +515,10 @@ const AdminDashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-500">Total Users</p>
                     <h3 className="text-2xl font-bold text-gray-900">{totalUsers}</h3>
+                    <div className="flex items-center mt-1 text-xs text-gray-500">
+                      <UserCheck className="h-3 w-3 mr-1" />
+                      <span>{totalVerifiedUsers} verified</span>
+                    </div>
                   </div>
                   <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
                     <Users className="h-6 w-6 text-blue-600" />
@@ -501,8 +587,16 @@ const AdminDashboard = () => {
                     onClick={() => handleTabChange("users")}
                     className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "users" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
                   >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Verified Users
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleTabChange("anon-users")}
+                    className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "anon-users" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
                     <Users className="h-4 w-4 mr-2" />
-                    Users
+                    Anonymous Users
                   </button>
                   
                   <button 
@@ -580,6 +674,20 @@ const AdminDashboard = () => {
                                 activeDot={{ r: 8 }}
                                 strokeWidth={2} 
                               />
+                              <Line 
+                                type="monotone" 
+                                dataKey="verified" 
+                                stroke="#10B981" 
+                                activeDot={{ r: 6 }}
+                                strokeWidth={2} 
+                              />
+                              <Line 
+                                type="monotone" 
+                                dataKey="anonymous" 
+                                stroke="#F59E0B" 
+                                activeDot={{ r: 6 }}
+                                strokeWidth={2} 
+                              />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -593,7 +701,7 @@ const AdminDashboard = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                      <span>Users</span>
+                      <span>Verified Users</span>
                       <div className="flex items-center space-x-2">
                         <Input
                           placeholder="Search users by email..."
@@ -678,11 +786,77 @@ const AdminDashboard = () => {
                   </CardContent>
                   <CardFooter className="flex justify-between">
                     <p className="text-sm text-gray-500">
-                      Showing {filteredUsers.length} of {users.length} users
+                      Showing {filteredUsers.length} of {users.length} verified users
                     </p>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
                       Export Users
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
+              
+              {activeTab === "anon-users" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Anonymous Users</span>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          placeholder="Search by identifier..."
+                          value={anonUserSearch}
+                          onChange={(e) => setAnonUserSearch(e.target.value)}
+                          className="w-64"
+                        />
+                        <Button onClick={handleAnonUserSearch}>
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filter
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Identifier</TableHead>
+                          <TableHead>Searches</TableHead>
+                          <TableHead>First Seen</TableHead>
+                          <TableHead>Last Active</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAnonUsers.length > 0 ? (
+                          filteredAnonUsers.map((user) => (
+                            <TableRow key={user.id}>
+                              <TableCell>
+                                <div className="flex items-center space-x-3">
+                                  <DefaultAvatar name={user.identifier} size="sm" />
+                                  <span className="font-mono text-sm">{user.identifier}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{user.search_count}</TableCell>
+                              <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell>{new Date(user.last_seen).toLocaleDateString()} {new Date(user.last_seen).toLocaleTimeString()}</TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                              No anonymous users found. They will appear here when non-logged in visitors search.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {filteredAnonUsers.length} of {anonUsers.length} anonymous users
+                    </p>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Anonymous Users
                     </Button>
                   </CardFooter>
                 </Card>
@@ -745,7 +919,7 @@ const AdminDashboard = () => {
                   </CardFooter>
                 </Card>
               )}
-
+              
               {activeTab === "logs" && (
                 <Card>
                   <CardHeader>
