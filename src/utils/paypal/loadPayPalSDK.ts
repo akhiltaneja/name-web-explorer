@@ -40,6 +40,8 @@ export const loadPayPalScript = (clientId: string): Promise<void> => {
       return;
     }
     
+    console.log("Loading PayPal SDK with client ID:", clientId);
+    
     const script = document.createElement('script');
     script.src = getPayPalScriptUrl({ clientId });
     script.async = true;

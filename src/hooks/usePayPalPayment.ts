@@ -56,8 +56,10 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
         setIsLoading(true);
         setError(null);
         
-        // Use sandbox client ID - critical for testing
-        const clientId = 'AUZfgCVN_xyWzKu09D9gQ-9SUNAt57fGbX5jkfBIgbMPRPCKOHuY3aMRNNkVmxOtRTz-3wC6mHR27BzU';
+        // Use live client ID - critical for production
+        const clientId = 'AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl';
+        
+        console.log("Initializing PayPal with client ID:", clientId);
         await loadPayPalScript(clientId);
         
         paypalLoaded.current = true;
@@ -99,18 +101,21 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
       // Clear any existing content
       container.innerHTML = '';
       
+      console.log("Setting up PayPal buttons with product ID:", productId, "and amount:", amount);
+      
       const paypalButtons = window.paypal.Buttons({
         style: {
           shape: "rect",
           layout: "vertical",
           color: "blue",
-          label: "checkout",
+          label: "pay",
         },
         // Create order function
         createOrder: async () => {
           try {
             setIsLoading(true);
             setError(null);
+            console.log("Creating PayPal order for product:", productId, "with amount:", amount);
             // Create an order ID on the server
             return await createPayPalOrder(productId, amount);
           } catch (err) {
@@ -125,6 +130,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           try {
             setIsLoading(true);
             setError(null);
+            console.log("Payment approved:", data);
             // Capture the payment
             const captureData = await capturePayPalPayment(data, productId);
             
@@ -176,6 +182,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
       }
 
       // Render the buttons
+      console.log("Rendering PayPal buttons to container");
       paypalButtons.render("#paypal-button-container")
         .then(() => {
           console.log("PayPal buttons rendered successfully");

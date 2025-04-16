@@ -50,22 +50,20 @@ const OrderSummary = () => {
             </Alert>
           )}
           
-          <div className="flex justify-center flex-col items-center">
+          <div className="flex flex-col justify-center items-center">
+            <div className="mb-4">
+              <div className="text-lg font-semibold">{selectedPlan.name} Plan</div>
+              <div className="text-xl font-bold mt-1">${selectedPlan.price}/month</div>
+              <div className="text-sm text-gray-500 mt-1">{selectedPlan.limit}</div>
+            </div>
+            
             {isLoading ? (
               <div className="text-center py-6">
                 <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
                 <p className="mt-3 text-gray-600">Processing payment...</p>
               </div>
             ) : (
-              <>
-                <div id="paypal-button-container" className="w-full max-w-md min-h-[150px]"></div>
-                <div className="flex flex-col items-center gap-2 w-full mt-4">
-                  <img src="https://www.paypalobjects.com/images/Debit_Credit_APM.svg" alt="cards" className="h-6" />
-                  <div className="text-sm text-gray-600">
-                    Powered by <img src="https://www.paypalobjects.com/paypal-ui/logos/svg/paypal-wordmark-color.svg" alt="paypal" className="h-4 inline-block align-middle ml-1"/>
-                  </div>
-                </div>
-              </>
+              <div id="paypal-button-container" className="w-full max-w-md min-h-[150px]"></div>
             )}
           </div>
         </div>
