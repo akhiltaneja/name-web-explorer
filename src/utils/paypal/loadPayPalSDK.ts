@@ -9,8 +9,8 @@ export const getPayPalScriptUrl = (config: { clientId: string }) => {
     intent: 'capture',
     components: 'buttons',
     'disable-funding': 'venmo,paylater',
-    'debug': 'false', // Disable debug mode in production
-    'buyer-country': 'US' // Add buyer country to improve compatibility
+    'debug': 'false',
+    'buyer-country': 'US'
   });
   
   return `${PAYPAL_SDK_URL}?${params.toString()}`;

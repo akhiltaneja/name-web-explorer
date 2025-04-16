@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -25,8 +24,8 @@ serve(async (req) => {
     // Get environment variables
     const paypalClientId = Deno.env.get("PAYPAL_CLIENT_ID");
     const paypalSecret = Deno.env.get("PAYPAL_SECRET");
-    const paypalApiUrl = Deno.env.get("PAYPAL_API_URL") || "https://api-m.sandbox.paypal.com";
-
+    const paypalApiUrl = "https://api-m.paypal.com"; // Use live API URL
+    
     if (!paypalClientId || !paypalSecret) {
       console.error("Missing PayPal credentials");
       return new Response(
@@ -132,8 +131,8 @@ serve(async (req) => {
         brand_name: "CandidateChecker",
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
-        return_url: "https://your-app.com/success",
-        cancel_url: "https://your-app.com/cancel"
+        return_url: "https://candidatechecker.com/success", // Update with your live domain
+        cancel_url: "https://candidatechecker.com/cancel"   // Update with your live domain
       },
     };
 

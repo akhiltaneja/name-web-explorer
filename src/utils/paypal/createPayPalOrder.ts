@@ -33,9 +33,10 @@ export const createPayPalOrder = async (productId: string, amount: number) => {
     const { data, error } = await supabase.functions.invoke("create-paypal-order", {
       body: {
         planId: productId,
-        planName: productId.charAt(0).toUpperCase() + productId.slice(1), 
-        amount: amount.toFixed(2), // Ensure proper decimal formatting
-        userId: userId  // Pass user ID for tracking
+        planName: productId.charAt(0).toUpperCase() + productId.slice(1),
+        amount: amount.toFixed(2),
+        userId: userId,
+        environment: 'live' // Add environment parameter
       }
     });
 
