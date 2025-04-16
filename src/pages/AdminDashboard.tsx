@@ -27,13 +27,13 @@ import {
   PieChart,
   AreaChart,
   LayoutList,
-  UserCheck
+  UserCheck,
+  Trash
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DefaultAvatar from "@/components/DefaultAvatar";
 import CountdownTimer from "@/components/search/CountdownTimer";
 import ResetCreditsButton from "@/components/profile/ResetCreditsButton";
-import { Database, Tables } from "@/integrations/supabase/types";
 
 interface UserData {
   id: string;
