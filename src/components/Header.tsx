@@ -1,4 +1,3 @@
-
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,12 +11,11 @@ import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut } from
 import DefaultAvatar from "./DefaultAvatar";
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   
-  // For demo purposes, consider the admin email as admin@example.com
-  const isAdmin = user?.email === "admin@example.com";
+  // Update isAdmin check to use the specific email
+  const isAdmin = profile?.email === "akhiltaneja92@gmail.com";
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();

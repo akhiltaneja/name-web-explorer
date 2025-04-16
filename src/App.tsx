@@ -1,14 +1,11 @@
-
 import { Suspense, lazy, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/AuthContext";
 import NotFound from "@/pages/NotFound";
 
-// Import Index component directly instead of lazy loading it
 import Index from "@/pages/Index";
 
-// Dynamically import other page components
 const Auth = lazy(() => import("@/pages/Auth"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
@@ -18,16 +15,27 @@ const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const Settings = lazy(() => import("@/pages/Settings"));
 
-// Correctly import Blog pages separately
 const BlogIndex = lazy(() => import("@/pages/blog/BlogIndex"));
 const BlogPost = lazy(() => import("@/pages/blog/BlogPost"));
+
+const AuthorizedAdminRoute = () => {
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user || profile?.email !== "akhiltaneja92@gmail.com") {
+      navigate('/');
+    }
+  }, [user, profile, navigate]);
+
+  return user && profile?.email === "akhiltaneja92@gmail.com" ? <AdminDashboard /> : null;
+};
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set a timeout to handle potential loading issues
     const timeout = setTimeout(() => {
       if (isLoading) {
         setLoadError("Loading is taking longer than expected. You may need to refresh the page.");
@@ -38,7 +46,6 @@ function App() {
   }, [isLoading]);
 
   useEffect(() => {
-    // Set loading to false once components are ready
     setIsLoading(false);
   }, []);
 
@@ -72,7 +79,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<AuthorizedAdminRoute />} />
             <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/search/:query" element={<Index />} />
