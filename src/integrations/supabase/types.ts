@@ -36,6 +36,30 @@ export type Database = {
         }
         Relationships: []
       }
+      anon_users: {
+        Row: {
+          created_at: string
+          id: string
+          identifier: string
+          last_seen: string
+          search_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identifier: string
+          last_seen?: string
+          search_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identifier?: string
+          last_seen?: string
+          search_count?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -112,6 +136,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_anon_users_table_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_logs_table_if_not_exists: {
         Args: Record<PropertyKey, never>
         Returns: undefined
