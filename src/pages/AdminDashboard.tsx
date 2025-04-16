@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -90,11 +89,11 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserData[]>([]);
-  const [anonUsers, setAnonUsers] = useState<Tables<"anon_users">["Row"][]>([]);
+  const [anonUsers, setAnonUsers] = useState<AnonUserData[]>([]);
   const [searches, setSearches] = useState<SearchData[]>([]);
   const [logs, setLogs] = useState<LogData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
-  const [filteredAnonUsers, setFilteredAnonUsers] = useState<Tables<"anon_users">["Row"][]>([]);
+  const [filteredAnonUsers, setFilteredAnonUsers] = useState<AnonUserData[]>([]);
   const [filteredSearches, setFilteredSearches] = useState<SearchData[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogData[]>([]);
   const [userSearch, setUserSearch] = useState("");
@@ -313,7 +312,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const generateStatsData = (searchesData: SearchData[], usersData: UserData[], anonUsersData: Tables['anon_users']['Row'][]) => {
+  const generateStatsData = (searchesData: SearchData[], usersData: UserData[], anonUsersData: AnonUserData[]) => {
     const searchesByDay = searchesData.reduce((acc: Record<string, number>, search) => {
       const date = new Date(search.created_at).toLocaleDateString();
       acc[date] = (acc[date] || 0) + 1;
@@ -859,18 +858,3 @@ const AdminDashboard = () => {
                     </p>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
-                      Export Users
-                    </Button>
-                  </CardFooter>
-                </Card>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-      <Footer />
-    </div>
-  );
-};
-
-export default AdminDashboard;
