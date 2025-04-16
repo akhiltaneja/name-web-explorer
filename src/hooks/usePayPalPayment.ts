@@ -1,8 +1,7 @@
-
 import { useEffect, useRef } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
-import { supabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PayPalButtonsConfig {
   amount: number;
@@ -36,8 +35,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           },
           createOrder: async () => {
             try {
-              // Use Supabase Edge Function for creating order
-              const { data, error } = await supabaseClient.functions.invoke("create-paypal-order", {
+              const { data, error } = await supabase.functions.invoke("create-paypal-order", {
                 body: {
                   planId: productId,
                   planName: productId.charAt(0).toUpperCase() + productId.slice(1),
@@ -77,8 +75,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           },
           onApprove: async (data: any, actions: any) => {
             try {
-              // Use Supabase Edge Function for capturing order
-              const user = await supabaseClient.auth.getUser();
+              const user = await supabase.auth.getUser();
               const userId = user.data.user?.id;
               
               if (!userId) {
@@ -90,7 +87,7 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
                 return;
               }
 
-              const { data: captureData, error } = await supabaseClient.functions.invoke("capture-paypal-order", {
+              const { data: captureData, error } = await supabase.functions.invoke("capture-paypal-order", {
                 body: {
                   orderId: data.orderID,
                   userId: userId,
@@ -127,7 +124,6 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
                 description: `Your ${productId} plan has been activated.`,
               });
 
-              // Redirect to success page or update UI accordingly
               navigate('/profile?tab=plans');
             } catch (error) {
               console.error(error);
