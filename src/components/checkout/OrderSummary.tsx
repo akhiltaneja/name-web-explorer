@@ -32,12 +32,6 @@ const OrderSummary = () => {
       <CardContent className="p-5">
         <div className="space-y-4">
           <div className="flex flex-col justify-center items-center">
-            <div className="mb-4">
-              <div className="text-lg font-semibold">{selectedPlan.name} Plan</div>
-              <div className="text-xl font-bold mt-1">${selectedPlan.price}/month</div>
-              <div className="text-sm text-gray-500 mt-1">{selectedPlan.limit}</div>
-            </div>
-            
             <div 
               id={`paypal-container-${selectedPlan.id}`}
               className="w-full max-w-md min-h-[150px]"
@@ -60,3 +54,4 @@ const OrderSummary = () => {
 };
 
 export default OrderSummary;
+
