@@ -858,3 +858,127 @@ const AdminDashboard = () => {
                     </p>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
+              
+              {activeTab === "searches" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Searches</CardTitle>
+                    <CardDescription>
+                      Search results and analytics
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Query</TableHead>
+                          <TableHead>Result Count</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Created At</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSearches.map((search) => (
+                          <TableRow key={search.id}>
+                            <TableCell>{search.query}</TableCell>
+                            <TableCell>{search.result_count}</TableCell>
+                            <TableCell>
+                              {search.user_email}
+                            </TableCell>
+                            <TableCell>{new Date(search.created_at).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {activeTab === "logs" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Activity Logs</CardTitle>
+                    <CardDescription>
+                      User actions and events
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Action</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Target User</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead>Created At</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell>{log.action}</TableCell>
+                            <TableCell>
+                              {log.user_email}
+                            </TableCell>
+                            <TableCell>
+                              {log.target_user_id && log.user_email !== log.target_user_id && (
+                                <span>{log.target_user_id}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{log.details}</TableCell>
+                            <TableCell>{new Date(log.created_at).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {activeTab === "affiliates" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Affiliate Links</CardTitle>
+                    <CardDescription>
+                      Manage affiliate programs
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span>Links</span>
+                        <Button onClick={handleAddAffiliateLink}>
+                          <Link2 className="h-4 w-4 mr-2" />
+                          Add Link
+                        </Button>
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        {affiliateLinks.map((link) => (
+                          <div key={link.id} className="flex items-center justify-between">
+                            <span>{link.name}</span>
+                            <Button onClick={() => handleDeleteAffiliateLink(link.id)}>
+                              <Trash className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default AdminDashboard;
