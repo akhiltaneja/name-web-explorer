@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { cleanupPayPalScript, loadPayPalScript } from '@/utils/paypal/loadPayPalSDK';
+import { createPayPalOrder } from '@/utils/paypal/createPayPalOrder';
+import { capturePayPalPayment } from '@/utils/paypal/capturePayPalPayment';
 
 interface PayPalButtonsConfig {
   amount: number;
@@ -17,51 +19,25 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
 
   // Clear any existing PayPal scripts on mount to avoid conflicts
   useEffect(() => {
-    const cleanupPayPalScript = () => {
-      const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-        paypalLoaded.current = false;
-        paypalButtonsRendered.current = false;
-        setSdkReady(false);
-      }
-
-      // Also clean up any PayPal button containers
-      const container = document.getElementById('paypal-button-container');
-      if (container) {
-        container.innerHTML = '';
-      }
-    };
-
     // Clean up on mount
     cleanupPayPalScript();
 
     // Load PayPal script with proper configuration
-    const loadPayPalScript = () => {
-      const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl&currency=USD&intent=capture&components=buttons&disable-funding=venmo,paylater`;
-      script.async = true;
-      script.defer = true;
-
-      script.onload = () => {
-        console.log("PayPal SDK loaded successfully");
+    const initPayPal = async () => {
+      try {
+        await loadPayPalScript('AVuzQzspgCUwELAG9RAJVEifedKU0XEA_E6rggkxic__6TaLvTLvp4DwukcUNrYwguN3DAifSaG4yTjl');
         paypalLoaded.current = true;
         setSdkReady(true);
-      };
-
-      script.onerror = (error) => {
-        console.error("PayPal SDK failed to load:", error);
+      } catch (error) {
         toast({
           title: "Error",
           description: "Failed to load payment system. Please try again later.",
           variant: "destructive"
         });
-      };
-
-      document.head.appendChild(script);
+      }
     };
 
-    loadPayPalScript();
+    initPayPal();
     
     // Clean up on component unmount
     return () => {
@@ -83,8 +59,6 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
       // Clear any existing content
       container.innerHTML = '';
       
-      console.log("Creating PayPal buttons with config:", { amount, productId });
-      
       const paypalButtons = window.paypal.Buttons({
         style: {
           shape: "rect",
@@ -92,126 +66,18 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           color: "blue",
           label: "checkout",
         },
-        createOrder: async () => {
-          try {
-            console.log("Creating PayPal order for:", { productId, amount });
-            
-            // Get the current user session to verify authentication
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-              toast({
-                title: "Authentication Error",
-                description: "You need to be logged in to make a purchase.",
-                variant: "destructive"
-              });
-              throw new Error("User not authenticated");
-            }
-            
-            const { data, error } = await supabase.functions.invoke("create-paypal-order", {
-              body: {
-                planId: productId,
-                planName: productId.charAt(0).toUpperCase() + productId.slice(1),
-                amount: amount.toString()
-              }
-            });
-
-            if (error) {
-              console.error("Error creating order:", error);
-              toast({
-                title: "Error",
-                description: "Could not initiate PayPal Checkout. Please try again.",
-                variant: "destructive"
-              });
-              throw new Error(error.message);
-            }
-
-            if (data && data.id) {
-              console.log("Order created successfully with ID:", data.id);
-              return data.id;
-            }
-
-            const errorDetail = data?.details?.[0];
-            const errorMessage = errorDetail
-              ? `${errorDetail.issue} ${errorDetail.description} (${data.debug_id})`
-              : JSON.stringify(data);
-
-            console.error("Unexpected response from create order:", errorMessage);
-            throw new Error(errorMessage);
-          } catch (error) {
-            console.error("Create order error:", error);
-            toast({
-              title: "Error",
-              description: "Could not initiate PayPal Checkout. Please try again.",
-              variant: "destructive"
-            });
-            throw error;
-          }
-        },
+        createOrder: () => createPayPalOrder(productId, amount),
         onApprove: async (data) => {
           try {
-            console.log("Payment approved, capturing order:", data.orderID);
-            
-            // Get the current user
-            const { data: { user } } = await supabase.auth.getUser();
-            const userId = user?.id;
-            
-            if (!userId) {
-              toast({
-                title: "Authentication Error",
-                description: "You need to be logged in to complete this purchase.",
-                variant: "destructive"
-              });
-              return;
-            }
-
-            const { data: captureData, error } = await supabase.functions.invoke("capture-paypal-order", {
-              body: {
-                orderId: data.orderID,
-                userId: userId,
-                planId: productId
-              }
-            });
-
-            if (error) {
-              console.error("Error capturing payment:", error);
-              toast({
-                title: "Payment Failed",
-                description: "Sorry, your transaction could not be processed. Please try again.",
-                variant: "destructive"
-              });
-              throw new Error(error.message);
-            }
-
-            if (!captureData?.success) {
-              const errorDetail = captureData?.details?.[0];
-              const errorMessage = errorDetail
-                ? `${errorDetail.issue} ${errorDetail.description}`
-                : JSON.stringify(captureData);
-                
-              console.error("Error in capture response:", errorMessage);
-              toast({
-                title: "Payment Failed",
-                description: "Sorry, your transaction could not be processed. Please try again.",
-                variant: "destructive"
-              });
-              return;
-            }
-
-            console.log("Payment captured successfully:", captureData);
-            
+            const captureData = await capturePayPalPayment(data, productId);
             toast({
               title: "Payment Successful",
               description: `Your ${productId} plan has been activated.`,
             });
-
             navigate('/profile?tab=plans');
           } catch (error) {
-            console.error("Payment capture error:", error);
-            toast({
-              title: "Payment Failed",
-              description: "Sorry, your transaction could not be processed. Please try again.",
-              variant: "destructive"
-            });
+            // Error handling is done in capturePayPalPayment
+            console.error('Payment capture failed:', error);
           }
         },
         onCancel: () => {
