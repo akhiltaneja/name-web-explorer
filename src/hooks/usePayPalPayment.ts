@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { supabaseClient } from '@/integrations/supabase/client';
 
 interface PayPalButtonsConfig {
   amount: number;
@@ -35,30 +36,33 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           },
           createOrder: async () => {
             try {
-              const response = await fetch("/api/orders", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  cart: [{
-                    id: productId,
-                    quantity: 1,
-                    amount: amount
-                  }],
-                }),
+              // Use Supabase Edge Function for creating order
+              const { data, error } = await supabaseClient.functions.invoke("create-paypal-order", {
+                body: {
+                  planId: productId,
+                  planName: productId.charAt(0).toUpperCase() + productId.slice(1),
+                  amount: amount.toString()
+                }
               });
 
-              const orderData = await response.json();
-
-              if (orderData.id) {
-                return orderData.id;
+              if (error) {
+                console.error("Error creating order:", error);
+                toast({
+                  title: "Error",
+                  description: "Could not initiate PayPal Checkout. Please try again.",
+                  variant: "destructive"
+                });
+                throw new Error(error.message);
               }
 
-              const errorDetail = orderData?.details?.[0];
+              if (data && data.id) {
+                return data.id;
+              }
+
+              const errorDetail = data?.details?.[0];
               const errorMessage = errorDetail
-                ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
-                : JSON.stringify(orderData);
+                ? `${errorDetail.issue} ${errorDetail.description} (${data.debug_id})`
+                : JSON.stringify(data);
 
               throw new Error(errorMessage);
             } catch (error) {
@@ -68,41 +72,59 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
                 description: "Could not initiate PayPal Checkout. Please try again.",
                 variant: "destructive"
               });
+              throw error;
             }
           },
           onApprove: async (data: any, actions: any) => {
             try {
-              const response = await fetch(
-                `/api/orders/${data.orderID}/capture`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                }
-              );
+              // Use Supabase Edge Function for capturing order
+              const user = await supabaseClient.auth.getUser();
+              const userId = user.data.user?.id;
+              
+              if (!userId) {
+                toast({
+                  title: "Authentication Error",
+                  description: "You need to be logged in to complete this purchase.",
+                  variant: "destructive"
+                });
+                return;
+              }
 
-              const orderData = await response.json();
-              const errorDetail = orderData?.details?.[0];
+              const { data: captureData, error } = await supabaseClient.functions.invoke("capture-paypal-order", {
+                body: {
+                  orderId: data.orderID,
+                  userId: userId,
+                  planId: productId
+                }
+              });
+
+              if (error) {
+                console.error("Error capturing payment:", error);
+                toast({
+                  title: "Payment Failed",
+                  description: "Sorry, your transaction could not be processed. Please try again.",
+                  variant: "destructive"
+                });
+                throw new Error(error.message);
+              }
+
+              const errorDetail = captureData?.details?.[0];
 
               if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
                 return actions.restart();
               } 
               
               if (errorDetail) {
-                throw new Error(`${errorDetail.description} (${orderData.debug_id})`);
+                throw new Error(`${errorDetail.description} (${captureData.debug_id})`);
               } 
               
-              if (!orderData.purchase_units) {
-                throw new Error(JSON.stringify(orderData));
+              if (!captureData.success) {
+                throw new Error(JSON.stringify(captureData));
               }
-
-              const transaction = orderData?.purchase_units?.[0]?.payments?.captures?.[0] ||
-                                orderData?.purchase_units?.[0]?.payments?.authorizations?.[0];
 
               toast({
                 title: "Payment Successful",
-                description: `Transaction ${transaction.status}: ${transaction.id}`,
+                description: `Your ${productId} plan has been activated.`,
               });
 
               // Redirect to success page or update UI accordingly

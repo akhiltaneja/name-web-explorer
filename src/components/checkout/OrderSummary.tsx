@@ -5,10 +5,13 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { usePayPalPayment } from "@/hooks/usePayPalPayment";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState } from "react";
 
 const OrderSummary = () => {
   const navigate = useNavigate();
   const { selectedPlan } = useCart();
+  const [paymentError, setPaymentError] = useState('');
 
   const planConfig = {
     amount: selectedPlan?.price || 0,
@@ -26,6 +29,12 @@ const OrderSummary = () => {
       </CardHeader>
       <CardContent className="p-5">
         <div className="space-y-4">
+          {paymentError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{paymentError}</AlertDescription>
+            </Alert>
+          )}
+          
           <div className="flex justify-center flex-col items-center">
             <div id="paypal-button-container" className="w-full max-w-md"></div>
             <div className="flex flex-col items-center gap-2 w-full mt-4">
