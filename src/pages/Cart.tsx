@@ -28,7 +28,7 @@ const plans: PlanOption[] = [
     id: 'unlimited',
     name: 'Unlimited',
     description: 'For power users with high search needs.',
-    price: 20,
+    price: 19,
     originalPrice: 30,
     limit: 'Unlimited searches',
     features: [
