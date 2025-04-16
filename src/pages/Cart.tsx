@@ -143,11 +143,21 @@ const CartContent = () => {
                         : 'border-gray-200 hover:border-blue-300'
                     }`}
                   >
-                    <RadioGroupItem 
-                      value={plan.id} 
-                      id={`plan-${plan.id}`} 
-                      className="mt-1 mr-3"
-                    />
+                    <div className="flex items-center">
+                      <RadioGroupItem 
+                        value={plan.id} 
+                        id={`plan-${plan.id}`} 
+                        className="mr-3"
+                      />
+                      <div className="flex-grow">
+                        <h3 className="text-lg font-semibold">{plan.name} Plan</h3>
+                        <p className="text-sm text-gray-600">{plan.description}</p>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-xl font-bold text-gray-900">${plan.price}/month</span>
+                          <span className="text-sm text-gray-500">{plan.limit}</span>
+                        </div>
+                      </div>
+                    </div>
                   </label>
                 ))}
               </RadioGroup>
@@ -178,3 +188,4 @@ const Cart = () => {
 };
 
 export default Cart;
+
