@@ -21,7 +21,10 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
       script.async = true;
 
       script.onload = () => {
-        if (!window.paypal) return;
+        if (!window.paypal) {
+          console.error("PayPal SDK failed to load");
+          return;
+        }
 
         const paypalButtons = window.paypal.Buttons({
           style: {
@@ -115,8 +118,12 @@ export const usePayPalPayment = ({ amount, productId }: PayPalButtonsConfig) => 
           },
         });
 
-        paypalButtons.render("#paypal-button-container");
-        paypalLoaded.current = true;
+        if (paypalButtons.render) {
+          paypalButtons.render("#paypal-button-container");
+          paypalLoaded.current = true;
+        } else {
+          console.error("PayPal Buttons render method not found");
+        }
       };
 
       document.head.appendChild(script);
