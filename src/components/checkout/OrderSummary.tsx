@@ -17,7 +17,7 @@ const OrderSummary = () => {
       }).render("#paypal-container-premium");
     } else if (selectedPlan?.id === 'unlimited') {
       window.paypal?.HostedButtons?.({
-        hostedButtonId: "9UJUQBPHTR9MY"
+        hostedButtonId: "2UTTJZG37LRMN"
       }).render("#paypal-container-unlimited");
     }
   }, [selectedPlan?.id]);

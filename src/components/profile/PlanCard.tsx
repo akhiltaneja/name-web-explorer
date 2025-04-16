@@ -22,7 +22,7 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan }: PlanCardProps) => {
     // Unlimited plan PayPal button
     if (plan.id === 'unlimited') {
       window.paypal?.HostedButtons?.({
-        hostedButtonId: "9UJUQBPHTR9MY"
+        hostedButtonId: "2UTTJZG37LRMN"
       }).render("#paypal-container-unlimited");
     }
   }, [plan.id]);
