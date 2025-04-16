@@ -1,7 +1,8 @@
+
 import { Suspense, lazy, useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import NotFound from "@/pages/NotFound";
 
 import Index from "@/pages/Index";
@@ -18,7 +19,8 @@ const Settings = lazy(() => import("@/pages/Settings"));
 const BlogIndex = lazy(() => import("@/pages/blog/BlogIndex"));
 const BlogPost = lazy(() => import("@/pages/blog/BlogPost"));
 
-const AuthorizedAdminRoute = () => {
+// This component needs to be outside the Router to use hooks
+const AuthorizedAdminRouteWrapper = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -79,7 +81,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/admin" element={<AuthorizedAdminRoute />} />
+            <Route path="/admin" element={<AuthorizedAdminRouteWrapper />} />
             <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/search/:query" element={<Index />} />

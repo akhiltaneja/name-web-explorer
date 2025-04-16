@@ -1,3 +1,4 @@
+
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,7 +12,7 @@ import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut } from
 import DefaultAvatar from "./DefaultAvatar";
 
 const Header = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   
   // Update isAdmin check to use the specific email
