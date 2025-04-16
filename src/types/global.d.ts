@@ -7,7 +7,8 @@ interface Window {
       render: (containerId: string) => void;
     };
     Buttons: (config: any) => {
-      render: (containerId: string) => void;
+      render: (containerId: string) => Promise<void>;
+      isEligible: () => boolean;
     };
   };
 }

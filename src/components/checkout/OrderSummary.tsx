@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { usePayPalPayment } from "@/hooks/usePayPalPayment";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const OrderSummary = () => {
   const navigate = useNavigate();
@@ -18,7 +18,13 @@ const OrderSummary = () => {
     productId: selectedPlan?.id || ''
   };
 
+  // Initialize PayPal payment system
   usePayPalPayment(planConfig);
+
+  // Clear any error when component unmounts or when selectedPlan changes
+  useEffect(() => {
+    setPaymentError('');
+  }, [selectedPlan]);
 
   if (!selectedPlan) return null;
 
@@ -36,7 +42,7 @@ const OrderSummary = () => {
           )}
           
           <div className="flex justify-center flex-col items-center">
-            <div id="paypal-button-container" className="w-full max-w-md"></div>
+            <div id="paypal-button-container" className="w-full max-w-md min-h-[150px]"></div>
             <div className="flex flex-col items-center gap-2 w-full mt-4">
               <img src="https://www.paypalobjects.com/images/Debit_Credit_APM.svg" alt="cards" className="h-6" />
               <div className="text-sm text-gray-600">
