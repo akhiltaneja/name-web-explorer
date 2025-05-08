@@ -38,9 +38,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Link } from 'react-router-dom';
+import { UserProfile } from '@/types/socialMedia';
 
 const AdminDashboard = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [anonUsers, setAnonUsers] = useState([]);
   const [searches, setSearches] = useState([]);
   const [loading, setLoading] = useState(true);

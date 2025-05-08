@@ -1,3 +1,4 @@
+
 export type SocialMediaProfile = {
   platform: string;
   url: string;
