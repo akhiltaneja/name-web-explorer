@@ -273,6 +273,28 @@ export const useSearchLimit = (user: any, profile: any) => {
         setGuestCheckAvailable(true);
       }
       
+      // Also save the anonymous user info in Supabase for tracking purposes
+      try {
+        // Generate a consistent identifier for this anonymous user
+        const identifierRaw = localStorage.getItem('anonUserId');
+        const identifier = identifierRaw || `anon_${Math.random().toString(36).substring(2, 15)}`;
+        
+        if (!identifierRaw) {
+          localStorage.setItem('anonUserId', identifier);
+        }
+        
+        // Try to update the anon_user record
+        const { data, error } = await supabase.rpc('update_anon_user', {
+          p_identifier: identifier,
+        });
+        
+        if (error) {
+          console.error("Error updating anonymous user:", error);
+        }
+      } catch (e) {
+        console.error("Error processing anonymous user:", e);
+      }
+      
       return true;
     }
   };

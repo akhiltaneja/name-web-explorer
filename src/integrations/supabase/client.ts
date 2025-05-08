@@ -9,10 +9,36 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Create a client with admin access for specific admin operations
 // This should only be used in admin-specific functions
 export const getAdminClient = (serviceRoleKey: string) => {
   return createClient<Database>(SUPABASE_URL, serviceRoleKey);
+};
+
+// Helper method to get a client with the service role key for admin operations
+export const getServiceRoleClient = async () => {
+  try {
+    // Request the service role key from the admin session
+    const { data, error } = await supabase.functions.invoke('get-service-role-key', {
+      method: 'POST'
+    });
+    
+    if (error || !data?.serviceRoleKey) {
+      console.error('Error getting service role key:', error);
+      return null;
+    }
+    
+    // Create a client with the service role key
+    return createClient<Database>(SUPABASE_URL, data.serviceRoleKey);
+  } catch (err) {
+    console.error('Exception getting service role client:', err);
+    return null;
+  }
 };

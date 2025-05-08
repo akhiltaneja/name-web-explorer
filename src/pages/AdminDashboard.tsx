@@ -25,8 +25,8 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink, Home, CheckCircle2, Shield } from 'lucide-react';
+import { supabase, getServiceRoleClient } from "@/integrations/supabase/client";
+import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink, Home, CheckCircle2, Shield, Loader } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,8 @@ const AdminDashboard = () => {
   const [searches, setSearches] = useState([]);
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminClient, setAdminClient] = useState(null);
+  const [loadingAdminClient, setLoadingAdminClient] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -71,9 +73,33 @@ const AdminDashboard = () => {
     }
   }, [profile, isAdmin, navigate]);
 
+  // Set up admin client
+  useEffect(() => {
+    const initAdminClient = async () => {
+      if (!isAdmin) return;
+      
+      setLoadingAdminClient(true);
+      try {
+        const adminClient = await getServiceRoleClient();
+        setAdminClient(adminClient);
+      } catch (err) {
+        console.error('Error initializing admin client:', err);
+        toast({
+          title: "Admin Error",
+          description: "Failed to initialize admin access. Some features may be limited.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingAdminClient(false);
+      }
+    };
+    
+    initAdminClient();
+  }, [isAdmin]);
+
   // Use an interval to keep refreshing data when tab is active
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && !loadingAdminClient) {
       fetchData();
       
       // Set up interval for refreshing data
@@ -91,7 +117,7 @@ const AdminDashboard = () => {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
-  }, [isAdmin]);
+  }, [isAdmin, loadingAdminClient, adminClient]);
 
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'visible' && isAdmin) {
@@ -119,8 +145,10 @@ const AdminDashboard = () => {
 
   const calculateStats = async () => {
     try {
+      const client = adminClient || supabase;
+      
       // Get total registered users from profiles table
-      const { count: userCount, error: userError } = await supabase
+      const { count: userCount, error: userError } = await client
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
@@ -128,8 +156,20 @@ const AdminDashboard = () => {
         console.error('Error counting users:', userError);
       }
 
+      // Get total anon users count
+      let anonCount = 0;
+      if (adminClient) {
+        const { count: anonUserCount, error: anonError } = await adminClient
+          .from('anon_users')
+          .select('*', { count: 'exact', head: true });
+
+        if (!anonError) {
+          anonCount = anonUserCount || 0;
+        }
+      }
+
       // Get total searches count
-      const { count: searchCount, error: searchError } = await supabase
+      const { count: searchCount, error: searchError } = await client
         .from('searches')
         .select('*', { count: 'exact', head: true });
 
@@ -138,7 +178,7 @@ const AdminDashboard = () => {
       }
 
       // Calculate revenue (from premium users)
-      const { data: premiumUsers, error: premiumError } = await supabase
+      const { data: premiumUsers, error: premiumError } = await client
         .from('profiles')
         .select('*')
         .neq('plan', 'free');
@@ -151,7 +191,7 @@ const AdminDashboard = () => {
       const revenue = premiumUsers ? premiumUsers.length * 29.99 : 0;
 
       setStats({
-        totalUsers: userCount || 0,
+        totalUsers: (userCount || 0) + anonCount,
         totalSearches: searchCount || 0,
         totalRevenue: revenue
       });
@@ -162,7 +202,9 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data: profiles, error: profileError } = await supabase
+      const client = adminClient || supabase;
+      
+      const { data: profiles, error: profileError } = await client
         .from('profiles')
         .select('*');
 
@@ -205,33 +247,77 @@ const AdminDashboard = () => {
 
   const fetchAnonUsers = async () => {
     try {
-      const { data, error } = await supabase
+      if (!adminClient) {
+        console.log('Admin client not available, cannot fetch anon users');
+        setAnonUsers([]);
+        return;
+      }
+      
+      const { data, error } = await adminClient
         .from('anon_users')
-        .select('*');
+        .select('*')
+        .order('last_seen', { ascending: false });
 
       if (error) {
-        console.error('Error fetching unverified users:', error);
+        console.error('Error fetching anon users:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load anonymous users",
+          variant: "destructive",
+        });
+        setAnonUsers([]);
       } else {
         setAnonUsers(data || []);
       }
     } catch (err) {
-      console.error('Exception fetching unverified users:', err);
+      console.error('Exception fetching anon users:', err);
+      setAnonUsers([]);
     }
   };
 
   const fetchSearches = async () => {
     try {
-      // Get all searches, not just for the current user
-      const { data, error } = await supabase
+      const client = adminClient || supabase;
+      
+      // Get all searches with both regular and anon users
+      let { data: regularSearches, error: regularError } = await client
         .from('searches')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching searches:', error);
-      } else {
-        setSearches(data || []);
+      if (regularError) {
+        console.error('Error fetching regular searches:', regularError);
+        regularSearches = [];
       }
+
+      // If we have admin access, also fetch custom format "anon_" searches
+      let anonSearchData = [];
+      if (adminClient) {
+        try {
+          const { data: anonSearches, error: anonError } = await adminClient
+            .from('anon_users')
+            .select('identifier, search_count, last_seen, created_at');
+
+          if (!anonError && anonSearches) {
+            // Format anon user data to match searches format for display purposes
+            anonSearchData = anonSearches.map(anon => ({
+              id: `anon_${anon.identifier}`,
+              query: "Anonymous Search",
+              user_id: `anon_${anon.identifier}`,
+              result_count: anon.search_count,
+              created_at: anon.last_seen || anon.created_at
+            }));
+          }
+        } catch (err) {
+          console.error('Error fetching anon searches:', err);
+        }
+      }
+
+      // Combine regular and anon searches and sort by date
+      const allSearches = [...(regularSearches || []), ...anonSearchData]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      setSearches(allSearches);
     } catch (err) {
       console.error('Exception fetching searches:', err);
     }
@@ -239,7 +325,9 @@ const AdminDashboard = () => {
 
   const fetchAdminLogs = async () => {
     try {
-      const { data, error } = await supabase
+      const client = adminClient || supabase;
+      
+      const { data, error } = await client
         .from('admin_logs')
         .select('*')
         .order('created_at', { ascending: false });
@@ -256,7 +344,9 @@ const AdminDashboard = () => {
 
   const handleResetCredits = async (userId: string) => {
     try {
-      const { error } = await supabase
+      const client = adminClient || supabase;
+      
+      const { error } = await client
         .from('profiles')
         .update({ checks_used: 0 })
         .eq('id', userId);
@@ -286,8 +376,17 @@ const AdminDashboard = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      // Delete the profile - this is safer than trying to delete from auth.users
-      const { error: profileError } = await supabase
+      if (!adminClient) {
+        toast({
+          title: "Error",
+          description: "Admin privileges required for this action",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // First delete the profile - this is safer than trying to delete from auth.users directly
+      const { error: profileError } = await adminClient
         .from('profiles')
         .delete()
         .eq('id', userId);
@@ -302,13 +401,28 @@ const AdminDashboard = () => {
         return;
       }
 
+      // Then delete the auth user if possible
+      try {
+        // Call an admin function to delete the auth user
+        const { error } = await adminClient.functions.invoke('delete-user', {
+          body: { user_id: userId }
+        });
+        
+        if (error) {
+          console.error('Error deleting auth user:', error);
+          // Even if this fails, the profile is gone so we consider it a partial success
+        }
+      } catch (err) {
+        console.error('Exception deleting auth user:', err);
+      }
+
       toast({
         title: "Success",
-        description: "User profile deleted successfully",
+        description: "User deleted successfully",
       });
       
       // Log the admin action
-      await logAdminAction('delete_user', 'Deleted user profile', userId);
+      await logAdminAction('delete_user', 'Deleted user', userId);
       
       fetchUsers();
     } catch (err) {
@@ -435,7 +549,8 @@ const AdminDashboard = () => {
     
     // Check if userId starts with 'anon_' - it's an unverified user
     if (String(userId).startsWith('anon_')) {
-      return "Unverified User";
+      const identifier = userId.replace('anon_', '');
+      return `Anonymous (${identifier.substring(0, 8)}...)`;
     }
     
     // Otherwise find the user in our profiles
@@ -544,7 +659,7 @@ const AdminDashboard = () => {
             </Avatar>
             <div>
               <div className="flex items-center">
-                Unverified User (ID: {user.identifier.substring(0, 8)}...)
+                Anonymous User (ID: {user.identifier.substring(0, 8)}...)
                 <Badge variant="outline" className="ml-2">Unverified</Badge>
               </div>
             </div>
@@ -644,6 +759,18 @@ const AdminDashboard = () => {
           <Button className="mt-6" onClick={() => navigate('/')}>
             Return to Home
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingAdminClient) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader className="mx-auto h-12 w-12 text-blue-600 animate-spin" />
+          <h1 className="mt-4 text-xl font-bold">Initializing Admin Dashboard</h1>
+          <p className="mt-2 text-gray-600">Please wait while we set up admin access...</p>
         </div>
       </div>
     );
