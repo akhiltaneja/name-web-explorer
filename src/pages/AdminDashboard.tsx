@@ -100,20 +100,33 @@ const AdminDashboard = () => {
 
   const calculateStats = async () => {
     try {
-      // Get total registered users count using the admin API
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-      const userCount = userData ? userData.users.length : 0;
+      // Get total registered users from profiles table instead of admin API
+      const { count: userCount, error: userError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      if (userError) {
+        console.error('Error counting users:', userError);
+      }
 
       // Get total searches count
       const { count: searchCount, error: searchError } = await supabase
         .from('searches')
         .select('*', { count: 'exact', head: true });
 
+      if (searchError) {
+        console.error('Error counting searches:', searchError);
+      }
+
       // Calculate revenue (placeholder - you would replace with actual revenue data)
       const { data: premiumUsers, error: premiumError } = await supabase
         .from('profiles')
         .select('*')
         .neq('plan', 'free');
+
+      if (premiumError) {
+        console.error('Error fetching premium users:', premiumError);
+      }
 
       // Simple revenue calculation (placeholder)
       const revenue = premiumUsers ? premiumUsers.length * 29.99 : 0;
@@ -130,11 +143,14 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      // Use the admin API to get all users
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
+      // Instead of using the admin API which requires service role,
+      // fetch users directly from the profiles table
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
         toast({
           title: "Error",
           description: "Failed to load users",
@@ -143,35 +159,23 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Get profiles for additional user data
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (profileError) {
-        console.error('Error fetching profiles:', profileError);
-      }
-
-      // Map profiles to auth users
-      const mappedUsers = authData.users.map(authUser => {
-        // Find matching profile or provide default values with proper typing
-        const profile = profiles?.find(p => p.id === authUser.id) || {
-          plan: 'free',
-          checks_used: 0,
-          role: 'user'
-        };
-        
+      // Map profiles to user format expected by the UI
+      const mappedUsers = profiles?.map(profile => {
         return {
-          ...authUser,
-          ...profile,
-          email: authUser.email,
+          id: profile.id,
+          email: profile.email,
+          avatar_url: profile.avatar_url,
+          created_at: profile.created_at,
+          updated_at: profile.updated_at,
           plan: profile.plan || 'free',
           checks_used: profile.checks_used || 0,
+          plan_start_date: profile.plan_start_date,
+          plan_end_date: profile.plan_end_date,
           role: profile.role || 'user'
         } as UserProfile;
-      });
+      }) || [];
       
-      setUsers(mappedUsers || []);
+      setUsers(mappedUsers);
     } catch (err) {
       console.error('Exception fetching users:', err);
       toast({
@@ -244,7 +248,7 @@ const AdminDashboard = () => {
 
   const handleDeleteUser = async (userId) => {
     try {
-      // First, delete the user's profile
+      // Since we don't have admin API access, we can only delete the profile
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -254,41 +258,25 @@ const AdminDashboard = () => {
         console.error('Error deleting profile:', profileError);
         toast({
           title: "Error",
-          description: "Failed to delete user profile",
+          description: "Failed to delete user profile. You may need additional permissions.",
           variant: "destructive",
         });
         return;
       }
 
-      // Try to delete the auth user using admin API
-      try {
-        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-        
-        if (authError) {
-          console.error('Error deleting auth user:', authError);
-          toast({
-            title: "Partial Success",
-            description: "User profile deleted but auth record may remain.",
-            variant: "default",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: "User completely deleted.",
-          });
-        }
-      } catch (authErr) {
-        console.error('Exception deleting auth user:', authErr);
-        toast({
-          title: "Partial Success",
-          description: "User profile deleted but auth record may remain.",
-          variant: "default",
-        });
-      }
+      toast({
+        title: "Success",
+        description: "User profile deleted successfully.",
+      });
       
       fetchUsers();
     } catch (err) {
       console.error('Exception deleting user:', err);
+      toast({
+        title: "Error",
+        description: "Failed to delete user. You may need admin privileges.",
+        variant: "destructive",
+      });
     }
   };
 
