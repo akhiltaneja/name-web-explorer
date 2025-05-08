@@ -155,6 +155,7 @@ const AdminDashboard = () => {
 
       // Map profiles to auth users
       const mappedUsers = authData.users.map(authUser => {
+        // Find matching profile or provide default values
         const profile = profiles?.find(p => p.id === authUser.id) || {};
         return {
           ...authUser,
@@ -163,7 +164,7 @@ const AdminDashboard = () => {
           plan: profile.plan || 'free',
           checks_used: profile.checks_used || 0,
           role: profile.role || 'user'
-        };
+        } as UserProfile;
       });
       
       setUsers(mappedUsers || []);
