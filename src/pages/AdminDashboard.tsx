@@ -202,6 +202,7 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
+      // Always use admin client if available for fetching users
       const client = adminClient || supabase;
       
       const { data: profiles, error: profileError } = await client
@@ -253,6 +254,7 @@ const AdminDashboard = () => {
         return;
       }
       
+      // Always use admin client for fetching anon users
       const { data, error } = await adminClient
         .from('anon_users')
         .select('*')
@@ -277,9 +279,10 @@ const AdminDashboard = () => {
 
   const fetchSearches = async () => {
     try {
+      // Always use admin client if available to see all searches
       const client = adminClient || supabase;
       
-      // Get all searches with both regular and anon users
+      // Get all searches from registered users
       let { data: regularSearches, error: regularError } = await client
         .from('searches')
         .select('*')
@@ -290,8 +293,10 @@ const AdminDashboard = () => {
         regularSearches = [];
       }
 
-      // If we have admin access, also fetch custom format "anon_" searches
+      // Format anon searches to match
       let anonSearchData = [];
+      
+      // Only fetch anon searches if adminClient is available
       if (adminClient) {
         try {
           const { data: anonSearches, error: anonError } = await adminClient
@@ -325,8 +330,10 @@ const AdminDashboard = () => {
 
   const fetchAdminLogs = async () => {
     try {
+      // Always use admin client if available to see all admin logs
       const client = adminClient || supabase;
       
+      // Fix: No longer filter admin logs by the current user's ID
       const { data, error } = await client
         .from('admin_logs')
         .select('*')
@@ -547,7 +554,7 @@ const AdminDashboard = () => {
   const getUserEmailById = (userId: string) => {
     if (!userId) return "N/A";
     
-    // Check if userId starts with 'anon_' - it's an unverified user
+    // Check if userId starts with 'anon_' - it's an anonymous user
     if (String(userId).startsWith('anon_')) {
       const identifier = userId.replace('anon_', '');
       return `Anonymous (${identifier.substring(0, 8)}...)`;
@@ -675,7 +682,7 @@ const AdminDashboard = () => {
 
   // Search Row component
   const SearchRow = ({ search }: { search: any }) => {
-    const isAnonSearch = search.user_id?.startsWith('anon_');
+    const isAnonSearch = search.user_id?.toString().startsWith('anon_');
     const userEmail = getUserEmailById(search.user_id);
     
     return (
@@ -703,6 +710,7 @@ const AdminDashboard = () => {
               onClick={() => handleViewSearchResults(search.query)}
               className="h-8 p-2 flex items-center gap-1"
               title="View Results" 
+              disabled={isAnonSearch}
             >
               <ExternalLink className="h-4 w-4" />
               View
