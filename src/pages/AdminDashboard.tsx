@@ -263,7 +263,7 @@ const AdminDashboard = () => {
           toast({
             title: "Partial Success",
             description: "User profile deleted but auth record may remain.",
-            variant: "warning",
+            variant: "default",
           });
         } else {
           toast({
@@ -276,7 +276,7 @@ const AdminDashboard = () => {
         toast({
           title: "Partial Success",
           description: "User profile deleted but auth record may remain.",
-          variant: "warning",
+          variant: "default",
         });
       }
       
