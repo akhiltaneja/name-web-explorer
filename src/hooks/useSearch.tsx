@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,33 @@ const getGuestIdentifier = () => {
 // Track anonymous user activity in the database
 const trackAnonUserSearch = async (identifier: string, query: string, resultCount: number) => {
   try {
+    // Normalize the query
+    const normalizedQuery = query.trim().toLowerCase();
+
+    // First check if this search already exists for this anonymous user today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { data: existingSearch } = await supabase
+      .from('searches')
+      .select('*')
+      .eq('user_id', 'anon_' + identifier)
+      .eq('query', normalizedQuery)
+      .gte('created_at', today.toISOString())
+      .maybeSingle();
+      
+    if (existingSearch) {
+      console.log("Anon user already performed this search today, updating result count");
+      // Update the existing search with new result count if different
+      if (existingSearch.result_count !== resultCount) {
+        await supabase
+          .from('searches')
+          .update({ result_count: resultCount })
+          .eq('id', existingSearch.id);
+      }
+      return;
+    }
+    
     // First check if this anonymous user exists
     const { data, error } = await supabase
       .from('anon_users')
@@ -64,7 +92,7 @@ const trackAnonUserSearch = async (identifier: string, query: string, resultCoun
       .from('searches')
       .insert({
         user_id: 'anon_' + identifier, // We prefix with 'anon_' to identify this as an anonymous user
-        query: query,
+        query: normalizedQuery,
         result_count: resultCount
       });
   } catch (error) {
@@ -181,7 +209,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     // Set flag to prevent duplicate searches
     isSearchInProgress.current = true;
 
-    const canProceed = await incrementSearchCount();
+    // Pass the query to incrementSearchCount to check for duplicates
+    const canProceed = await incrementSearchCount(queryString);
     if (!canProceed) {
       isSearchInProgress.current = false;
       return;
@@ -378,12 +407,14 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           // Record search data based on user type
           if (user) {
             // Authenticated user - save to their history
+            // Only record the search history once, don't increment the count again
             saveSearchHistory(queryString, profiles.length)
               .then(success => {
                 if (success) refreshProfile();
               });
           } else {
             // Anonymous user - track in anon_users and searches tables
+            // This is now handled with duplicate detection
             trackAnonUserSearch(guestIdentifier, queryString, profiles.length);
           }
           

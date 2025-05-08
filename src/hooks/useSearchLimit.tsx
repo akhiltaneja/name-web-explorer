@@ -8,6 +8,9 @@ export const useSearchLimit = (user: any, profile: any) => {
   const [searchLimitReached, setSearchLimitReached] = useState(false);
   const [checksRemaining, setChecksRemaining] = useState<number>(10); // Default to 10 searches
   const { toast } = useToast();
+  
+  // Track searches to prevent duplicates in the current session
+  const [recentSearches, setRecentSearches] = useState<Set<string>>(new Set());
 
   // Initialize the limit state based on user authentication and profile
   useEffect(() => {
@@ -62,7 +65,7 @@ export const useSearchLimit = (user: any, profile: any) => {
     
     if (storedData) {
       try {
-        const { date, count } = JSON.parse(storedData);
+        const { date, count, searches } = JSON.parse(storedData);
         
         if (date === today) {
           // Same day, count the searches
@@ -70,31 +73,61 @@ export const useSearchLimit = (user: any, profile: any) => {
           setChecksRemaining(remainingSearches);
           setGuestCheckAvailable(remainingSearches > 0);
           setSearchLimitReached(count >= 3);
+          
+          // Initialize recent searches set
+          if (searches && Array.isArray(searches)) {
+            setRecentSearches(new Set(searches));
+          }
         } else {
           // New day, reset counter
-          localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: 0 }));
+          localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+            date: today, 
+            count: 0,
+            searches: []
+          }));
           setChecksRemaining(3);
           setGuestCheckAvailable(true);
           setSearchLimitReached(false);
+          setRecentSearches(new Set());
         }
       } catch (e) {
         // Invalid stored data, reset
-        localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: 0 }));
+        localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+          date: today, 
+          count: 0,
+          searches: []
+        }));
         setChecksRemaining(3);
         setGuestCheckAvailable(true);
         setSearchLimitReached(false);
+        setRecentSearches(new Set());
       }
     } else {
       // No stored data, initialize
-      localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: 0 }));
+      localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+        date: today, 
+        count: 0,
+        searches: []
+      }));
       setChecksRemaining(3);
       setGuestCheckAvailable(true);
       setSearchLimitReached(false);
+      setRecentSearches(new Set());
     }
   };
 
   // Increment the search count after a successful search
-  const incrementSearchCount = async (): Promise<boolean> => {
+  // Return true if the search should be counted, false if it's a duplicate
+  const incrementSearchCount = async (query: string): Promise<boolean> => {
+    // Normalize the query by trimming and converting to lowercase
+    const normalizedQuery = query.trim().toLowerCase();
+    
+    // Check if this is a duplicate search
+    if (recentSearches.has(normalizedQuery)) {
+      console.log("Duplicate search detected, not counting:", normalizedQuery);
+      return true; // Allow the search but don't count it
+    }
+    
     // Double check the limit
     if (hasReachedSearchLimit()) {
       setSearchLimitReached(true);
@@ -108,8 +141,32 @@ export const useSearchLimit = (user: any, profile: any) => {
       return false;
     }
 
+    // Add to recent searches
+    setRecentSearches(prev => {
+      const updated = new Set(prev);
+      updated.add(normalizedQuery);
+      return updated;
+    });
+
     if (user) {
       try {
+        // Check if this search already exists for this user today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const { data: existingSearch } = await supabase
+          .from('searches')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('query', normalizedQuery)
+          .gte('created_at', today.toISOString())
+          .maybeSingle();
+        
+        if (existingSearch) {
+          console.log("This search was already performed today, not counting toward limit");
+          return true; // Allow the search but don't count it in the limit
+        }
+
         // Increment checks_used in the database
         const { error } = await supabase
           .from('profiles')
@@ -158,9 +215,21 @@ export const useSearchLimit = (user: any, profile: any) => {
           const data = JSON.parse(storedData);
           
           if (data.date === today) {
+            // Check if this search is already in the list
+            const searches = Array.isArray(data.searches) ? data.searches : [];
+            if (searches.includes(normalizedQuery)) {
+              console.log("Duplicate guest search detected, not counting");
+              return true; // Allow search but don't count
+            }
+            
             // Same day, increment count
             const newCount = data.count + 1;
-            localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: newCount }));
+            const newSearches = [...searches, normalizedQuery];
+            localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+              date: today, 
+              count: newCount,
+              searches: newSearches
+            }));
             setChecksRemaining(Math.max(3 - newCount, 0));
             setGuestCheckAvailable(newCount < 3);
             setSearchLimitReached(newCount >= 3);
@@ -175,19 +244,31 @@ export const useSearchLimit = (user: any, profile: any) => {
             }
           } else {
             // New day, reset counter
-            localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: 1 }));
+            localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+              date: today, 
+              count: 1,
+              searches: [normalizedQuery]
+            }));
             setChecksRemaining(2);
             setGuestCheckAvailable(true);
           }
         } catch (e) {
           // Invalid stored data, reset
-          localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: 1 }));
+          localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+            date: today, 
+            count: 1,
+            searches: [normalizedQuery]
+          }));
           setChecksRemaining(2);
           setGuestCheckAvailable(true);
         }
       } else {
         // No stored data, initialize with count 1
-        localStorage.setItem('guestSearchLimit', JSON.stringify({ date: today, count: 1 }));
+        localStorage.setItem('guestSearchLimit', JSON.stringify({ 
+          date: today, 
+          count: 1,
+          searches: [normalizedQuery]
+        }));
         setChecksRemaining(2);
         setGuestCheckAvailable(true);
       }
@@ -210,13 +291,45 @@ export const useSearchLimit = (user: any, profile: any) => {
   // Function to save search history for authenticated users
   const saveSearchHistory = async (query: string, resultCount: number): Promise<boolean> => {
     if (!user) return false;
+
+    // Normalize the query
+    const normalizedQuery = query.trim().toLowerCase();
     
     try {
+      // Check if this search already exists for this user today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data: existingSearch } = await supabase
+        .from('searches')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('query', normalizedQuery)
+        .gte('created_at', today.toISOString())
+        .maybeSingle();
+      
+      if (existingSearch) {
+        console.log("This search was already performed today, updating result count");
+        // Update the existing search with new result count if different
+        if (existingSearch.result_count !== resultCount) {
+          const { error } = await supabase
+            .from('searches')
+            .update({ result_count: resultCount })
+            .eq('id', existingSearch.id);
+          
+          if (error) {
+            console.error("Error updating search history:", error);
+          }
+        }
+        return true;
+      }
+      
+      // Insert new search record
       const { error } = await supabase
         .from('searches')
         .insert({
           user_id: user.id,
-          query: query,
+          query: normalizedQuery,
           result_count: resultCount
         });
       
