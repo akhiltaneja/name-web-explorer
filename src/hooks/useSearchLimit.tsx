@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase, updateAnonUser } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -68,10 +69,11 @@ export const useSearchLimit = (user: any, profile: any) => {
         
         if (date === today) {
           // Same day, count the searches
-          const remainingSearches = Math.max(3 - count, 0);
+          // Updated: Now remaining searches is out of 5 instead of 3
+          const remainingSearches = Math.max(5 - count, 0);
           setChecksRemaining(remainingSearches);
           setGuestCheckAvailable(remainingSearches > 0);
-          setSearchLimitReached(count >= 3);
+          setSearchLimitReached(count >= 5);
           
           // Initialize recent searches set
           if (searches && Array.isArray(searches)) {
@@ -84,7 +86,7 @@ export const useSearchLimit = (user: any, profile: any) => {
             count: 0,
             searches: []
           }));
-          setChecksRemaining(3);
+          setChecksRemaining(5); // Updated: Set to 5 instead of 3
           setGuestCheckAvailable(true);
           setSearchLimitReached(false);
           setRecentSearches(new Set());
@@ -96,7 +98,7 @@ export const useSearchLimit = (user: any, profile: any) => {
           count: 0,
           searches: []
         }));
-        setChecksRemaining(3);
+        setChecksRemaining(5); // Updated: Set to 5 instead of 3
         setGuestCheckAvailable(true);
         setSearchLimitReached(false);
         setRecentSearches(new Set());
@@ -108,7 +110,7 @@ export const useSearchLimit = (user: any, profile: any) => {
         count: 0,
         searches: []
       }));
-      setChecksRemaining(3);
+      setChecksRemaining(5); // Updated: Set to 5 instead of 3
       setGuestCheckAvailable(true);
       setSearchLimitReached(false);
       setRecentSearches(new Set());

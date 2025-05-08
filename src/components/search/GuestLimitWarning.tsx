@@ -29,7 +29,7 @@ const GuestLimitWarning = ({
         <div>
           <h3 className="font-bold text-amber-800 mb-1">Request Limit Reached</h3>
           <p className="text-amber-700">
-            You've used your 3 daily searches. Sign in or upgrade to continue searching.
+            You've used your 5 daily searches. Sign in or upgrade to continue searching.
           </p>
         </div>
       </div>

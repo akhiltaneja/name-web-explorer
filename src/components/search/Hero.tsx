@@ -131,16 +131,16 @@ const Hero = ({
               <p className="mb-4">
                 You've used all your available searches. 
                 {!user ? " Please sign in or upgrade your plan to continue searching." :
-                         " You've reached your daily limit of 3 searches. Please upgrade your plan to continue searching."}
+                         " Please upgrade your plan to continue searching."}
               </p>
               {!user && (
                 <p className="text-sm text-gray-500">
-                  Free users are limited to 3 searches per day.
+                  Free users are limited to 5 searches per day.
                 </p>
               )}
               {user && profile?.plan === 'free' && (
                 <p className="text-sm text-gray-500">
-                  Your free plan allows 3 searches per day. Upgrade for more searches.
+                  Your free plan allows 10 searches per day. Upgrade for more searches.
                 </p>
               )}
             </DialogDescription>

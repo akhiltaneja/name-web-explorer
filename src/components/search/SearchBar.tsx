@@ -71,9 +71,9 @@ const SearchBar = ({
 
   // Get the daily/monthly limit based on plan
   const getSearchLimit = () => {
-    if (!profile) return 10; // Default for guest users
-    if (profile.plan === 'free') return 10;
-    if (profile.plan === 'premium') return 500;
+    if (!user) return 5; // Updated: Default for guest users is 5
+    if (profile?.plan === 'free') return 10;
+    if (profile?.plan === 'premium') return 500;
     return Infinity; // Unlimited plan
   };
 
