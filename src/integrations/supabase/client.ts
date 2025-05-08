@@ -42,3 +42,33 @@ export const getServiceRoleClient = async () => {
     return null;
   }
 };
+
+// Helper function to update anonymous user statistics
+export const updateAnonUser = async (identifier: string) => {
+  try {
+    // Use SQL query directly instead of RPC function to avoid TypeScript issues
+    const { error } = await supabase
+      .from('anon_users')
+      .upsert(
+        { 
+          identifier,
+          search_count: 1,
+          last_seen: new Date().toISOString()
+        },
+        { 
+          onConflict: 'identifier',
+          ignoreDuplicates: false
+        }
+      );
+    
+    if (error) {
+      console.error("Error updating anonymous user:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (e) {
+    console.error("Error processing anonymous user update:", e);
+    return false;
+  }
+};

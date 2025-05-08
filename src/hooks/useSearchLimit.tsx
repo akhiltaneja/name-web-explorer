@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, updateAnonUser } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export const useSearchLimit = (user: any, profile: any) => {
@@ -283,14 +282,9 @@ export const useSearchLimit = (user: any, profile: any) => {
           localStorage.setItem('anonUserId', identifier);
         }
         
-        // Try to update the anon_user record
-        const { data, error } = await supabase.rpc('update_anon_user', {
-          p_identifier: identifier,
-        });
+        // Use our helper function instead of RPC
+        await updateAnonUser(identifier);
         
-        if (error) {
-          console.error("Error updating anonymous user:", error);
-        }
       } catch (e) {
         console.error("Error processing anonymous user:", e);
       }
