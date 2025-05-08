@@ -1,7 +1,6 @@
-
 import { Progress } from "@/components/ui/progress";
 import { Search, CheckCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface SearchProgressProps {
   isSearching: boolean;
@@ -18,6 +17,29 @@ const SearchProgress = ({
   isDeepVerifying = false,
   verificationProgress = 0
 }: SearchProgressProps) => {
+  const [showProgress, setShowProgress] = useState(false);
+  const progressDisplayed = useRef(false);
+  
+  // Only show progress once per search session
+  useEffect(() => {
+    if (isSearching && !progressDisplayed.current) {
+      setShowProgress(true);
+      progressDisplayed.current = true;
+    } else if (!isSearching && !isDeepVerifying) {
+      // Reset the flag when search is complete
+      progressDisplayed.current = false;
+      // Keep the completion message briefly before hiding
+      if (searchProgress >= 100) {
+        const timer = setTimeout(() => {
+          setShowProgress(false);
+        }, 2000);
+        return () => clearTimeout(timer);
+      } else {
+        setShowProgress(false);
+      }
+    }
+  }, [isSearching, isDeepVerifying, searchProgress]);
+  
   // Combine the search and verification progress into a single progress bar
   const combinedIsSearching = isSearching || isDeepVerifying;
   const combinedProgress = isSearching 
@@ -26,7 +48,7 @@ const SearchProgress = ({
       ? Math.min(verificationProgress + searchProgress, 100)
       : 0;
   
-  if (!combinedIsSearching) return null;
+  if (!showProgress) return null;
   
   return (
     <div className="mt-4 p-6 bg-blue-50 rounded-lg border border-blue-200 shadow-sm animate-fade-in flex items-start">

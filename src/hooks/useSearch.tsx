@@ -61,7 +61,6 @@ const trackAnonUserSearch = async (identifier: string, query: string, resultCoun
     }
     
     // Record the search in the searches table with a special user_id for anonymous users
-    // You can identify these as anonymous in SQL queries or your admin panel
     await supabase
       .from('searches')
       .insert({
@@ -97,6 +96,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [searchParams] = useSearchParams();
   const searchInitiated = useRef(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const isSearchInProgress = useRef(false);
   
   const { 
     guestCheckAvailable, 
@@ -145,6 +145,12 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   }, [searchParams, location, checksRemaining, user]);
 
   const handleSearch = async (searchQuery = name) => {
+    // Prevent duplicate searches
+    if (isSearchInProgress.current) {
+      console.log("Search already in progress, ignoring duplicate request");
+      return;
+    }
+    
     const queryString = String(searchQuery);
     
     if (!queryString?.trim()) {
@@ -173,8 +179,12 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
       return;
     }
 
+    // Set flag to prevent duplicate searches
+    isSearchInProgress.current = true;
+
     const canProceed = await incrementSearchCount();
     if (!canProceed) {
+      isSearchInProgress.current = false;
       return;
     }
 
@@ -199,6 +209,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           clearInterval(progressInterval);
           setIsSearching(false);
           setShowLimitModal(true);
+          isSearchInProgress.current = false;
           return;
         }
         
@@ -345,6 +356,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         if (hasReachedSearchLimit() || searchLimitReached) {
           setIsSearching(false);
           setShowLimitModal(true);
+          isSearchInProgress.current = false;
           return;
         }
         
@@ -376,14 +388,18 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
           }
           
           setIsSearching(false);
+          // Reset the search in progress flag
+          isSearchInProgress.current = false;
         } catch (error) {
           console.error("Verification error:", error);
           setIsSearching(false);
+          isSearchInProgress.current = false;
         }
       } catch (error) {
         console.error("Search error:", error);
         clearInterval(progressInterval);
         setIsSearching(false);
+        isSearchInProgress.current = false;
         setSearchProgress(0);
         
         toast({
