@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -155,8 +154,13 @@ const AdminDashboard = () => {
 
       // Map profiles to auth users
       const mappedUsers = authData.users.map(authUser => {
-        // Find matching profile or provide default values
-        const profile = profiles?.find(p => p.id === authUser.id) || {};
+        // Find matching profile or provide default values with proper typing
+        const profile = profiles?.find(p => p.id === authUser.id) || {
+          plan: 'free',
+          checks_used: 0,
+          role: 'user'
+        };
+        
         return {
           ...authUser,
           ...profile,
