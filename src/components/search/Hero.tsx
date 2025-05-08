@@ -5,6 +5,7 @@ import SearchProgress from "./SearchProgress";
 import GuestLimitWarning from "./GuestLimitWarning";
 import RecentSearches from "./RecentSearches";
 import SearchFeatures from "./SearchFeatures";
+import CountdownTimer from "./CountdownTimer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -113,7 +114,7 @@ const Hero = ({
         </div>
       </div>
 
-      {/* Plan Limit Modal */}
+      {/* Plan Limit Modal - Updated to prevent auto-redirect */}
       <Dialog 
         open={showLimitModal} 
         onOpenChange={(open) => {
@@ -143,6 +144,12 @@ const Hero = ({
                   Your free plan allows 10 searches per day. Upgrade for more searches.
                 </p>
               )}
+              {checksRemaining === 0 && !user && (
+                <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                  <p className="text-sm font-medium">Time until next reset:</p>
+                  <CountdownTimer />
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center gap-2">
@@ -167,6 +174,17 @@ const Hero = ({
             >
               Upgrade Now
             </Button>
+            {!user && (
+              <Button
+                variant="ghost"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setShowLimitModal(false);
+                }}
+              >
+                Wait for Reset
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

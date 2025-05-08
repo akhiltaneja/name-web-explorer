@@ -231,11 +231,11 @@ export const useSearchLimit = (user: any, profile: any) => {
               count: newCount,
               searches: newSearches
             }));
-            setChecksRemaining(Math.max(3 - newCount, 0));
-            setGuestCheckAvailable(newCount < 3);
-            setSearchLimitReached(newCount >= 3);
+            setChecksRemaining(Math.max(5 - newCount, 0));  // Updated to use 5 instead of 3
+            setGuestCheckAvailable(newCount < 5);  // Updated to use 5 instead of 3
+            setSearchLimitReached(newCount >= 5);  // Updated to use 5 instead of 3
             
-            if (newCount >= 3) {
+            if (newCount >= 5) {  // Updated to use 5 instead of 3
               toast({
                 title: "Guest limit reached",
                 description: "Sign in or create an account for more searches.",
@@ -250,7 +250,7 @@ export const useSearchLimit = (user: any, profile: any) => {
               count: 1,
               searches: [normalizedQuery]
             }));
-            setChecksRemaining(2);
+            setChecksRemaining(4); // Updated: now it's 5-1=4 remaining since we just used one
             setGuestCheckAvailable(true);
           }
         } catch (e) {
@@ -260,7 +260,7 @@ export const useSearchLimit = (user: any, profile: any) => {
             count: 1,
             searches: [normalizedQuery]
           }));
-          setChecksRemaining(2);
+          setChecksRemaining(4); // Updated: now it's 5-1=4 remaining
           setGuestCheckAvailable(true);
         }
       } else {
@@ -270,7 +270,7 @@ export const useSearchLimit = (user: any, profile: any) => {
           count: 1,
           searches: [normalizedQuery]
         }));
-        setChecksRemaining(2);
+        setChecksRemaining(4); // Updated: now it's 5-1=4 remaining
         setGuestCheckAvailable(true);
       }
       

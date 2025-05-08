@@ -57,6 +57,8 @@ const SearchBar = ({
             duration: 5000, // Longer duration
           });
         }
+        // Prevent default Enter key behavior to avoid form submission
+        e.preventDefault();
       } else {
         // Only proceed with search if we have credits
         handleSearch();
