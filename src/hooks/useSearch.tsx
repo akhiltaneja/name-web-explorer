@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -12,8 +13,67 @@ import {
 } from "@/utils/socialMediaSearch";
 import { useSearchLimit } from "./useSearchLimit";
 import { SocialMediaProfile } from "@/types/socialMedia";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 const MAX_RECENT_SEARCHES = 5;
+
+// Function to get or generate an anonymous user identifier
+const getGuestIdentifier = () => {
+  let identifier = localStorage.getItem('guest_identifier');
+  if (!identifier) {
+    identifier = uuidv4();
+    localStorage.setItem('guest_identifier', identifier);
+  }
+  return identifier;
+};
+
+// Track anonymous user activity in the database
+const trackAnonUserSearch = async (identifier: string, query: string, resultCount: number) => {
+  try {
+    // First check if this anonymous user exists
+    const { data, error } = await supabase
+      .from('anon_users')
+      .select('*')
+      .eq('identifier', identifier)
+      .maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error("Error checking anon user:", error);
+      return;
+    }
+    
+    if (!data) {
+      // Create new anonymous user
+      await supabase.from('anon_users').insert({
+        identifier: identifier,
+        search_count: 1,
+        last_seen: new Date().toISOString()
+      });
+    } else {
+      // Update existing anonymous user
+      await supabase
+        .from('anon_users')
+        .update({ 
+          last_seen: new Date().toISOString(),
+          search_count: data.search_count + 1
+        })
+        .eq('id', data.id);
+    }
+    
+    // Record the search in the searches table with a special user_id for anonymous users
+    // You can identify these as anonymous in SQL queries or your admin panel
+    await supabase
+      .from('searches')
+      .insert({
+        user_id: 'anon_' + identifier, // We prefix with 'anon_' to identify this as an anonymous user
+        query: query,
+        result_count: resultCount
+      });
+  } catch (error) {
+    console.error("Error tracking anonymous user:", error);
+  }
+};
 
 export const useSearch = (user: any, profile: any, refreshProfile: () => void) => {
   const [name, setName] = useState("");
@@ -30,6 +90,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [isDeepVerifying, setIsDeepVerifying] = useState(false);
   const [verificationProgress, setVerificationProgress] = useState(0);
+  const [guestIdentifier, setGuestIdentifier] = useState("");
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -47,6 +108,14 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     incrementSearchCount,
     saveSearchHistory
   } = useSearchLimit(user, profile);
+
+  // Initialize guest identifier
+  useEffect(() => {
+    if (!user) {
+      const identifier = getGuestIdentifier();
+      setGuestIdentifier(identifier);
+    }
+  }, [user]);
 
   useEffect(() => {
     const query = searchParams.get('query');
@@ -295,11 +364,16 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
             resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           
+          // Record search data based on user type
           if (user) {
+            // Authenticated user - save to their history
             saveSearchHistory(queryString, profiles.length)
               .then(success => {
                 if (success) refreshProfile();
               });
+          } else {
+            // Anonymous user - track in anon_users and searches tables
+            trackAnonUserSearch(guestIdentifier, queryString, profiles.length);
           }
           
           setIsSearching(false);

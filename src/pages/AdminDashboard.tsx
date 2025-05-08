@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import {
   Users,
@@ -28,7 +30,8 @@ import {
   AreaChart,
   LayoutList,
   UserCheck,
-  Trash
+  Trash,
+  Check
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DefaultAvatar from "@/components/DefaultAvatar";
@@ -43,6 +46,7 @@ interface UserData {
   plan: string;
   checks_used: number;
   daily_searches_used?: number;
+  email_confirmed_at?: string | null;
 }
 
 interface AnonUserData {
@@ -59,6 +63,9 @@ interface SearchData {
   created_at: string;
   result_count: number;
   user_email: string;
+  user_id: string;
+  is_anonymous: boolean;
+  user_metadata?: any;
 }
 
 interface AffiliateLink {
@@ -116,6 +123,30 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchStats, setSearchStats] = useState<{ name: string; searches: number }[]>([]);
   const [userStats, setUserStats] = useState<{ date: string; count: number; verified: number; anonymous: number }[]>([]);
+  
+  const tabRef = useRef(null);
+  const visibilityRef = useRef<boolean>(true);
+
+  // Handle document visibility changes to prevent loading freeze when tab is inactive
+  useEffect(() => {
+    function handleVisibilityChange() {
+      visibilityRef.current = !document.hidden;
+      
+      if (document.hidden && loading) {
+        // If page becomes hidden while loading, we might want to pause heavy operations
+        console.log("Page hidden while loading, operations paused");
+      } else if (!document.hidden && loading) {
+        // If page becomes visible again and was previously loading, resume
+        console.log("Page visible again, resuming operations");
+        fetchData();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [loading]);
 
   useEffect(() => {
     if (!user) {
@@ -184,14 +215,42 @@ const AdminDashboard = () => {
   };
 
   const fetchData = async () => {
+    if (!visibilityRef.current) {
+      console.log("Page is hidden, skipping data fetch");
+      return;
+    }
+    
     setLoading(true);
     try {
-      const { data: usersData, error: usersError } = await supabase
+      // Get all users from auth.users with their profile info
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) throw authError;
+      
+      const authUsers = authData?.users || [];
+      
+      // Get profile data
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
       
-      if (usersError) throw usersError;
+      if (profilesError) throw profilesError;
       
+      // Merge auth user data with profile data
+      const formattedUsers = authUsers.map(authUser => {
+        const userProfile = profilesData.find(p => p.id === authUser.id) || {};
+        return {
+          id: authUser.id,
+          email: authUser.email || "No email",
+          created_at: authUser.created_at,
+          avatar_url: userProfile.avatar_url,
+          plan: userProfile.plan || "free",
+          checks_used: userProfile.checks_used || 0,
+          email_confirmed_at: authUser.email_confirmed_at
+        };
+      });
+
+      // Get anonymous users
       const { data: anonUsersData, error: anonUsersError } = await supabase
         .from('anon_users')
         .select('*')
@@ -202,6 +261,7 @@ const AdminDashboard = () => {
         await createAnonUsersTable();
       }
       
+      // Get all searches with user info
       const { data: searchesData, error: searchesError } = await supabase
         .from('searches')
         .select('*')
@@ -209,21 +269,21 @@ const AdminDashboard = () => {
       
       if (searchesError) throw searchesError;
       
-      const searchesWithEmails = await Promise.all(
+      const searchesWithUserInfo = await Promise.all(
         searchesData.map(async (search) => {
-          const { data: userData, error: userError } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', search.user_id)
-            .single();
+          // Find user in our loaded users data
+          const userInfo = formattedUsers.find(u => u.id === search.user_id);
           
           return {
             ...search,
-            user_email: userError ? 'Anonymous' : userData.email
+            user_email: userInfo ? userInfo.email : 'Anonymous',
+            is_anonymous: !userInfo,
+            user_metadata: {} // We'll enhance this with IP, location data later
           };
         })
       );
-      
+
+      // Get activity logs  
       let { data: logsData, error: logsError } = await supabase
         .from('admin_logs')
         .select('*')
@@ -238,22 +298,16 @@ const AdminDashboard = () => {
       
       const logsWithEmails = await Promise.all(
         (logsData || []).map(async (log) => {
-          const { data: userData, error: userError } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', log.user_id)
-            .single();
+          const userInfo = formattedUsers.find(u => u.id === log.user_id);
           
           return {
             ...log,
-            user_email: userError ? 'Unknown' : userData.email
+            user_email: userInfo ? userInfo.email : 'Unknown'
           };
         })
       );
       
-      const formattedUsers = usersData as UserData[];
-      const formattedAnonUsers = anonUsersData as AnonUserData[] || [];
-      
+      // Calculate daily search usage for each user
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayUTC = today.toISOString().split('T')[0];
@@ -273,32 +327,30 @@ const AdminDashboard = () => {
         })
       );
       
-      const formattedSearches = searchesWithEmails as SearchData[];
-      
-      const formattedLogs = logsWithEmails as LogData[];
-      
+      // Set state with fetched data
       const premiumUsers = formattedUsers.filter(u => u.plan === 'premium').length;
       const unlimitedUsers = formattedUsers.filter(u => u.plan === 'unlimited').length;
       const revenue = (premiumUsers * 9.99) + (unlimitedUsers * 29.99);
+      const verifiedUsers = formattedUsers.filter(u => u.email_confirmed_at !== null).length;
       
       setUsers(usersWithDailySearches);
       setFilteredUsers(usersWithDailySearches);
       setAnonUsers(anonUsersData || []);
       setFilteredAnonUsers(anonUsersData || []);
-      setSearches(formattedSearches);
-      setFilteredSearches(formattedSearches);
-      setLogs(formattedLogs);
-      setFilteredLogs(formattedLogs);
-      setTotalVerifiedUsers(formattedUsers.length);
+      setSearches(searchesWithUserInfo);
+      setFilteredSearches(searchesWithUserInfo);
+      setLogs(logsWithEmails);
+      setFilteredLogs(logsWithEmails);
+      setTotalVerifiedUsers(verifiedUsers);
       setTotalAnonUsers(anonUsersData?.length || 0);
       setTotalUsers(formattedUsers.length + (anonUsersData?.length || 0));
-      setTotalSearches(formattedSearches.length);
+      setTotalSearches(searchesWithUserInfo.length);
       setTotalRevenue(revenue);
       
-      const totalResults = formattedSearches.reduce((acc, search) => acc + search.result_count, 0);
-      setAvgResultsPerSearch(formattedSearches.length ? totalResults / formattedSearches.length : 0);
+      const totalResults = searchesWithUserInfo.reduce((acc, search) => acc + search.result_count, 0);
+      setAvgResultsPerSearch(searchesWithUserInfo.length ? totalResults / searchesWithUserInfo.length : 0);
       
-      generateStatsData(formattedSearches, formattedUsers, anonUsersData || []);
+      generateStatsData(searchesWithUserInfo, formattedUsers, anonUsersData || []);
       
     } catch (error) {
       console.error("Error fetching admin data:", error);
@@ -393,7 +445,8 @@ const AdminDashboard = () => {
     } else {
       setFilteredSearches(
         searches.filter((search) =>
-          search.query.toLowerCase().includes(querySearch.toLowerCase())
+          search.query.toLowerCase().includes(querySearch.toLowerCase()) ||
+          search.user_email.toLowerCase().includes(querySearch.toLowerCase())
         )
       );
     }
@@ -589,8 +642,8 @@ const AdminDashboard = () => {
                     onClick={() => handleTabChange("users")}
                     className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "users" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
                   >
-                    <UserCheck className="h-4 w-4 mr-2" />
-                    Verified Users
+                    <Users className="h-4 w-4 mr-2" />
+                    Users
                   </button>
                   
                   <button 
@@ -606,7 +659,7 @@ const AdminDashboard = () => {
                     className={`flex items-center justify-start py-3 px-4 rounded-sm ${activeTab === "searches" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
                   >
                     <Search className="h-4 w-4 mr-2" />
-                    Searches
+                    All Searches
                   </button>
                   
                   <button 
@@ -703,7 +756,7 @@ const AdminDashboard = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                      <span>Verified Users</span>
+                      <span>Users</span>
                       <div className="flex items-center space-x-2">
                         <Input
                           placeholder="Search users by email..."
@@ -727,6 +780,7 @@ const AdminDashboard = () => {
                           <TableHead>Total Searches</TableHead>
                           <TableHead>Daily Searches</TableHead>
                           <TableHead>Joined</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -775,10 +829,22 @@ const AdminDashboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              {user.email_confirmed_at ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                                  <Check className="h-3 w-3" /> Verified
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  Unverified
+                                </Badge>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               <ResetCreditsButton 
                                 onReset={() => handleResetDailySearches(user.id)} 
                                 userId={user.id}
+                                variant="admin"
                               />
                             </TableCell>
                           </TableRow>
@@ -788,7 +854,7 @@ const AdminDashboard = () => {
                   </CardContent>
                   <CardFooter className="flex justify-between">
                     <p className="text-sm text-gray-500">
-                      Showing {filteredUsers.length} of {users.length} verified users
+                      Showing {filteredUsers.length} of {users.length} users
                     </p>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
@@ -858,6 +924,7 @@ const AdminDashboard = () => {
                     </p>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
+                      Export Data
                     </Button>
                   </CardFooter>
                 </Card>
@@ -866,9 +933,23 @@ const AdminDashboard = () => {
               {activeTab === "searches" && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Searches</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>All Searches</span>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          placeholder="Search by query or user..."
+                          value={querySearch}
+                          onChange={(e) => setQuerySearch(e.target.value)}
+                          className="w-64"
+                        />
+                        <Button onClick={handleQuerySearch}>
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filter
+                        </Button>
+                      </div>
+                    </CardTitle>
                     <CardDescription>
-                      Search results and analytics
+                      All search queries from registered and anonymous users
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -878,23 +959,38 @@ const AdminDashboard = () => {
                           <TableHead>Query</TableHead>
                           <TableHead>Result Count</TableHead>
                           <TableHead>User</TableHead>
-                          <TableHead>Created At</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Date & Time</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredSearches.map((search) => (
                           <TableRow key={search.id}>
-                            <TableCell>{search.query}</TableCell>
+                            <TableCell><span className="font-medium">{search.query}</span></TableCell>
                             <TableCell>{search.result_count}</TableCell>
                             <TableCell>
                               {search.user_email}
                             </TableCell>
-                            <TableCell>{new Date(search.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Badge variant={search.is_anonymous ? "outline" : "secondary"}>
+                                {search.is_anonymous ? "Guest" : "Registered"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{new Date(search.created_at).toLocaleString()}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {filteredSearches.length} of {searches.length} searches
+                    </p>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Searches
+                    </Button>
+                  </CardFooter>
                 </Card>
               )}
               
@@ -936,6 +1032,15 @@ const AdminDashboard = () => {
                       </TableBody>
                     </Table>
                   </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {filteredLogs.length} of {logs.length} logs
+                    </p>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Logs
+                    </Button>
+                  </CardFooter>
                 </Card>
               )}
               
@@ -971,6 +1076,75 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
               )}
+            </div>
+          </div>
+
+          <div className="mt-10 p-6 bg-white rounded-lg border border-gray-200">
+            <h2 className="text-xl font-semibold mb-4">Ownership Transfer Guide</h2>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">1. Prepare the Project for Transfer</h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2 text-gray-700">
+                  <li>Export your full codebase as a zip file by downloading it from the project dashboard</li>
+                  <li>Document any environment variables and configuration settings</li>
+                  <li>Create a detailed README.md file with setup instructions</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium">2. Set Up Digital Ocean</h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2 text-gray-700">
+                  <li>Create a Digital Ocean account for the new owner (or have them create one)</li>
+                  <li>Set up a new Droplet with Ubuntu LTS (20.04 or newer)</li>
+                  <li>Install Node.js, npm, and other dependencies required for the project</li>
+                  <li>Set up Nginx as a web server and configure it to serve your React application</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium">3. Transfer Supabase Ownership</h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2 text-gray-700">
+                  <li>Go to your Supabase project settings</li>
+                  <li>Under "General" settings, find the "Transfer Ownership" section</li>
+                  <li>Enter the email address of the new owner</li>
+                  <li>The new owner will receive an email to accept the transfer</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium">4. Deploy the Application</h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2 text-gray-700">
+                  <li>Upload your codebase to the Digital Ocean droplet</li>
+                  <li>Install dependencies with <code>npm install</code></li>
+                  <li>Build the production version with <code>npm run build</code></li>
+                  <li>Configure Nginx to serve the built files</li>
+                  <li>Set up SSL/TLS using Let's Encrypt for HTTPS</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium">5. Setup Domain and DNS</h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2 text-gray-700">
+                  <li>Transfer domain ownership or create a new domain for the new owner</li>
+                  <li>Update DNS settings to point to the Digital Ocean droplet's IP address</li>
+                  <li>Set up proper A records, CNAME records, and MX records if needed</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium">6. Document Everything</h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2 text-gray-700">
+                  <li>Create comprehensive documentation about the application architecture</li>
+                  <li>Document all API endpoints, authentication flows, and database schema</li>
+                  <li>Provide instructions for common maintenance tasks</li>
+                  <li>Create a troubleshooting guide for common issues</li>
+                </ul>
+              </div>
+              
+              <div className="mt-4 p-4 bg-blue-50 rounded-md">
+                <h4 className="font-medium text-blue-800">Important Note</h4>
+                <p className="mt-2 text-blue-700">The application is a standard React application with Supabase backend. There's no need to mention how it was built or any specific tools used in its creation. The new owner can maintain and modify it using standard web development tools and practices.</p>
+              </div>
             </div>
           </div>
         </div>
