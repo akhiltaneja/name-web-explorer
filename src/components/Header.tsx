@@ -12,12 +12,9 @@ import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut, Shiel
 import DefaultAvatar from "./DefaultAvatar";
 
 const Header = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   
-  // Update isAdmin check to use the specific email
-  const isAdmin = profile?.email === "akhiltaneja92@gmail.com";
-
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
     window.location.href = '/'; // This will cause a full page refresh
@@ -43,6 +40,7 @@ const Header = () => {
             <Button 
               variant="admin" 
               onClick={() => navigate('/admin-control-dashboard-s3cr3t')}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               <Shield className="mr-2 h-4 w-4" />
               Admin
@@ -78,6 +76,12 @@ const Header = () => {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate('/admin-control-dashboard-s3cr3t')}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Admin Dashboard</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Logout</span>

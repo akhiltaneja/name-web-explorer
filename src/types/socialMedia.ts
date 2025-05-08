@@ -48,4 +48,14 @@ export type UserProfile = {
   plan_start_date?: string;
   plan_end_date?: string;
   role?: string;
+  admin_access?: boolean;
+};
+
+export type AdminLog = {
+  id: string;
+  action: string;
+  user_id: string;
+  target_user_id?: string;
+  details?: string;
+  created_at: string;
 };

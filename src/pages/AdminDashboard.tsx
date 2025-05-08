@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -11,11 +11,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -24,9 +24,9 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink, Home, CheckCircle2 } from 'lucide-react';
+import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink, Home, CheckCircle2, Shield } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,15 +34,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Link } from 'react-router-dom';
-import { UserProfile } from '@/types/socialMedia';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserProfile, AdminLog } from '@/types/socialMedia';
+import { useAuth } from '@/context/AuthContext';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [anonUsers, setAnonUsers] = useState([]);
   const [searches, setSearches] = useState([]);
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [stats, setStats] = useState({
@@ -54,29 +56,45 @@ const AdminDashboard = () => {
     return localStorage.getItem('affiliateLink') || 'https://www.namecheap.com';
   });
   const { toast } = useToast();
+  const { user, profile, isAdmin, logAdminAction } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (profile && !isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "You do not have permission to access the admin dashboard",
+        variant: "destructive",
+      });
+      navigate('/');
+    }
+  }, [profile, isAdmin, navigate]);
 
   // Use an interval to keep refreshing data when tab is active
   useEffect(() => {
-    fetchData();
-    
-    // Set up interval for refreshing data
-    const intervalId = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchData();
-      }
-    }, 30000); // Refresh every 30 seconds when tab is visible
-    
-    // Event listener for visibility change
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
+    if (isAdmin) {
+      fetchData();
+      
+      // Set up interval for refreshing data
+      const intervalId = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          fetchData();
+        }
+      }, 30000); // Refresh every 30 seconds when tab is visible
+      
+      // Event listener for visibility change
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      return () => {
+        clearInterval(intervalId);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }
+  }, [isAdmin]);
 
   const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
+    if (document.visibilityState === 'visible' && isAdmin) {
       // Refresh data immediately when tab becomes visible
       fetchData();
     }
@@ -89,6 +107,7 @@ const AdminDashboard = () => {
         fetchUsers(),
         fetchAnonUsers(),
         fetchSearches(),
+        fetchAdminLogs(),
         calculateStats()
       ]);
     } catch (err) {
@@ -100,7 +119,7 @@ const AdminDashboard = () => {
 
   const calculateStats = async () => {
     try {
-      // Get total registered users from profiles table instead of admin API
+      // Get total registered users from profiles table
       const { count: userCount, error: userError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
@@ -118,7 +137,7 @@ const AdminDashboard = () => {
         console.error('Error counting searches:', searchError);
       }
 
-      // Calculate revenue (placeholder - you would replace with actual revenue data)
+      // Calculate revenue (from premium users)
       const { data: premiumUsers, error: premiumError } = await supabase
         .from('profiles')
         .select('*')
@@ -128,7 +147,7 @@ const AdminDashboard = () => {
         console.error('Error fetching premium users:', premiumError);
       }
 
-      // Simple revenue calculation (placeholder)
+      // Simple revenue calculation
       const revenue = premiumUsers ? premiumUsers.length * 29.99 : 0;
 
       setStats({
@@ -143,8 +162,6 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      // Instead of using the admin API which requires service role,
-      // fetch users directly from the profiles table
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*');
@@ -163,7 +180,7 @@ const AdminDashboard = () => {
       const mappedUsers = profiles?.map(profile => {
         return {
           id: profile.id,
-          email: profile.email,
+          email: profile.email || '',
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
           updated_at: profile.updated_at,
@@ -180,7 +197,7 @@ const AdminDashboard = () => {
       console.error('Exception fetching users:', err);
       toast({
         title: "Error",
-        description: "Failed to load users. This might be due to insufficient permissions.",
+        description: "Failed to load users",
         variant: "destructive",
       });
     }
@@ -220,7 +237,24 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleResetCredits = async (userId) => {
+  const fetchAdminLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching admin logs:', error);
+      } else {
+        setAdminLogs(data as AdminLog[] || []);
+      }
+    } catch (err) {
+      console.error('Exception fetching admin logs:', err);
+    }
+  };
+
+  const handleResetCredits = async (userId: string) => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -239,6 +273,10 @@ const AdminDashboard = () => {
           title: "Success",
           description: "Credits reset successfully",
         });
+        
+        // Log the admin action
+        await logAdminAction('reset_credits', 'Reset user credits', userId);
+        
         fetchUsers();
       }
     } catch (err) {
@@ -246,9 +284,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userId: string) => {
     try {
-      // Since we don't have admin API access, we can only delete the profile
+      // Delete the profile - this is safer than trying to delete from auth.users
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -258,7 +296,7 @@ const AdminDashboard = () => {
         console.error('Error deleting profile:', profileError);
         toast({
           title: "Error",
-          description: "Failed to delete user profile. You may need additional permissions.",
+          description: "Failed to delete user profile",
           variant: "destructive",
         });
         return;
@@ -266,15 +304,18 @@ const AdminDashboard = () => {
 
       toast({
         title: "Success",
-        description: "User profile deleted successfully.",
+        description: "User profile deleted successfully",
       });
+      
+      // Log the admin action
+      await logAdminAction('delete_user', 'Deleted user profile', userId);
       
       fetchUsers();
     } catch (err) {
       console.error('Exception deleting user:', err);
       toast({
         title: "Error",
-        description: "Failed to delete user. You may need admin privileges.",
+        description: "Failed to delete user",
         variant: "destructive",
       });
     }
@@ -298,10 +339,83 @@ const AdminDashboard = () => {
           title: "Success",
           description: "All users' credits reset successfully",
         });
+        
+        // Log the admin action
+        await logAdminAction('reset_all_credits', 'Reset credits for all users');
+        
         fetchUsers();
       }
     } catch (err) {
       console.error('Exception resetting all credits:', err);
+    }
+  };
+
+  const handleSetUserRole = async (userId: string, role: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error setting user role:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to update user role",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `User role updated to ${role}`,
+        });
+        
+        // Log the admin action
+        await logAdminAction('update_role', `Changed user role to ${role}`, userId);
+        
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error('Exception setting user role:', err);
+    }
+  };
+
+  const handleSetUserPlan = async (userId: string, plan: string) => {
+    try {
+      const now = new Date().toISOString();
+      const endDate = plan === 'free' 
+        ? null
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          plan,
+          plan_start_date: plan === 'free' ? null : now,
+          plan_end_date: endDate
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error setting user plan:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update user plan",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `User plan updated to ${plan}`,
+        });
+        
+        // Log the admin action
+        await logAdminAction('update_plan', `Changed user plan to ${plan}`, userId);
+        
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error('Exception setting user plan:', err);
     }
   };
 
@@ -311,9 +425,12 @@ const AdminDashboard = () => {
       title: "Success",
       description: "Affiliate link saved successfully",
     });
+    
+    // Log the admin action
+    logAdminAction('update_affiliate', `Updated affiliate link to ${affiliateLink}`);
   };
 
-  const getUserEmailById = (userId) => {
+  const getUserEmailById = (userId: string) => {
     if (!userId) return "N/A";
     
     // Check if userId starts with 'anon_' - it's an unverified user
@@ -326,11 +443,11 @@ const AdminDashboard = () => {
     return user ? user.email : "Unknown User";
   };
 
-  const handleViewSearchResults = (query) => {
+  const handleViewSearchResults = (query: string) => {
     window.open(`/search/${encodeURIComponent(query)}`, '_blank');
   };
 
-  const handleDownloadReport = (search) => {
+  const handleDownloadReport = (search: any) => {
     // This is a placeholder - you would implement actual report generation/download here
     toast({
       title: "Download Report",
@@ -339,7 +456,7 @@ const AdminDashboard = () => {
   };
 
   // User Row component
-  const UserRow = ({ user }) => {
+  const UserRow = ({ user }: { user: UserProfile }) => {
     return (
       <TableRow key={user.id} className="hover:bg-gray-50">
         <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
@@ -362,30 +479,54 @@ const AdminDashboard = () => {
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.checks_used || 0}</TableCell>
         <TableCell className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
           <div className="flex justify-end gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => handleResetCredits(user.id)}
-              className="h-8 p-2 flex items-center gap-1"
-              title="Reset Credits"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Reset
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-                  handleDeleteUser(user.id);
-                }
-              }} 
-              className="h-8 p-2 flex items-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-              title="Delete User"
-            >
-              <Trash className="h-4 w-4" />
-              Delete
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleResetCredits(user.id)}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Reset Credits
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Set Role</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleSetUserRole(user.id, 'user')}>
+                  <User className="mr-2 h-4 w-4" />
+                  User
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetUserRole(user.id, 'admin')}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Set Plan</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleSetUserPlan(user.id, 'free')}>
+                  Free Plan
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetUserPlan(user.id, 'premium')}>
+                  Premium Plan
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetUserPlan(user.id, 'unlimited')}>
+                  Unlimited Plan
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-red-600"
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+                      handleDeleteUser(user.id);
+                    }
+                  }}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete User
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </TableCell>
       </TableRow>
@@ -393,7 +534,7 @@ const AdminDashboard = () => {
   };
 
   // Unverified User Row component
-  const UnverifiedUserRow = ({ user }) => {
+  const UnverifiedUserRow = ({ user }: { user: any }) => {
     return (
       <TableRow key={user.id} className="hover:bg-gray-50">
         <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
@@ -418,7 +559,7 @@ const AdminDashboard = () => {
   };
 
   // Search Row component
-  const SearchRow = ({ search }) => {
+  const SearchRow = ({ search }: { search: any }) => {
     const isAnonSearch = search.user_id?.startsWith('anon_');
     const userEmail = getUserEmailById(search.user_id);
     
@@ -467,6 +608,47 @@ const AdminDashboard = () => {
     );
   };
 
+  // Admin Log Row component
+  const LogRow = ({ log }: { log: AdminLog }) => {
+    return (
+      <TableRow key={log.id} className="hover:bg-gray-50">
+        <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            {log.action.replace(/_/g, ' ').toUpperCase()}
+          </div>
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+          {getUserEmailById(log.user_id)}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+          {log.target_user_id ? getUserEmailById(log.target_user_id) : "N/A"}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+          {log.details || "No details provided"}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+          {new Date(log.created_at).toLocaleString()}
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Shield className="mx-auto h-12 w-12 text-red-600" />
+          <h1 className="mt-4 text-3xl font-bold">Access Denied</h1>
+          <p className="mt-2 text-gray-600">You do not have permission to access this page.</p>
+          <Button className="mt-6" onClick={() => navigate('/')}>
+            Return to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -501,6 +683,13 @@ const AdminDashboard = () => {
             Activity Log
           </button>
           <button
+            onClick={() => setActiveTab("admin-logs")}
+            className={`flex items-center w-full px-4 py-3 ${activeTab === "admin-logs" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            <Shield className="mr-3 h-5 w-5" />
+            Admin Logs
+          </button>
+          <button
             onClick={() => setActiveTab("settings")}
             className={`flex items-center w-full px-4 py-3 ${activeTab === "settings" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
           >
@@ -514,12 +703,18 @@ const AdminDashboard = () => {
       <div className="flex-1 overflow-auto p-6">
         <div className="flex justify-between mb-6">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <Link to="/">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Home className="mr-2 h-4 w-4" />
-              Go to Home
+          <div className="flex gap-2">
+            <Button onClick={fetchData} variant="outline" className="flex items-center gap-2">
+              <RefreshCcw className="h-4 w-4" />
+              Refresh Data
             </Button>
-          </Link>
+            <Link to="/">
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Home className="mr-2 h-4 w-4" />
+                Go to Home
+              </Button>
+            </Link>
+          </div>
         </div>
         
         {/* Dashboard Tab */}
@@ -603,9 +798,16 @@ const AdminDashboard = () => {
         {/* Users Tab */}
         {activeTab === "users" && (
           <div>
+            <div className="flex justify-between mb-4">
+              <h2 className="text-xl font-semibold">User Management</h2>
+              <Button variant="secondary" onClick={handleResetAllCredits}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Reset All Credits
+              </Button>
+            </div>
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Users</CardTitle>
+                <CardTitle>Registered Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -714,6 +916,49 @@ const AdminDashboard = () => {
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8">
                             No search activity found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Admin Logs Tab */}
+        {activeTab === "admin-logs" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Activity Logs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-6 text-left">Action</TableHead>
+                        <TableHead className="text-left">Admin</TableHead>
+                        <TableHead className="text-left">Target User</TableHead>
+                        <TableHead className="text-left">Details</TableHead>
+                        <TableHead className="text-left">Date/Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminLogs.length > 0 ? (
+                        adminLogs.map((log) => (
+                          <LogRow key={log.id} log={log} />
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            No admin logs found
                           </TableCell>
                         </TableRow>
                       )}
