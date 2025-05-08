@@ -23,9 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter
 } from "@/components/ui/dialog"
 import { supabase } from "@/integrations/supabase/client";
-import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity } from 'lucide-react';
+import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,13 +35,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [anonUsers, setAnonUsers] = useState([]);
   const [searches, setSearches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalSearches: 0,
+    totalRevenue: 0,
+  });
+  const [affiliateLink, setAffiliateLink] = useState(() => {
+    return localStorage.getItem('affiliateLink') || 'https://www.namecheap.com';
+  });
   const { toast } = useToast();
 
   // Use an interval to keep refreshing data when tab is active
@@ -76,12 +86,44 @@ const AdminDashboard = () => {
       await Promise.all([
         fetchUsers(),
         fetchAnonUsers(),
-        fetchSearches()
+        fetchSearches(),
+        calculateStats()
       ]);
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const calculateStats = async () => {
+    try {
+      // Get total registered users count
+      const { count: userCount, error: userError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Get total searches count
+      const { count: searchCount, error: searchError } = await supabase
+        .from('searches')
+        .select('*', { count: 'exact', head: true });
+
+      // Calculate revenue (placeholder - you would replace with actual revenue data)
+      const { data: premiumUsers, error: premiumError } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('plan', 'free');
+
+      // Simple revenue calculation (placeholder)
+      const revenue = premiumUsers ? premiumUsers.length * 29.99 : 0;
+
+      setStats({
+        totalUsers: userCount || 0,
+        totalSearches: searchCount || 0,
+        totalRevenue: revenue
+      });
+    } catch (err) {
+      console.error('Error calculating stats:', err);
     }
   };
 
@@ -139,26 +181,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
-        return {};
-      }
-
-      return data || {};
-    } catch (err) {
-      console.error('Exception fetching profile:', err);
-      return {};
-    }
-  };
-
   const handleResetCredits = async (userId) => {
     try {
       const { error } = await supabase
@@ -203,22 +225,10 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Then, delete the user from auth.users
-      const { error: userError } = await supabase.auth.admin.deleteUser(userId);
-
-      if (userError) {
-        console.error('Error deleting user:', userError);
-        toast({
-          title: "Error",
-          description: "Failed to delete user",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      // Then try to delete the user auth entry (may require admin rights)
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "User profile deleted. Note: The auth record may require manual deletion in Supabase.",
       });
       fetchUsers();
     } catch (err) {
@@ -226,11 +236,41 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleResetAllCredits = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ checks_used: 0 });
+
+      if (error) {
+        console.error('Error resetting all credits:', error);
+        toast({
+          title: "Error",
+          description: "Failed to reset all credits",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "All users' credits reset successfully",
+        });
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error('Exception resetting all credits:', err);
+    }
+  };
+
+  const saveAffiliateLink = () => {
+    localStorage.setItem('affiliateLink', affiliateLink);
+    toast({
+      title: "Success",
+      description: "Affiliate link saved successfully",
+    });
+  };
+
   // User Row component
   const UserRow = ({ user }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-
     return (
       <TableRow key={user.id} className="hover:bg-gray-50">
         <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
@@ -240,15 +280,17 @@ const AdminDashboard = () => {
               <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 {user.email}
+                {user.role === 'admin' && (
+                  <Badge className="bg-red-600">Admin</Badge>
+                )}
               </div>
             </div>
           </div>
         </TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.plan || 'free'}</TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.checks_used || 0}</TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.role === 'admin' ? 'Admin' : 'User'}</TableCell>
         <TableCell className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -297,13 +339,9 @@ const AdminDashboard = () => {
             </div>
           </div>
         </TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Guest</TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.search_count || 0}</TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
           {new Date(user.last_seen).toLocaleString()}
-        </TableCell>
-        <TableCell className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-          {/* No actions for anonymous users */}
         </TableCell>
       </TableRow>
     );
@@ -338,129 +376,280 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-5">Admin Dashboard</h1>
-      
-      <Tabs defaultValue="users" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" /> Users
-          </TabsTrigger>
-          <TabsTrigger value="anon" className="flex items-center gap-2">
-            <User className="h-4 w-4" /> Anonymous Users
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" /> Activity Log
-          </TabsTrigger>
-        </TabsList>
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-md">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800">Admin Panel</h2>
+        </div>
+        <nav className="mt-4">
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex items-center w-full px-4 py-3 ${activeTab === "dashboard" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            <BarChart className="mr-3 h-5 w-5" />
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`flex items-center w-full px-4 py-3 ${activeTab === "users" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            <Users className="mr-3 h-5 w-5" />
+            Users
+          </button>
+          <button
+            onClick={() => setActiveTab("activity")}
+            className={`flex items-center w-full px-4 py-3 ${activeTab === "activity" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            <Activity className="mr-3 h-5 w-5" />
+            Activity Log
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex items-center w-full px-4 py-3 ${activeTab === "settings" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            <Settings className="mr-3 h-5 w-5" />
+            Settings
+          </button>
+        </nav>
+        <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-200">
+          <Button 
+            variant="admin" 
+            className="w-full" 
+            onClick={handleResetAllCredits}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Reset All Credits
+          </Button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 overflow-auto p-6">
+        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
         
-        <TabsContent value="users" className="border rounded-md p-4">
-          <h2 className="text-xl font-bold mb-4">Registered Users</h2>
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        {/* Dashboard Tab */}
+        {activeTab === "dashboard" && (
+          <div>
+            <div className="grid gap-6 md:grid-cols-3 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                  <p className="text-xs text-muted-foreground">Registered accounts</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Total Searches</CardTitle>
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalSearches}</div>
+                  <p className="text-xs text-muted-foreground">All time searches</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground">Estimated revenue</p>
+                </CardContent>
+              </Card>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6 text-left">Email</TableHead>
-                    <TableHead className="text-left">Plan</TableHead>
-                    <TableHead className="text-left">Credits Used</TableHead>
-                    <TableHead className="text-left">Role</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.length > 0 ? (
-                    users.map((user) => (
-                      <UserRow key={user.id} user={user} />
-                    ))
-                  ) : (
+            
+            {/* Recent activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        No users found
-                      </TableCell>
+                      <TableHead>Query</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Date/Time</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
+                  </TableHeader>
+                  <TableBody>
+                    {searches.slice(0, 5).map(search => (
+                      <TableRow key={search.id}>
+                        <TableCell>"{search.query}"</TableCell>
+                        <TableCell>
+                          {search.user_id?.startsWith('anon_') 
+                            ? `Anonymous (${search.user_id.substring(5, 13)}...)` 
+                            : search.user_id}
+                        </TableCell>
+                        <TableCell>{new Date(search.created_at).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         
-        <TabsContent value="anon" className="border rounded-md p-4">
-          <h2 className="text-xl font-bold mb-4">Anonymous Users</h2>
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6 text-left">Identifier</TableHead>
-                    <TableHead className="text-left">Type</TableHead>
-                    <TableHead className="text-left">Search Count</TableHead>
-                    <TableHead className="text-left">Last Seen</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {anonUsers.length > 0 ? (
-                    anonUsers.map((user) => (
-                      <AnonUserRow key={user.id} user={user} />
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        No anonymous users found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
+        {/* Users Tab */}
+        {activeTab === "users" && (
+          <div>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Registered Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="pl-6 text-left">Email</TableHead>
+                          <TableHead className="text-left">Plan</TableHead>
+                          <TableHead className="text-left">Credits Used</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.length > 0 ? (
+                          users.map((user) => (
+                            <UserRow key={user.id} user={user} />
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-8">
+                              No users found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Anonymous Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="pl-6 text-left">Identifier</TableHead>
+                          <TableHead className="text-left">Search Count</TableHead>
+                          <TableHead className="text-left">Last Seen</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {anonUsers.length > 0 ? (
+                          anonUsers.map((user) => (
+                            <AnonUserRow key={user.id} user={user} />
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-8">
+                              No anonymous users found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
         
-        <TabsContent value="activity" className="border rounded-md p-4">
-          <h2 className="text-xl font-bold mb-4">Search Activity</h2>
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6 text-left">Search Query</TableHead>
-                    <TableHead className="text-left">User</TableHead>
-                    <TableHead className="text-left">Results</TableHead>
-                    <TableHead className="text-left">Date/Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {searches.length > 0 ? (
-                    searches.map((search) => (
-                      <SearchRow key={search.id} search={search} />
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
-                        No search activity found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Activity Log Tab */}
+        {activeTab === "activity" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Search Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-6 text-left">Search Query</TableHead>
+                        <TableHead className="text-left">User</TableHead>
+                        <TableHead className="text-left">Results</TableHead>
+                        <TableHead className="text-left">Date/Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {searches.length > 0 ? (
+                        searches.map((search) => (
+                          <SearchRow key={search.id} search={search} />
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">
+                            No search activity found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Settings Tab */}
+        {activeTab === "settings" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Affiliate Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="affiliateLink">Domain Affiliate Link</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input 
+                      id="affiliateLink"
+                      value={affiliateLink}
+                      onChange={(e) => setAffiliateLink(e.target.value)}
+                      placeholder="https://www.namecheap.com/your-affiliate-id"
+                      className="flex-1"
+                    />
+                    <Button onClick={saveAffiliateLink}>Save</Button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    This link will be used when users click "See Domain Name Options" button
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

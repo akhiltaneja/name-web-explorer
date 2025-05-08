@@ -1,3 +1,4 @@
+
 import { Progress } from "@/components/ui/progress";
 import { Search, CheckCircle } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
@@ -19,21 +20,29 @@ const SearchProgress = ({
 }: SearchProgressProps) => {
   const [showProgress, setShowProgress] = useState(false);
   const progressDisplayed = useRef(false);
+  const progressUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Only show progress once per search session
   useEffect(() => {
     if (isSearching && !progressDisplayed.current) {
       setShowProgress(true);
       progressDisplayed.current = true;
+      
+      // Clear any existing timers to prevent duplicate progress bars
+      if (progressUpdateTimer.current) {
+        clearTimeout(progressUpdateTimer.current);
+      }
     } else if (!isSearching && !isDeepVerifying) {
       // Reset the flag when search is complete
       progressDisplayed.current = false;
       // Keep the completion message briefly before hiding
       if (searchProgress >= 100) {
-        const timer = setTimeout(() => {
+        progressUpdateTimer.current = setTimeout(() => {
           setShowProgress(false);
         }, 2000);
-        return () => clearTimeout(timer);
+        return () => {
+          if (progressUpdateTimer.current) clearTimeout(progressUpdateTimer.current);
+        };
       } else {
         setShowProgress(false);
       }

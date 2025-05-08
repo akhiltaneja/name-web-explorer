@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,15 @@ interface DomainSuggestionsProps {
 const DomainSuggestions: React.FC<DomainSuggestionsProps> = ({ username, domains }) => {
   const { toast } = useToast();
   const availableDomains = domains.filter(d => d.available);
+  const [affiliateLink, setAffiliateLink] = useState<string>('https://www.namecheap.com');
+  
+  // Load affiliate link from localStorage if available
+  useEffect(() => {
+    const storedLink = localStorage.getItem('affiliateLink');
+    if (storedLink) {
+      setAffiliateLink(storedLink);
+    }
+  }, []);
   
   if (availableDomains.length === 0) return null;
   
@@ -29,8 +38,8 @@ const DomainSuggestions: React.FC<DomainSuggestionsProps> = ({ username, domains
       description: `You'll be redirected to purchase ${username}${tld}`,
     });
     
-    // In a real app, this would use affiliate links
-    window.open(`https://www.namecheap.com/domains/registration/results/?domain=${username}`, '_blank');
+    // Use the affiliate link if available, otherwise use default
+    window.open(`${affiliateLink}/domains/registration/results/?domain=${username}`, '_blank');
   };
   
   return (
@@ -97,7 +106,7 @@ const DomainSuggestions: React.FC<DomainSuggestionsProps> = ({ username, domains
             <Button
               variant="outline"
               className="text-xs text-gray-600 hover:text-gray-800"
-              onClick={() => window.open('https://www.namecheap.com', '_blank')}
+              onClick={() => window.open(affiliateLink, '_blank')}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               See all domain options
