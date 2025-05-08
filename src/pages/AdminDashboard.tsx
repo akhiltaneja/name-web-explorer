@@ -26,7 +26,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 import { supabase } from "@/integrations/supabase/client";
-import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink } from 'lucide-react';
+import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink, Home, CheckCircle2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -274,7 +275,7 @@ const AdminDashboard = () => {
     
     // Check if userId starts with 'anon_' - it's an anonymous user
     if (String(userId).startsWith('anon_')) {
-      return "Guest User";
+      return "Unverified User";
     }
     
     // Otherwise find the user in our profiles
@@ -346,8 +347,8 @@ const AdminDashboard = () => {
     );
   };
 
-  // Anonymous User Row component
-  const AnonUserRow = ({ user }) => {
+  // Unverified User Row component
+  const UnverifiedUserRow = ({ user }) => {
     return (
       <TableRow key={user.id} className="hover:bg-gray-50">
         <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
@@ -358,7 +359,7 @@ const AdminDashboard = () => {
             <div>
               <div className="flex items-center">
                 Unverified User (ID: {user.identifier.substring(0, 8)}...)
-                <Badge variant="outline" className="ml-2">Guest</Badge>
+                <Badge variant="outline" className="ml-2">Unverified</Badge>
               </div>
             </div>
           </div>
@@ -427,6 +428,10 @@ const AdminDashboard = () => {
           <h2 className="text-xl font-semibold text-gray-800">Admin Panel</h2>
         </div>
         <nav className="mt-4">
+          <Link to="/" className="flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-50">
+            <Home className="mr-3 h-5 w-5" />
+            Back to Website
+          </Link>
           <button
             onClick={() => setActiveTab("dashboard")}
             className={`flex items-center w-full px-4 py-3 ${activeTab === "dashboard" ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}`}
@@ -544,7 +549,7 @@ const AdminDashboard = () => {
           <div>
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Registered Users</CardTitle>
+                <CardTitle>Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -603,7 +608,7 @@ const AdminDashboard = () => {
                       <TableBody>
                         {anonUsers.length > 0 ? (
                           anonUsers.map((user) => (
-                            <AnonUserRow key={user.id} user={user} />
+                            <UnverifiedUserRow key={user.id} user={user} />
                           ))
                         ) : (
                           <TableRow>

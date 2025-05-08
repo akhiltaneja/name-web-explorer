@@ -47,10 +47,6 @@ const Hero = ({
   recentSearches,
   onClearSearch,
   onClearAllSearches,
-  // We're still accepting these props for backward compatibility,
-  // but we don't use them in the component anymore
-  isDeepVerifying = false,
-  verificationProgress = 0
 }: HeroProps) => {
   const navigate = useNavigate();
 

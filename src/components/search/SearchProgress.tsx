@@ -22,7 +22,7 @@ const SearchProgress = ({
   const progressUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
-    // Only show progress on initial search and don't show for verification
+    // Show progress when searching starts
     if (isSearching && !hasCompletedOnce) {
       setShowProgress(true);
       
@@ -30,7 +30,7 @@ const SearchProgress = ({
       if (progressUpdateTimer.current) {
         clearTimeout(progressUpdateTimer.current);
       }
-    } else if (!isSearching && !isDeepVerifying) {
+    } else if (!isSearching) {
       // Keep the completion message briefly before hiding
       if (searchProgress >= 100) {
         // Mark as completed to prevent showing progress again in the same session
@@ -46,14 +46,13 @@ const SearchProgress = ({
         };
       }
     }
-  }, [isSearching, isDeepVerifying, searchProgress, hasCompletedOnce]);
+  }, [isSearching, searchProgress, hasCompletedOnce]);
   
   // Reset when the name changes (new search)
   useEffect(() => {
     setHasCompletedOnce(false);
   }, [name]);
   
-  // Don't show verification progress separately - just the combined progress
   const progress = isSearching ? searchProgress : 0;
   
   if (!showProgress) return null;
