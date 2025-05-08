@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -46,7 +47,7 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*');
 
       if (error) {
@@ -191,8 +192,8 @@ const AdminDashboard = () => {
             {user.email}
           </div>
         </td>
-        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{profile?.plan || 'free'}</td>
-        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{profile?.checks_used || 0}</td>
+        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.plan || 'free'}</td>
+        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.checks_used || 0}</td>
         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
