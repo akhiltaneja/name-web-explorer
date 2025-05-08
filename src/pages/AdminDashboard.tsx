@@ -26,7 +26,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 import { supabase } from "@/integrations/supabase/client";
-import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign } from 'lucide-react';
+import { MoreVertical, Edit, Trash, RefreshCcw, CheckCircle, Search, User, Users, Activity, Settings, BarChart, PieChart, CircleDollarSign, Download, ExternalLink } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,12 +155,12 @@ const AdminDashboard = () => {
         .select('*');
 
       if (error) {
-        console.error('Error fetching anonymous users:', error);
+        console.error('Error fetching unverified users:', error);
       } else {
         setAnonUsers(data || []);
       }
     } catch (err) {
-      console.error('Exception fetching anonymous users:', err);
+      console.error('Exception fetching unverified users:', err);
     }
   };
 
@@ -269,6 +269,31 @@ const AdminDashboard = () => {
     });
   };
 
+  const getUserEmailById = (userId) => {
+    if (!userId) return "N/A";
+    
+    // Check if userId starts with 'anon_' - it's an anonymous user
+    if (String(userId).startsWith('anon_')) {
+      return "Guest User";
+    }
+    
+    // Otherwise find the user in our profiles
+    const user = users.find(u => u.id === userId);
+    return user ? user.email : "Unknown User";
+  };
+
+  const handleViewSearchResults = (query) => {
+    window.open(`/search/${encodeURIComponent(query)}`, '_blank');
+  };
+
+  const handleDownloadReport = (search) => {
+    // This is a placeholder - you would implement actual report generation/download here
+    toast({
+      title: "Download Report",
+      description: `Report download for "${search.query}" will be implemented.`,
+    });
+  };
+
   // User Row component
   const UserRow = ({ user }) => {
     return (
@@ -292,31 +317,30 @@ const AdminDashboard = () => {
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.plan || 'free'}</TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.checks_used || 0}</TableCell>
         <TableCell className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-                    handleDeleteUser(user.id);
-                  }
-                }}
-                className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
-              >
-                Delete <Trash className="ml-2 h-4 w-4" />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleResetCredits(user.id)} className="cursor-pointer">
-                <RefreshCcw className="mr-2 h-4 w-4" /> Reset Credits
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleResetCredits(user.id)}
+              className="h-8 w-8 p-0"
+              title="Reset Credits"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+                  handleDeleteUser(user.id);
+                }
+              }} 
+              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+              title="Delete User"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
     );
@@ -329,11 +353,11 @@ const AdminDashboard = () => {
         <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
           <div className="flex items-center gap-3">
             <Avatar>
-              <AvatarFallback>A</AvatarFallback>
+              <AvatarFallback>G</AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center">
-                Anonymous (ID: {user.identifier.substring(0, 8)}...)
+                Unverified User (ID: {user.identifier.substring(0, 8)}...)
                 <Badge variant="outline" className="ml-2">Guest</Badge>
               </div>
             </div>
@@ -350,10 +374,8 @@ const AdminDashboard = () => {
   // Search Row component
   const SearchRow = ({ search }) => {
     const isAnonSearch = search.user_id?.startsWith('anon_');
-    const displayUserId = isAnonSearch 
-      ? `Anonymous (${search.user_id.substring(5, 13)}...)` 
-      : search.user_id;
-      
+    const userEmail = getUserEmailById(search.user_id);
+    
     return (
       <TableRow key={search.id} className="hover:bg-gray-50">
         <TableCell className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
@@ -363,13 +385,35 @@ const AdminDashboard = () => {
           </div>
         </TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-          {displayUserId}
+          {userEmail}
         </TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
           {search.result_count || 0} results
         </TableCell>
         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
           {new Date(search.created_at).toLocaleString()}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-right">
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleViewSearchResults(search.query)}
+              className="h-8 w-8 p-0"
+              title="View Results" 
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleDownloadReport(search)}
+              className="h-8 w-8 p-0"
+              title="Download Report" 
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
     );
@@ -412,16 +456,6 @@ const AdminDashboard = () => {
             Settings
           </button>
         </nav>
-        <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-200">
-          <Button 
-            variant="admin" 
-            className="w-full" 
-            onClick={handleResetAllCredits}
-          >
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            Reset All Credits
-          </Button>
-        </div>
       </div>
 
       {/* Main content */}
@@ -476,18 +510,26 @@ const AdminDashboard = () => {
                       <TableHead>Query</TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Date/Time</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {searches.slice(0, 5).map(search => (
                       <TableRow key={search.id}>
                         <TableCell>"{search.query}"</TableCell>
-                        <TableCell>
-                          {search.user_id?.startsWith('anon_') 
-                            ? `Anonymous (${search.user_id.substring(5, 13)}...)` 
-                            : search.user_id}
-                        </TableCell>
+                        <TableCell>{getUserEmailById(search.user_id)}</TableCell>
                         <TableCell>{new Date(search.created_at).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewSearchResults(search.query)}
+                            className="h-8 w-8 p-0"
+                            title="View Results"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -541,7 +583,7 @@ const AdminDashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Anonymous Users</CardTitle>
+                <CardTitle>Unverified Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -566,7 +608,7 @@ const AdminDashboard = () => {
                         ) : (
                           <TableRow>
                             <TableCell colSpan={3} className="text-center py-8">
-                              No anonymous users found
+                              No unverified users found
                             </TableCell>
                           </TableRow>
                         )}
@@ -599,6 +641,7 @@ const AdminDashboard = () => {
                         <TableHead className="text-left">User</TableHead>
                         <TableHead className="text-left">Results</TableHead>
                         <TableHead className="text-left">Date/Time</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -608,7 +651,7 @@ const AdminDashboard = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8">
+                          <TableCell colSpan={5} className="text-center py-8">
                             No search activity found
                           </TableCell>
                         </TableRow>

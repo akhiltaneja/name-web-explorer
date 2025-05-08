@@ -1,4 +1,3 @@
-
 import { Progress } from "@/components/ui/progress";
 import { Search, CheckCircle } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
@@ -19,50 +18,50 @@ const SearchProgress = ({
   verificationProgress = 0
 }: SearchProgressProps) => {
   const [showProgress, setShowProgress] = useState(false);
-  const progressDisplayed = useRef(false);
+  const [hasCompletedOnce, setHasCompletedOnce] = useState(false);
   const progressUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Only show progress once per search session
   useEffect(() => {
-    if (isSearching && !progressDisplayed.current) {
+    // Only show progress on initial search and don't show for verification
+    if (isSearching && !hasCompletedOnce) {
       setShowProgress(true);
-      progressDisplayed.current = true;
       
       // Clear any existing timers to prevent duplicate progress bars
       if (progressUpdateTimer.current) {
         clearTimeout(progressUpdateTimer.current);
       }
     } else if (!isSearching && !isDeepVerifying) {
-      // Reset the flag when search is complete
-      progressDisplayed.current = false;
       // Keep the completion message briefly before hiding
       if (searchProgress >= 100) {
+        // Mark as completed to prevent showing progress again in the same session
+        setHasCompletedOnce(true);
+        
+        // Hide after a delay
         progressUpdateTimer.current = setTimeout(() => {
           setShowProgress(false);
         }, 2000);
+        
         return () => {
           if (progressUpdateTimer.current) clearTimeout(progressUpdateTimer.current);
         };
-      } else {
-        setShowProgress(false);
       }
     }
-  }, [isSearching, isDeepVerifying, searchProgress]);
+  }, [isSearching, isDeepVerifying, searchProgress, hasCompletedOnce]);
   
-  // Combine the search and verification progress into a single progress bar
-  const combinedIsSearching = isSearching || isDeepVerifying;
-  const combinedProgress = isSearching 
-    ? searchProgress 
-    : isDeepVerifying 
-      ? Math.min(verificationProgress + searchProgress, 100)
-      : 0;
+  // Reset when the name changes (new search)
+  useEffect(() => {
+    setHasCompletedOnce(false);
+  }, [name]);
+  
+  // Don't show verification progress separately - just the combined progress
+  const progress = isSearching ? searchProgress : 0;
   
   if (!showProgress) return null;
   
   return (
     <div className="mt-4 p-6 bg-blue-50 rounded-lg border border-blue-200 shadow-sm animate-fade-in flex items-start">
       <div className="mr-4 bg-blue-100 p-2 rounded-full">
-        {combinedProgress < 100 ? (
+        {progress < 100 ? (
           <Search className="h-6 w-6 text-blue-600" />
         ) : (
           <CheckCircle className="h-6 w-6 text-green-600" />
@@ -70,10 +69,10 @@ const SearchProgress = ({
       </div>
       <div className="flex-grow">
         <h3 className="font-bold text-blue-800 mb-1">
-          {combinedProgress < 100 ? "Searching for profiles..." : "Search complete!"}
+          {progress < 100 ? "Searching for profiles..." : "Search complete!"}
         </h3>
-        <p className="text-blue-700 mb-2">Finding "{name}" across social networks and verifying results</p>
-        <Progress value={combinedProgress} className="h-2 bg-blue-100" />
+        <p className="text-blue-700 mb-2">Finding "{name}" across social networks</p>
+        <Progress value={progress} className="h-2 bg-blue-100" />
       </div>
     </div>
   );

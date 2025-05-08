@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +9,6 @@ import {
   groupProfilesByCategory, 
   checkUrlStatus,
   checkDomainAvailability,
-  deepVerifyProfiles
 } from "@/utils/socialMediaSearch";
 import { useSearchLimit } from "./useSearchLimit";
 import { SocialMediaProfile } from "@/types/socialMedia";
@@ -77,7 +77,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [name, setName] = useState("");
   const [results, setResults] = useState<SocialMediaProfile[]>([]);
   const [additionalResults, setAdditionalResults] = useState<SocialMediaProfile[]>([]);
-  const [unverifiedResults, setUnverifiedResults] = useState<SocialMediaProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
   const [searchTime, setSearchTime] = useState<number | null>(null);
@@ -86,8 +85,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [categories, setCategories] = useState([]);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [isDeepVerifying, setIsDeepVerifying] = useState(false);
-  const [verificationProgress, setVerificationProgress] = useState(0);
   const [guestIdentifier, setGuestIdentifier] = useState("");
 
   const { toast } = useToast();
@@ -416,7 +413,6 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setName,
     results,
     additionalResults,
-    unverifiedResults,
     isSearching,
     searchProgress,
     searchTime,
@@ -434,7 +430,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setShowLimitModal,
     emailModalOpen,
     setEmailModalOpen,
-    isDeepVerifying,
-    verificationProgress
+    // Removing isDeepVerifying and verificationProgress as we don't need them anymore
+    isDeepVerifying: false,
+    verificationProgress: 0
   };
 };

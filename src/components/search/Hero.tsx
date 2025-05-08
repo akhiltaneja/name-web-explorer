@@ -47,12 +47,12 @@ const Hero = ({
   recentSearches,
   onClearSearch,
   onClearAllSearches,
+  // We're still accepting these props for backward compatibility,
+  // but we don't use them in the component anymore
   isDeepVerifying = false,
   verificationProgress = 0
 }: HeroProps) => {
   const navigate = useNavigate();
-  
-  // Removed showRating state and useEffect that was showing the rating dialog
 
   return (
     <section className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-16">
@@ -71,7 +71,7 @@ const Hero = ({
             name={name}
             setName={setName}
             handleSearch={handleSearch}
-            isSearching={isSearching || isDeepVerifying}
+            isSearching={isSearching}
             checksRemaining={checksRemaining}
             searchLimitReached={searchLimitReached}
             user={user}
@@ -83,9 +83,7 @@ const Hero = ({
           <SearchProgress 
             isSearching={isSearching} 
             searchProgress={searchProgress} 
-            name={name} 
-            isDeepVerifying={isDeepVerifying}
-            verificationProgress={verificationProgress}
+            name={name}
           />
           
           {!user && (
