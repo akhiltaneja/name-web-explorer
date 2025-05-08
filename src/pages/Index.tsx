@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -38,7 +37,7 @@ const Index = () => {
     setName,
     results,
     additionalResults,
-    unverifiedResults,
+    unverifiedResults, // Include unverifiedResults from useSearch
     isSearching,
     searchProgress,
     searchTime,
@@ -207,6 +206,7 @@ const Index = () => {
           onClearAllSearches={clearAllRecentSearches}
           isDeepVerifying={isDeepVerifying}
           verificationProgress={verificationProgress}
+          unverifiedResults={unverifiedResults}
         />
 
         <section className="py-8 px-4" ref={resultsRef}>

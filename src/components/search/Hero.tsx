@@ -29,6 +29,7 @@ interface HeroProps {
   onClearAllSearches: () => void;
   isDeepVerifying?: boolean;
   verificationProgress?: number;
+  unverifiedResults?: any[]; // Add unverifiedResults prop
 }
 
 const Hero = ({
@@ -47,6 +48,9 @@ const Hero = ({
   recentSearches,
   onClearSearch,
   onClearAllSearches,
+  isDeepVerifying,
+  verificationProgress,
+  unverifiedResults, // Include unverifiedResults
 }: HeroProps) => {
   const navigate = useNavigate();
 
@@ -80,6 +84,8 @@ const Hero = ({
             isSearching={isSearching} 
             searchProgress={searchProgress} 
             name={name}
+            isDeepVerifying={isDeepVerifying}
+            verificationProgress={verificationProgress}
           />
           
           {!user && (

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -77,6 +76,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [name, setName] = useState("");
   const [results, setResults] = useState<SocialMediaProfile[]>([]);
   const [additionalResults, setAdditionalResults] = useState<SocialMediaProfile[]>([]);
+  const [unverifiedResults, setUnverifiedResults] = useState<SocialMediaProfile[]>([]); // Add unverifiedResults state
   const [isSearching, setIsSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
   const [searchTime, setSearchTime] = useState<number | null>(null);
@@ -86,6 +86,8 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [guestIdentifier, setGuestIdentifier] = useState("");
+  const [isDeepVerifying, setIsDeepVerifying] = useState(false);
+  const [verificationProgress, setVerificationProgress] = useState(0);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -360,6 +362,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
         try {
           setResults(profiles);
           setAdditionalResults(additionalProfiles);
+          setUnverifiedResults(unverifiedResults); // Add unverifiedResults to state
           const updatedCategorizedProfiles = groupProfilesByCategory(profiles);
           setProfilesByCategory(updatedCategorizedProfiles);
           setCategories(getCategories(profiles));
@@ -413,6 +416,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setName,
     results,
     additionalResults,
+    unverifiedResults, // Export unverifiedResults
     isSearching,
     searchProgress,
     searchTime,
@@ -430,8 +434,7 @@ export const useSearch = (user: any, profile: any, refreshProfile: () => void) =
     setShowLimitModal,
     emailModalOpen,
     setEmailModalOpen,
-    // Removing isDeepVerifying and verificationProgress as we don't need them anymore
-    isDeepVerifying: false,
-    verificationProgress: 0
+    isDeepVerifying,
+    verificationProgress
   };
 };
