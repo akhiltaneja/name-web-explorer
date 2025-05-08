@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -99,10 +100,9 @@ const AdminDashboard = () => {
 
   const calculateStats = async () => {
     try {
-      // Get total registered users count
-      const { count: userCount, error: userError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      // Get total registered users count using the admin API
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      const userCount = userData ? userData.users.length : 0;
 
       // Get total searches count
       const { count: searchCount, error: searchError } = await supabase
@@ -130,22 +130,49 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (error) {
-        console.error('Error fetching users:', error);
+      // Use the admin API to get all users
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error fetching auth users:', authError);
         toast({
           title: "Error",
           description: "Failed to load users",
           variant: "destructive",
         });
-      } else {
-        setUsers(data || []);
+        return;
       }
+
+      // Get profiles for additional user data
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+      }
+
+      // Map profiles to auth users
+      const mappedUsers = authData.users.map(authUser => {
+        const profile = profiles?.find(p => p.id === authUser.id) || {};
+        return {
+          ...authUser,
+          ...profile,
+          email: authUser.email,
+          plan: profile.plan || 'free',
+          checks_used: profile.checks_used || 0,
+          role: profile.role || 'user'
+        };
+      });
+      
+      setUsers(mappedUsers || []);
     } catch (err) {
       console.error('Exception fetching users:', err);
+      toast({
+        title: "Error",
+        description: "Failed to load users. This might be due to insufficient permissions.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -167,6 +194,7 @@ const AdminDashboard = () => {
 
   const fetchSearches = async () => {
     try {
+      // Get all searches, not just for the current user
       const { data, error } = await supabase
         .from('searches')
         .select('*')
@@ -226,11 +254,32 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Then try to delete the user auth entry (may require admin rights)
-      toast({
-        title: "Success",
-        description: "User profile deleted. Note: The auth record may require manual deletion in Supabase.",
-      });
+      // Try to delete the auth user using admin API
+      try {
+        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+        
+        if (authError) {
+          console.error('Error deleting auth user:', authError);
+          toast({
+            title: "Partial Success",
+            description: "User profile deleted but auth record may remain.",
+            variant: "warning",
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "User completely deleted.",
+          });
+        }
+      } catch (authErr) {
+        console.error('Exception deleting auth user:', authErr);
+        toast({
+          title: "Partial Success",
+          description: "User profile deleted but auth record may remain.",
+          variant: "warning",
+        });
+      }
+      
       fetchUsers();
     } catch (err) {
       console.error('Exception deleting user:', err);
@@ -273,7 +322,7 @@ const AdminDashboard = () => {
   const getUserEmailById = (userId) => {
     if (!userId) return "N/A";
     
-    // Check if userId starts with 'anon_' - it's an anonymous user
+    // Check if userId starts with 'anon_' - it's an unverified user
     if (String(userId).startsWith('anon_')) {
       return "Unverified User";
     }
@@ -323,10 +372,11 @@ const AdminDashboard = () => {
               variant="ghost" 
               size="sm" 
               onClick={() => handleResetCredits(user.id)}
-              className="h-8 w-8 p-0"
+              className="h-8 p-2 flex items-center gap-1"
               title="Reset Credits"
             >
               <RefreshCcw className="h-4 w-4" />
+              Reset
             </Button>
             <Button 
               variant="ghost" 
@@ -336,10 +386,11 @@ const AdminDashboard = () => {
                   handleDeleteUser(user.id);
                 }
               }} 
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+              className="h-8 p-2 flex items-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
               title="Delete User"
             >
               <Trash className="h-4 w-4" />
+              Delete
             </Button>
           </div>
         </TableCell>
@@ -400,19 +451,21 @@ const AdminDashboard = () => {
               variant="ghost" 
               size="sm" 
               onClick={() => handleViewSearchResults(search.query)}
-              className="h-8 w-8 p-0"
+              className="h-8 p-2 flex items-center gap-1"
               title="View Results" 
             >
               <ExternalLink className="h-4 w-4" />
+              View
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => handleDownloadReport(search)}
-              className="h-8 w-8 p-0"
+              className="h-8 p-2 flex items-center gap-1"
               title="Download Report" 
             >
               <Download className="h-4 w-4" />
+              Download
             </Button>
           </div>
         </TableCell>
@@ -465,7 +518,15 @@ const AdminDashboard = () => {
 
       {/* Main content */}
       <div className="flex-1 overflow-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+        <div className="flex justify-between mb-6">
+          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <Link to="/">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Home className="mr-2 h-4 w-4" />
+              Go to Home
+            </Button>
+          </Link>
+        </div>
         
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
@@ -529,10 +590,11 @@ const AdminDashboard = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewSearchResults(search.query)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 p-2 flex items-center gap-1"
                             title="View Results"
                           >
                             <ExternalLink className="h-4 w-4" />
+                            View
                           </Button>
                         </TableCell>
                       </TableRow>
