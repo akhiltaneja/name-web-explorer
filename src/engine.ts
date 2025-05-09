@@ -7,13 +7,14 @@
  * - Uses npm install with --legacy-peer-deps for dependency resolution
  * - Requires Node.js 22.x and npm 10.x
  * - Includes a Procfile for process type definition
+ * - Uses build.sh for post-build operations
  */
 
 export const engineRequirements = {
   node: '22.x',
   npm: '10.x',
   installCommand: 'npm install --legacy-peer-deps',
-  buildCommand: 'npm run build',
+  buildCommand: './build.sh',
   startCommand: 'npm run serve'
 };
 
