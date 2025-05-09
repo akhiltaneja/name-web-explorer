@@ -62,3 +62,4 @@ app.listen(PORT, '0.0.0.0', () => {
 fs.writeFileSync(path.join(distPath, 'server.js'), serverContent);
 
 console.log('✅ Post-build files generated successfully');
+
