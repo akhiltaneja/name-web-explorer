@@ -42,5 +42,9 @@ export default defineConfig(({ mode }) => ({
   // Add engine requirements for deployment
   optimizeDeps: {
     include: ['react-day-picker', 'date-fns'],
+  },
+  // Define Node.js version for deployment
+  define: {
+    'process.env.NODE_VERSION': JSON.stringify('16.x')
   }
 }));
