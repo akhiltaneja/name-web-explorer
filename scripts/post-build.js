@@ -53,8 +53,9 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(\`Server running on port \${PORT}\`);
+// Make sure to listen on 0.0.0.0 for Digital Ocean App Platform
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(\`Server running on port \${PORT} and listening on all interfaces\`);
 });
 `;
 
