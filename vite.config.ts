@@ -38,13 +38,21 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
     // Improve chunk loading reliability
     chunkSizeWarningLimit: 1000,
+    // Add CI environment options
+    minify: 'esbuild',
+    emptyOutDir: true,
+    // Force packaging in modern format
+    target: 'es2020',
   },
   // Add engine requirements for deployment
   optimizeDeps: {
     include: ['react-day-picker', 'date-fns'],
+    // Force skip problematic dependencies during installation in CI environments
+    exclude: [],
   },
   // Define Node.js version for deployment
   define: {
-    'process.env.NODE_VERSION': JSON.stringify('22.x')
+    'process.env.NODE_VERSION': JSON.stringify('22.x'),
+    'process.env.NPM_CONFIG_LEGACY_PEER_DEPS': 'true',
   }
 }));
