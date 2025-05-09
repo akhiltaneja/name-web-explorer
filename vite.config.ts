@@ -38,5 +38,9 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
     // Improve chunk loading reliability
     chunkSizeWarningLimit: 1000,
+  },
+  // Add engine requirements for deployment
+  optimizeDeps: {
+    include: ['react-day-picker', 'date-fns'],
   }
 }));
