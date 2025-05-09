@@ -45,6 +45,6 @@ export default defineConfig(({ mode }) => ({
   },
   // Define Node.js version for deployment
   define: {
-    'process.env.NODE_VERSION': JSON.stringify('16.x')
+    'process.env.NODE_VERSION': JSON.stringify('22.x')
   }
 }));

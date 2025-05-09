@@ -5,8 +5,8 @@
  */
 
 export const engineRequirements = {
-  node: '16.x',
-  npm: '8.x'
+  node: '22.x',
+  npm: '10.x'
 };
 
 // This file is used by the build system to determine compatibility
