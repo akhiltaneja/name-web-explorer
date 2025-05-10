@@ -154,12 +154,19 @@ console.log('Creating start.sh script...');
 const startScriptContent = `#!/bin/bash
 # This script handles starting the server in production
 
-# Print each command before executing it
-set -x
+set -e # Exit on error
 
 # Force npm to use install instead of ci
 export NPM_CONFIG_CI=false 
 export NPM_CONFIG_LEGACY_PEER_DEPS=true
+
+# Remove any lock file to prevent npm ci
+if [ -f "package-lock.json" ]; then
+  rm package-lock.json
+fi
+
+# Create a minimal package-lock.json
+echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
 
 # Create .npmrc if not exists
 if [ ! -f ".npmrc" ]; then
@@ -174,21 +181,15 @@ audit=false
 EOF
 fi
 
-# Create a minimal package-lock.json if it doesn't exist
-if [ ! -f "package-lock.json" ]; then
-  echo "Creating minimal package-lock.json..."
-  echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
-fi
-
 # Install dependencies if they haven't been installed yet
-if [ ! -d "node_modules" ]; then
+if [ ! -d "node_modules" ] || [ ! -d "node_modules/express" ]; then
   echo "Installing dependencies..."
-  npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps
+  npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps express compression
 fi
 
-# Start the server
+# Start the server with fallbacks
 echo "Starting server..."
-npm run serve || node fallback-server.js
+node server.js || node fallback-server.js || echo "Failed to start server" >&2
 `;
 
 fs.writeFileSync(path.join(distPath, 'start.sh'), startScriptContent);
@@ -199,8 +200,7 @@ console.log('Creating run.sh script...');
 const runScriptContent = `#!/bin/bash
 # Fallback script to start server if the start.sh fails
 
-# Make sure to exit on error
-set -e
+set -e # Exit on error
 
 # Try using node directly if npm fails
 node server.js || node fallback-server.js || echo "Failed to start server" >&2
@@ -244,10 +244,10 @@ fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
 console.log('Installing dependencies in dist folder...');
 try {
   process.chdir(distPath);
-  execSync('npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps', { stdio: 'inherit' });
+  execSync('npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps express compression', { stdio: 'inherit' });
   process.chdir(path.join(__dirname, '..'));
 } catch (error) {
-  console.error('Failed to install dependencies in dist folder:', error);
+  console.error('Failed to install dependencies in dist folder, but continuing with build:', error);
   // Continue anyway as we have fallbacks
 }
 

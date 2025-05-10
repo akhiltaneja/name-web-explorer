@@ -14,6 +14,16 @@ export NPM_CONFIG_CI=false
 export NPM_CONFIG_LEGACY_PEER_DEPS=true
 export NODE_OPTIONS="--max-old-space-size=4096"
 
+# Remove any existing package-lock.json to prevent npm ci
+if [ -f "package-lock.json" ]; then
+  echo "Removing package-lock.json to prevent npm ci"
+  rm package-lock.json
+fi
+
+# Create a minimal package-lock.json that won't trigger npm ci
+echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
+chmod 0644 package-lock.json
+
 # Backup original .npmrc if it exists 
 if [ -f ".npmrc" ]; then
   mv .npmrc .npmrc.bak
@@ -49,18 +59,8 @@ runtime=node
 engine-strict=false
 EOF
 
-# Remove any existing package-lock.json to prevent npm ci
-if [ -f "package-lock.json" ]; then
-  echo "Removing package-lock.json to prevent npm ci"
-  rm package-lock.json
-fi
-
-# Create a minimal package-lock.json that won't trigger npm ci
-echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
-chmod 0644 package-lock.json
-
 echo "Installing dependencies with npm install..."
-npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
+npm install --no-audit --no-fund --legacy-peer-deps --no-save
 
 echo "Building application..."
 npm run build
