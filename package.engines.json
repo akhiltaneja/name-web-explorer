@@ -3,7 +3,7 @@
   "name": "digital-ocean-deployment-config",
   "private": true,
   "engines": {
-    "node": "22.x",
-    "npm": "10.x"
+    "node": "18.x",
+    "npm": "9.x"
   }
 }

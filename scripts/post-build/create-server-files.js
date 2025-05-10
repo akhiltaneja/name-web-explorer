@@ -21,8 +21,8 @@ export function createServerFiles(distPath) {
       "compression": "^1.7.4"
     },
     "engines": {
-      "node": "22.x",
-      "npm": "10.x"
+      "node": "18.x",
+      "npm": "9.x"
     }
   };
 
