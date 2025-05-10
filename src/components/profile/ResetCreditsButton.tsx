@@ -8,18 +8,14 @@ import { useAuth } from "@/context/AuthContext";
 
 interface ResetCreditsButtonProps {
   onReset: () => void;
-  userId?: string; // Optional userId for admin reset functionality
 }
 
-const ResetCreditsButton = ({ onReset, userId }: ResetCreditsButtonProps) => {
+const ResetCreditsButton = ({ onReset }: ResetCreditsButtonProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handleResetCredits = async () => {
-    // Determine which user ID to use (admin can reset for specific user)
-    const targetUserId = userId || (user ? user.id : null);
-    
-    if (!targetUserId) return;
+    if (!user) return;
 
     try {
       // Get today's date in UTC
@@ -31,31 +27,10 @@ const ResetCreditsButton = ({ onReset, userId }: ResetCreditsButtonProps) => {
       const { error } = await supabase
         .from('searches')
         .delete()
-        .eq('user_id', targetUserId)
+        .eq('user_id', user.id)
         .gte('created_at', todayUTC);
       
       if (error) throw error;
-      
-      // Log this action
-      if (user && user.id) {
-        // Create a more detailed log message
-        const logDetails = `Reset daily searches for user ${targetUserId}${userId ? ' (admin action)' : ' (self-reset)'}`;
-        
-        try {
-          // Using the proper insert format for the admin_logs table
-          await supabase
-            .from('admin_logs')
-            .insert({
-              action: userId ? 'admin_reset_user_credits' : 'user_reset_credits',
-              user_id: user.id,
-              target_user_id: targetUserId,
-              details: logDetails
-            });
-        } catch (logError) {
-          console.error("Error logging action:", logError);
-          // Continue even if logging fails
-        }
-      }
       
       toast({
         title: "Success!",
@@ -80,7 +55,7 @@ const ResetCreditsButton = ({ onReset, userId }: ResetCreditsButtonProps) => {
       className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
     >
       <RefreshCw className="h-4 w-4" />
-      {userId ? "Reset Daily Credits" : "Reset My Daily Credits"}
+      Reset My Daily Credits
     </Button>
   );
 };

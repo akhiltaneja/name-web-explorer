@@ -1,8 +1,8 @@
 
 import { Suspense, lazy, useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AuthProvider } from "@/context/AuthContext";
 import NotFound from "@/pages/NotFound";
 
 import Index from "@/pages/Index";
@@ -10,7 +10,6 @@ import Index from "@/pages/Index";
 const Auth = lazy(() => import("@/pages/Auth"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
-const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const Cart = lazy(() => import("@/pages/Cart"));
 const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
 const Contact = lazy(() => import("@/pages/Contact"));
@@ -18,20 +17,6 @@ const Settings = lazy(() => import("@/pages/Settings"));
 
 const BlogIndex = lazy(() => import("@/pages/blog/BlogIndex"));
 const BlogPost = lazy(() => import("@/pages/blog/BlogPost"));
-
-// This component needs to be outside the Router to use hooks
-const AuthorizedAdminRouteWrapper = () => {
-  const { user, profile } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!user || profile?.email !== "akhiltaneja92@gmail.com") {
-      navigate('/');
-    }
-  }, [user, profile, navigate]);
-
-  return user && profile?.email === "akhiltaneja92@gmail.com" ? <AdminDashboard /> : null;
-};
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -81,9 +66,6 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/admin-control-dashboard-s3cr3t" element={<AuthorizedAdminRouteWrapper />} />
-            <Route path="/admin" element={<Navigate to="/" replace />} />
-            <Route path="/admin-dashboard" element={<Navigate to="/" replace />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/search/:query" element={<Index />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />

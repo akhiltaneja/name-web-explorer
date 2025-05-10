@@ -4,9 +4,6 @@
 # Makes the script exit if any command fails
 set -e
 
-# Print each command before executing it
-set -x
-
 echo "========== STARTING CUSTOM BUILD PROCESS =========="
 
 # Force npm to use install instead of ci

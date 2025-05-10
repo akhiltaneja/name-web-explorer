@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { UserProfile, AdminLog } from "@/types/socialMedia";
+import { UserProfile } from "@/types/socialMedia";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextProps {
@@ -15,9 +16,7 @@ interface AuthContextProps {
   loading: boolean;
   loadingProfile: boolean;
   refreshProfile: () => Promise<void>;
-  supabase: typeof supabase; // Add supabase property
-  isAdmin: boolean;
-  logAdminAction: (action: string, details?: string, targetUserId?: string) => Promise<void>;
+  supabase: typeof supabase;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -28,7 +27,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,7 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, 0);
         } else {
           setProfile(null);
-          setIsAdmin(false);
           setLoadingProfile(false);
         }
       }
@@ -81,24 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: "destructive",
         });
       } else if (data) {
-        if (data.email === "akhiltaneja92@gmail.com") {
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              plan: "unlimited",
-              role: "admin"
-            })
-            .eq('id', userId);
-            
-          if (!updateError) {
-            data.plan = "unlimited";
-            data.role = "admin";
-          }
-        }
-        
-        // Set admin status based on role
-        const userIsAdmin = data.role === "admin" || data.email === "akhiltaneja92@gmail.com";
-        setIsAdmin(userIsAdmin);
         setProfile(data as UserProfile);
       }
     } catch (error) {
@@ -187,28 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // New function to log admin actions
-  const logAdminAction = async (action: string, details?: string, targetUserId?: string) => {
-    if (!user || !isAdmin) return;
-    
-    try {
-      const { error } = await supabase
-        .from('admin_logs')
-        .insert({
-          action,
-          user_id: user.id,
-          target_user_id: targetUserId,
-          details
-        });
-      
-      if (error) {
-        console.error('Error logging admin action:', error);
-      }
-    } catch (error) {
-      console.error('Error logging admin action:', error);
-    }
-  };
-
   const value = {
     session,
     user,
@@ -220,9 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     loadingProfile,
     refreshProfile,
-    supabase,
-    isAdmin,
-    logAdminAction
+    supabase
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
