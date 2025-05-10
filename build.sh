@@ -71,4 +71,10 @@ npm run build
 echo "Running post-build operations..."
 node scripts/post-build.js
 
+# Ensure all scripts are executable in the dist directory
+if [ -d "dist" ]; then
+  echo "Making scripts in dist directory executable..."
+  chmod +x dist/*.sh || true
+fi
+
 echo "Build completed successfully!"
