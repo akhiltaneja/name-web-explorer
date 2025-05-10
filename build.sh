@@ -63,7 +63,7 @@ EOF
 echo "Installing dependencies with npm install and skipping npm ci..."
 npm config set ci false --location=project
 npm config set package-lock false --location=project
-npm install --no-audit --no-fund --legacy-peer-deps --no-save
+npm install --no-audit --no-fund --legacy-peer-deps
 
 echo "Building application..."
 npm run build
@@ -74,7 +74,7 @@ node scripts/post-build.js
 # Ensure all scripts are executable in the dist directory
 if [ -d "dist" ]; then
   echo "Making scripts in dist directory executable..."
-  chmod +x dist/*.sh || true
+  find dist -name "*.sh" -type f -exec chmod +x {} \;
 fi
 
 echo "Build completed successfully!"
