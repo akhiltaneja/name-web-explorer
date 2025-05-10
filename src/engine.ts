@@ -13,9 +13,12 @@
 export const engineRequirements = {
   node: '22.x',
   npm: '10.x',
-  installCommand: 'npm install --legacy-peer-deps --no-fund --no-audit',
-  buildCommand: './build.sh',
-  startCommand: 'npm run serve'
+  installCommand: 'bash ./build.sh',
+  buildCommand: 'echo "Build already completed in installCommand"',
+  startCommand: 'cd dist && npm run serve'
 };
 
-// This file is used by the build system to determine compatibility
+// This configuration is applied during the build process
+// The installCommand now uses build.sh which handles both installation and building
+// Engine requirements are aligned with Digital Ocean App Platform
+
