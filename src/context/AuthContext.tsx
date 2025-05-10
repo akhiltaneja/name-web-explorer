@@ -17,6 +17,7 @@ interface AuthContextProps {
   loadingProfile: boolean;
   refreshProfile: () => Promise<void>;
   supabase: typeof supabase;
+  isAdmin: boolean; // Added isAdmin property
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -27,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false); // Added isAdmin state
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, 0);
         } else {
           setProfile(null);
+          setIsAdmin(false); // Reset admin status on sign out
           setLoadingProfile(false);
         }
       }
@@ -79,6 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else if (data) {
         setProfile(data as UserProfile);
+        
+        // Check if user is admin (using email for now, but could be a role in profile)
+        // Using akhiltaneja92@gmail.com as it was previously used in RLS policies
+        const isAdminUser = data.email === 'akhiltaneja92@gmail.com';
+        setIsAdmin(isAdminUser);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -177,7 +185,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     loadingProfile,
     refreshProfile,
-    supabase
+    supabase,
+    isAdmin // Added to context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

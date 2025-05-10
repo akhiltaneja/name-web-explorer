@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut, Shield } from "lucide-react";
+import { LogIn, User, CreditCard, LayoutDashboard, Home, Settings, LogOut } from "lucide-react";
 import DefaultAvatar from "./DefaultAvatar";
 
 const Header = () => {
@@ -36,17 +36,6 @@ const Header = () => {
         </a>
 
         <div className="flex items-center space-x-3">
-          {isAdmin && (
-            <Button 
-              variant="admin" 
-              onClick={() => navigate('/admin-control-dashboard-s3cr3t')}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Shield className="mr-2 h-4 w-4" />
-              Admin
-            </Button>
-          )}
-          
           {user ? (
             <>
               <DropdownMenu>
@@ -76,12 +65,6 @@ const Header = () => {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate('/admin-control-dashboard-s3cr3t')}>
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>Admin Dashboard</span>
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Logout</span>
