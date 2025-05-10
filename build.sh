@@ -9,24 +9,21 @@ set -x
 
 echo "========== STARTING CUSTOM BUILD PROCESS =========="
 
-# Set environment variables to force npm install
+# Force npm to use install instead of ci
 export NPM_CONFIG_CI=false
 export NPM_CONFIG_LEGACY_PEER_DEPS=true
 export NODE_OPTIONS="--max-old-space-size=4096"
 
-# Remove any existing package-lock.json to prevent npm ci
-if [ -f "package-lock.json" ]; then
-  echo "Removing package-lock.json to prevent npm ci"
-  rm package-lock.json
+# Backup original .npmrc if it exists 
+if [ -f ".npmrc" ]; then
+  mv .npmrc .npmrc.bak
 fi
 
-# Create a minimal package-lock.json that won't trigger npm ci
-echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
-
-# Make sure .npmrc exists with the right settings
+# Create a strong .npmrc that disables ci
 cat > .npmrc << EOF
-# Force npm to use install instead of ci
+# IMPORTANT: Force npm to use install instead of ci
 ci=false
+ignore-scripts=false
 
 # Allow legacy peer dependencies to resolve conflicting versions
 legacy-peer-deps=true
@@ -44,10 +41,26 @@ loglevel=error
 prefer-offline=true
 fund=false
 audit=false
+cache=false
+update-notifier=false
+
+# Make sure this is set at runtime
+runtime=node
+engine-strict=false
 EOF
 
+# Remove any existing package-lock.json to prevent npm ci
+if [ -f "package-lock.json" ]; then
+  echo "Removing package-lock.json to prevent npm ci"
+  rm package-lock.json
+fi
+
+# Create a minimal package-lock.json that won't trigger npm ci
+echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
+chmod 0644 package-lock.json
+
 echo "Installing dependencies with npm install..."
-npm install --legacy-peer-deps --no-fund --no-audit
+npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
 
 echo "Building application..."
 npm run build

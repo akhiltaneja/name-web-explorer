@@ -15,7 +15,7 @@ export const engineRequirements = {
   npm: '10.x',
   installCommand: 'bash ./build.sh',
   buildCommand: 'echo "Build already completed in installCommand"',
-  startCommand: 'cd dist && npm run serve'
+  startCommand: 'cd dist && chmod +x start.sh && ./start.sh'
 };
 
 // This configuration is designed to bypass npm ci completely
