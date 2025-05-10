@@ -61,4 +61,8 @@ app.listen(PORT, '0.0.0.0', () => {
 
 fs.writeFileSync(path.join(distPath, 'server.js'), serverContent);
 
+// Also create a Procfile in the dist folder
+const procfileContent = 'web: npm run serve';
+fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
+
 console.log('✅ Post-build files generated successfully');

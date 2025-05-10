@@ -7,7 +7,7 @@
  * - Uses npm install with --legacy-peer-deps for dependency resolution
  * - Requires Node.js 22.x and npm 10.x
  * - Includes a Procfile for process type definition
- * - Uses build.sh for post-build operations
+ * - Uses build.sh for installation and post-build operations
  */
 
 export const engineRequirements = {
