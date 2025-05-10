@@ -15,7 +15,7 @@ export const engineRequirements = {
   npm: '9.x',
   installCommand: 'bash ./build.sh',
   buildCommand: 'echo "Build already completed in installCommand"',
-  startCommand: 'bash -c "cd dist && chmod +x start.sh && ./start.sh || node server.js || node fallback-server.js"'
+  startCommand: 'bash -c "cd dist && chmod +x start.sh && ./start.sh || node server.js || node fallback-server.js || node minimal-fallback-server.js"'
 };
 
 // This configuration is designed to bypass npm ci completely

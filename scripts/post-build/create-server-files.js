@@ -59,6 +59,80 @@ app.listen(PORT, '0.0.0.0', () => {
 
   fs.writeFileSync(path.join(distPath, 'server.js'), serverContent);
 
+  // Create a truly fallback server that doesn't rely on any external dependencies
+  console.log('Creating minimal-fallback-server.js...');
+  const minimalFallbackServerContent = `
+import { createServer } from 'http';
+import { readFile } from 'fs';
+import { join, extname } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PORT = process.env.PORT || 8080;
+
+// Simple MIME type mapping
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+};
+
+console.log('Starting minimal fallback server on port ' + PORT);
+
+const server = createServer((req, res) => {
+  console.log(\`\${req.method} \${req.url}\`);
+  
+  let path = req.url === '/' ? '/index.html' : req.url;
+  const ext = extname(path);
+  
+  // If no file extension, serve index.html (for SPA routing)
+  if (!ext) {
+    path = '/index.html';
+  }
+  
+  const filePath = join(__dirname, path);
+  const contentType = MIME_TYPES[ext] || 'text/plain';
+  
+  readFile(filePath, (err, content) => {
+    if (err) {
+      // If file not found, try serving index.html
+      if (err.code === 'ENOENT' && path !== '/index.html') {
+        readFile(join(__dirname, '/index.html'), (err, content) => {
+          if (err) {
+            res.writeHead(500);
+            res.end('Error loading index.html');
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(content, 'utf-8');
+        });
+        return;
+      }
+      
+      res.writeHead(500);
+      res.end(\`Server Error: \${err.code}\`);
+      return;
+    }
+    
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(content, 'utf-8');
+  });
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(\`Minimal fallback server running on port \${PORT}\`);
+});
+`;
+
+  fs.writeFileSync(path.join(distPath, 'minimal-fallback-server.js'), minimalFallbackServerContent);
+
   // Create a fallback server in case dependencies fail
   console.log('Creating fallback-server.js...');
   const fallbackServerContent = `
