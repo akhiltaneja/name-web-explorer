@@ -6,12 +6,16 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, '..', 'dist');
 
+console.log('Starting post-build operations...');
+
 // Ensure the dist directory exists
 if (!fs.existsSync(distPath)) {
+  console.log('Creating dist directory...');
   fs.mkdirSync(distPath, { recursive: true });
 }
 
 // Generate production package.json
+console.log('Creating production package.json...');
 const prodPackage = {
   "name": "vite-production-build",
   "version": "1.0.0",
@@ -32,6 +36,7 @@ const prodPackage = {
 fs.writeFileSync(path.join(distPath, 'package.json'), JSON.stringify(prodPackage, null, 2));
 
 // Create Express server file
+console.log('Creating server.js file...');
 const serverContent = `
 import express from 'express';
 import { fileURLToPath } from 'url';
@@ -61,8 +66,20 @@ app.listen(PORT, '0.0.0.0', () => {
 
 fs.writeFileSync(path.join(distPath, 'server.js'), serverContent);
 
-// Also create a Procfile in the dist folder
+// Copy important deployment files to the dist folder
+console.log('Creating Procfile in dist directory...');
 const procfileContent = 'web: npm run serve';
 fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
+
+// Create .npmrc in the dist folder
+console.log('Creating .npmrc in dist directory...');
+const npmrcContent = `
+# Allow legacy peer dependencies to resolve conflicting versions
+legacy-peer-deps=true
+# Prevent npm ci
+ci=false
+`;
+fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{}');
+fs.writeFileSync(path.join(distPath, '.npmrc'), npmrcContent);
 
 console.log('✅ Post-build files generated successfully');

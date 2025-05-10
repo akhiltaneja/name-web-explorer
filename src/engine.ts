@@ -13,7 +13,7 @@
 export const engineRequirements = {
   node: '22.x',
   npm: '10.x',
-  installCommand: 'npm install --legacy-peer-deps',
+  installCommand: 'npm install --legacy-peer-deps --no-fund --no-audit',
   buildCommand: './build.sh',
   startCommand: 'npm run serve'
 };
