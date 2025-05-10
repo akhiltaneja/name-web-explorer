@@ -76,10 +76,29 @@ console.log('Creating .npmrc in dist directory...');
 const npmrcContent = `
 # Allow legacy peer dependencies to resolve conflicting versions
 legacy-peer-deps=true
+
 # Prevent npm ci
 ci=false
+
+# Additional options to prevent npm ci
+prefer-offline=true
+fund=false
+audit=false
 `;
-fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{}');
+
+// Create fake package-lock.json in dist to prevent npm ci from failing
+console.log('Creating package-lock.json in dist directory...');
+fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"lockfileVersion":3,"requires":true,"packages":{}}');
 fs.writeFileSync(path.join(distPath, '.npmrc'), npmrcContent);
+
+// Create a start script for the platform to find
+console.log('Creating start.sh script in dist directory...');
+const startScriptContent = `#!/bin/bash
+# Force npm to use install instead of ci
+export NPM_CONFIG_CI=false
+npm run serve
+`;
+fs.writeFileSync(path.join(distPath, 'start.sh'), startScriptContent);
+fs.chmodSync(path.join(distPath, 'start.sh'), '755');
 
 console.log('✅ Post-build files generated successfully');
