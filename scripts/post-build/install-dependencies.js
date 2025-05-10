@@ -20,7 +20,12 @@ export function installDependencies(distPath) {
     console.log(`Attempt ${retryCount} to install dependencies...`);
     
     try {
+      // Store current directory to return to later
+      const currentDir = process.cwd();
+      
+      // Change to dist directory
       process.chdir(distPath);
+      console.log(`Current directory: ${process.cwd()}`);
       
       // Method 1: Try regular npm install
       try {
@@ -36,7 +41,7 @@ export function installDependencies(distPath) {
         success = true;
         console.log('Dependencies installed successfully!');
       } catch (err) {
-        console.error('Method 1 failed, trying alternative method...');
+        console.error('Method 1 failed, trying alternative method...', err);
         
         // Method 2: Try creating node_modules and package manually if npm fails
         try {
@@ -54,9 +59,15 @@ export function installDependencies(distPath) {
       }
       
       // Go back to original directory
-      process.chdir(path.join(distPath, '..', 'scripts'));
+      process.chdir(currentDir);
+      console.log(`Returned to directory: ${process.cwd()}`);
     } catch (error) {
       console.error(`Attempt ${retryCount} failed:`, error);
     }
+  }
+
+  if (!success) {
+    console.log('Failed to install dependencies after multiple attempts.');
+    console.log('The application will try to run with the fallback server that uses only native Node.js modules.');
   }
 }

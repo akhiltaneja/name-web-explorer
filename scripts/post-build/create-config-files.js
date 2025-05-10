@@ -27,7 +27,7 @@ audit=false
 cache=false
 update-notifier=false
 `;
-  fs.writeFileSync(path.join(distPath, '.npmrc'), npmrcContent);
+  fs.writeFileSync(path.join(distPath, '.npmrc'), npmrcContent.trim());
 
   // Create package-lock.json in dist to prevent npm ci
   console.log('Creating package-lock.json in dist directory...');

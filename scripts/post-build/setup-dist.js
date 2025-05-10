@@ -12,5 +12,7 @@ export function setupDistDirectory(distPath) {
   if (!fs.existsSync(distPath)) {
     console.log('Creating dist directory...');
     fs.mkdirSync(distPath, { recursive: true });
+  } else {
+    console.log('Dist directory exists, continuing...');
   }
 }
