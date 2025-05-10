@@ -59,7 +59,10 @@ runtime=node
 engine-strict=false
 EOF
 
-echo "Installing dependencies with npm install..."
+# Add custom npm config to force install directly
+echo "Installing dependencies with npm install and skipping npm ci..."
+npm config set ci false --location=project
+npm config set package-lock false --location=project
 npm install --no-audit --no-fund --legacy-peer-deps --no-save
 
 echo "Building application..."

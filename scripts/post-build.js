@@ -153,7 +153,8 @@ console.log('Creating start.sh script...');
 const startScriptContent = `#!/bin/bash
 # This script handles starting the server in production
 
-set -e # Exit on error
+# Don't exit on error - we want to try fallbacks
+set +e
 
 echo "Starting deployment script $(date)"
 
@@ -190,7 +191,7 @@ echo "Checking for dependencies"
 # Install dependencies if they haven't been installed yet
 if [ ! -d "node_modules" ] || [ ! -d "node_modules/express" ]; then
   echo "Installing dependencies..."
-  npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps express compression
+  npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps express compression || true
 fi
 
 # Start the server with fallbacks
@@ -199,14 +200,22 @@ node server.js || node fallback-server.js || echo "Failed to start server" >&2
 `;
 
 fs.writeFileSync(path.join(distPath, 'start.sh'), startScriptContent);
-fs.chmodSync(path.join(distPath, 'start.sh'), '755');
+
+// Make start.sh executable
+try {
+  console.log('Making start.sh executable...');
+  fs.chmodSync(path.join(distPath, 'start.sh'), '755');
+} catch (error) {
+  console.error('Failed to chmod start.sh, but continuing:', error);
+}
 
 // Create run.sh as another fallback
 console.log('Creating run.sh script...');
 const runScriptContent = `#!/bin/bash
 # Fallback script to start server if the start.sh fails
 
-set -e # Exit on error
+# Don't exit on error - we want to try all options
+set +e
 
 echo "Running fallback script $(date)"
 
@@ -215,7 +224,14 @@ node server.js || node fallback-server.js || echo "Failed to start server" >&2
 `;
 
 fs.writeFileSync(path.join(distPath, 'run.sh'), runScriptContent);
-fs.chmodSync(path.join(distPath, 'run.sh'), '755');
+
+// Make run.sh executable
+try {
+  console.log('Making run.sh executable...');
+  fs.chmodSync(path.join(distPath, 'run.sh'), '755');
+} catch (error) {
+  console.error('Failed to chmod run.sh, but continuing:', error);
+}
 
 // Create .npmrc in the dist folder
 console.log('Creating .npmrc in dist directory...');
@@ -245,14 +261,21 @@ fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"name":"app","lockf
 
 // Create Procfile in dist
 console.log('Creating Procfile in dist directory...');
-const procfileContent = 'web: bash -c "./start.sh || node server.js || node fallback-server.js"';
+const procfileContent = 'web: bash -c "chmod +x start.sh && ./start.sh || node server.js || node fallback-server.js"';
 fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
 
 // Install dependencies in dist folder
 console.log('Installing dependencies in dist folder...');
 try {
   process.chdir(distPath);
-  execSync('npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps express compression', { stdio: 'inherit' });
+  execSync('npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps express compression', { 
+    stdio: 'inherit',
+    env: { 
+      ...process.env, 
+      NPM_CONFIG_CI: 'false',
+      NPM_CONFIG_LEGACY_PEER_DEPS: 'true' 
+    }
+  });
   process.chdir(path.join(__dirname, '..'));
 } catch (error) {
   console.error('Failed to install dependencies in dist folder, but continuing with build:', error);
