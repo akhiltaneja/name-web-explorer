@@ -43,7 +43,6 @@ import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import compression from 'compression';
-import fs from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -149,25 +148,31 @@ server.listen(PORT, '0.0.0.0', () => {
 
 fs.writeFileSync(path.join(distPath, 'fallback-server.js'), fallbackServerContent);
 
-// Create start.sh script
+// Create start.sh script with improved error handling
 console.log('Creating start.sh script...');
 const startScriptContent = `#!/bin/bash
 # This script handles starting the server in production
 
 set -e # Exit on error
 
+echo "Starting deployment script $(date)"
+
 # Force npm to use install instead of ci
 export NPM_CONFIG_CI=false 
 export NPM_CONFIG_LEGACY_PEER_DEPS=true
 
+echo "Checking for package-lock.json"
 # Remove any lock file to prevent npm ci
 if [ -f "package-lock.json" ]; then
+  echo "Removing existing package-lock.json"
   rm package-lock.json
 fi
 
 # Create a minimal package-lock.json
+echo "Creating minimal package-lock.json"
 echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
 
+echo "Checking for .npmrc"
 # Create .npmrc if not exists
 if [ ! -f ".npmrc" ]; then
   echo "Creating .npmrc file..."
@@ -181,6 +186,7 @@ audit=false
 EOF
 fi
 
+echo "Checking for dependencies"
 # Install dependencies if they haven't been installed yet
 if [ ! -d "node_modules" ] || [ ! -d "node_modules/express" ]; then
   echo "Installing dependencies..."
@@ -201,6 +207,8 @@ const runScriptContent = `#!/bin/bash
 # Fallback script to start server if the start.sh fails
 
 set -e # Exit on error
+
+echo "Running fallback script $(date)"
 
 # Try using node directly if npm fails
 node server.js || node fallback-server.js || echo "Failed to start server" >&2
@@ -237,7 +245,7 @@ fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"name":"app","lockf
 
 // Create Procfile in dist
 console.log('Creating Procfile in dist directory...');
-const procfileContent = 'web: ./start.sh || node server.js || node fallback-server.js';
+const procfileContent = 'web: bash -c "./start.sh || node server.js || node fallback-server.js"';
 fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
 
 // Install dependencies in dist folder
