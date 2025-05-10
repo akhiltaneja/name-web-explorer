@@ -66,10 +66,35 @@ app.listen(PORT, '0.0.0.0', () => {
 
 fs.writeFileSync(path.join(distPath, 'server.js'), serverContent);
 
-// Copy important deployment files to the dist folder
-console.log('Creating Procfile in dist directory...');
-const procfileContent = 'web: npm run serve';
-fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
+// Create start.sh script
+console.log('Creating start.sh script...');
+const startScriptContent = `#!/bin/bash
+# This script handles starting the server in production
+
+# Force npm to use install instead of ci
+export NPM_CONFIG_CI=false 
+export NPM_CONFIG_LEGACY_PEER_DEPS=true
+
+# Ensure we're in the dist directory
+cd "$(dirname "$0")" || exit 1
+
+# Install dependencies if they haven't been installed yet
+if [ ! -d "node_modules" ]; then
+  echo "Installing dependencies..."
+  npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps
+fi
+
+# Start the server
+echo "Starting server..."
+npm run serve
+`;
+
+fs.writeFileSync(path.join(distPath, 'start.sh'), startScriptContent);
+fs.chmodSync(path.join(distPath, 'start.sh'), '755');
+
+// Create package-lock.json in dist to prevent npm ci
+console.log('Creating package-lock.json in dist directory...');
+fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}');
 
 // Create .npmrc in the dist folder
 console.log('Creating .npmrc in dist directory...');
@@ -80,46 +105,30 @@ legacy-peer-deps=true
 # Prevent npm ci
 ci=false
 
-# Additional options to prevent npm ci
+# Additional options
 prefer-offline=true
 fund=false
 audit=false
 unsafe-perm=true
 `;
-
-// Create fake package-lock.json in dist to prevent npm ci from failing
-console.log('Creating package-lock.json in dist directory...');
-fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"lockfileVersion":3,"requires":true,"packages":{}}');
 fs.writeFileSync(path.join(distPath, '.npmrc'), npmrcContent);
 
-// Create a start script for the platform to find
-console.log('Creating start.sh script in dist directory...');
-const startScriptContent = `#!/bin/bash
-# Force npm to use install instead of ci
-export NPM_CONFIG_CI=false
-npm run serve
-`;
-fs.writeFileSync(path.join(distPath, 'start.sh'), startScriptContent);
-fs.chmodSync(path.join(distPath, 'start.sh'), '755');
+// Create Procfile in dist
+console.log('Creating Procfile in dist directory...');
+const procfileContent = 'web: npm run serve';
+fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
 
-// Create run.sh script
-console.log('Creating run.sh script in dist directory...');
-const runScriptContent = `#!/bin/bash
-# This script is needed for some platforms that don't respect .npmrc settings
-echo "Starting server with npm run serve"
-exec npm run serve
-`;
-fs.writeFileSync(path.join(distPath, 'run.sh'), runScriptContent);
-fs.chmodSync(path.join(distPath, 'run.sh'), '755');
-
-// Create a fallback static server if express setup fails
-console.log('Creating fallback static server...');
+// Create a simple fallback static server as emergency option
+console.log('Creating fallback server script...');
 const fallbackServerContent = `
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8080;
+
 const MIME_TYPES = {
   '.html': 'text/html',
   '.js': 'text/javascript',
