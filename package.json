@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "serve": "serve -s dist",
-    "preview": "vite preview"
+    "start": "serve -s dist",
+    "preview": "vite preview",
+    "heroku-postbuild": "npm run build"
   },
   "engines": {
   "node": "18.x",
