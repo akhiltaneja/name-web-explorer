@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, '..', 'dist');
@@ -75,9 +76,6 @@ const startScriptContent = `#!/bin/bash
 export NPM_CONFIG_CI=false 
 export NPM_CONFIG_LEGACY_PEER_DEPS=true
 
-# Ensure we're in the dist directory
-cd "$(dirname "$0")" || exit 1
-
 # Install dependencies if they haven't been installed yet
 if [ ! -d "node_modules" ]; then
   echo "Installing dependencies..."
@@ -92,18 +90,17 @@ npm run serve
 fs.writeFileSync(path.join(distPath, 'start.sh'), startScriptContent);
 fs.chmodSync(path.join(distPath, 'start.sh'), '755');
 
-// Create package-lock.json in dist to prevent npm ci
-console.log('Creating package-lock.json in dist directory...');
-fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}');
-
 // Create .npmrc in the dist folder
 console.log('Creating .npmrc in dist directory...');
 const npmrcContent = `
+# Force npm to use install instead of ci
+ci=false
+
 # Allow legacy peer dependencies to resolve conflicting versions
 legacy-peer-deps=true
 
 # Prevent npm ci
-ci=false
+package-lock=false
 
 # Additional options
 prefer-offline=true
@@ -113,76 +110,23 @@ unsafe-perm=true
 `;
 fs.writeFileSync(path.join(distPath, '.npmrc'), npmrcContent);
 
+// Create package-lock.json in dist to prevent npm ci
+console.log('Creating package-lock.json in dist directory...');
+fs.writeFileSync(path.join(distPath, 'package-lock.json'), '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}');
+
 // Create Procfile in dist
 console.log('Creating Procfile in dist directory...');
 const procfileContent = 'web: npm run serve';
 fs.writeFileSync(path.join(distPath, 'Procfile'), procfileContent);
 
-// Create a simple fallback static server as emergency option
-console.log('Creating fallback server script...');
-const fallbackServerContent = `
-import http from 'http';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || 8080;
-
-const MIME_TYPES = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
-};
-
-const server = http.createServer((req, res) => {
-  console.log(\`\${new Date().toISOString()} - \${req.method} \${req.url}\`);
-  
-  // Default to serving index.html for SPA routing
-  let filePath = '.' + req.url;
-  if (filePath === './') {
-    filePath = './index.html';
-  }
-  
-  // Get file extension and corresponding content type
-  const extname = path.extname(filePath);
-  let contentType = MIME_TYPES[extname] || 'application/octet-stream';
-  
-  // Read the file
-  fs.readFile(filePath, (error, content) => {
-    if (error) {
-      if(error.code === 'ENOENT') {
-        // File not found, serve index.html for SPA routing
-        fs.readFile('./index.html', (err, content) => {
-          if (err) {
-            res.writeHead(500);
-            res.end('Error loading index.html');
-          } else {
-            res.writeHead(200, { 'Content-Type': 'text/html' });
-            res.end(content, 'utf-8');
-          }
-        });
-      } else {
-        res.writeHead(500);
-        res.end('Server Error: ' + error.code);
-      }
-    } else {
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(content, 'utf-8');
-    }
-  });
-});
-
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(\`Fallback server running on port \${PORT}\`);
-});
-`;
-fs.writeFileSync(path.join(distPath, 'fallback-server.js'), fallbackServerContent);
+// Install dependencies in dist folder
+console.log('Installing dependencies in dist folder...');
+try {
+  process.chdir(distPath);
+  execSync('npm install --no-package-lock --no-audit --no-fund --legacy-peer-deps', { stdio: 'inherit' });
+  process.chdir(path.join(__dirname, '..'));
+} catch (error) {
+  console.error('Failed to install dependencies in dist folder:', error);
+}
 
 console.log('✅ Post-build files generated successfully');

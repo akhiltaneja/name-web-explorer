@@ -23,6 +23,29 @@ fi
 # Create a minimal package-lock.json that won't trigger npm ci
 echo '{"name":"app","lockfileVersion":3,"requires":true,"packages":{}}' > package-lock.json
 
+# Make sure .npmrc exists with the right settings
+cat > .npmrc << EOF
+# Force npm to use install instead of ci
+ci=false
+
+# Allow legacy peer dependencies to resolve conflicting versions
+legacy-peer-deps=true
+
+# Set timeout for network operations
+network-timeout=600000
+
+# Prevent the generation of package-lock.json during CI
+package-lock=false
+
+# Decrease logging verbosity
+loglevel=error
+
+# Additional options to prevent npm ci
+prefer-offline=true
+fund=false
+audit=false
+EOF
+
 echo "Installing dependencies with npm install..."
 npm install --legacy-peer-deps --no-fund --no-audit
 

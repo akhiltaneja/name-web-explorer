@@ -1,2 +1,2 @@
 
-web: bash dist/start.sh
+web: cd dist && npm run serve
